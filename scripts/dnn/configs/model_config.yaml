@@ -1,6 +1,6 @@
-class_path: models.model_interface.ClassifierInterface
+class_path: src.models.model_interface.ClassifierInterface
 init_args:
-  model_class: models.deformer.Deformer
+  model_class: src.models.deformer.Deformer
   model_args:
     skip_pool: false
     symmetric_qk: false

@@ -11,7 +11,7 @@ for dataset_id = 1:length(dataset_names)
     dataset_name = dataset_names(dataset_id);
     dataset_info = dataset_infos(dataset_id);
     fs = dataset_info.fs;
-
+    
     for subject_id = 1:fastif(DEBUG_MODE,1,dataset_info.num_subject)
 
         data_struct = load_data_struct(fullfile(dataset_info.filelists(subject_id).folder,dataset_info.filelists(subject_id).name),dataset_name);

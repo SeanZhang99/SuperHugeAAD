@@ -91,17 +91,20 @@ class MInterface(pl2.LightningModule):
 
 
 class ClassifierInterface(MInterface):
-    def training_step(
-        self, batch: dict[str, torch.Tensor | dict], batch_idx: int
-    ) -> torch.Tensor:
-        exg = batch["exg"]
-        label = batch["label"]
+    def training_step(self, batch: dict[str, Any], batch_idx: int) -> torch.Tensor:
+        # How pytorch collect_fn handle nested dict:
+        # batch["meta"]["dataset_id"][sample_idx] -> torch.Tensor
+        meta: dict[str, Any] = batch["meta"]
+        exg: torch.Tensor = batch["exg"]
+        label: str = batch["label"]
         outputs = self.forward(exg)
         loss = self.loss_fn(outputs, label)  # type: ignore
         if self.training:
             self.log("train_loss", loss)  # Log as 'train_loss' during training
         else:
             self.log("val_loss", loss)
+        # for sample_idx in range(len(batch)):
+        #     self.log_dict({f"dataset-{batch["meta"][sample_idx]["dataset_id"]:03d}-subject-{batch["meta"][sample_idx]["subject_id"]:03d}-trial-{}": outputs[sample_idx]})
         return loss
 
     def validation_step(

@@ -15,6 +15,10 @@ class MetaDataElement(BaseModel, extra="allow"):
     signal_length: int | None = 0
     fs: int | None = 0
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.entry = f"dataset-{self.dataset_id:03d}-subject-{self.subject_id:03d}-trial-{self.trial_id:03d}"
+
 
 class RegressionMetaDataElement(MetaDataElement):
     env: str | None

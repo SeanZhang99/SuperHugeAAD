@@ -22,7 +22,7 @@
 """
 import os
 import torch
-from .functional.multi_run_cli import MultiRunCLI
+from src.functional.multi_run_cli import MultiRunCLI
 
 torch.set_float32_matmul_precision("medium")
 

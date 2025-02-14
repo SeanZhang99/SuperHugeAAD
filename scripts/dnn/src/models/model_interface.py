@@ -13,15 +13,20 @@
 # limitations under the License.
 
 from collections.abc import Sequence
-from typing import Any
+import inspect
+from typing import Any, final
+from sympy import Min
 import torch
+from abc import ABC, abstractmethod
 
 import lightning as pl2
+from torchmetrics.classification import ConfusionMatrix
 
 from .model_template import ModelTemplate
 
 
-class MInterface(pl2.LightningModule):
+class MInterface(pl2.LightningModule, ABC):
+    @abstractmethod
     def __init__(
         self,
         /,
@@ -48,40 +53,57 @@ class MInterface(pl2.LightningModule):
         self.lr = lr
         self.configure_loss()
 
-    def forward(self, input) -> torch.Tensor:
-        input = input.to(self.precision)
-        return self.model.forward(input)
+    def forward(self, *inputs: torch.Tensor) -> torch.Tensor:
+        return self.model.forward(*(input.to(self.precision) for input in inputs))
 
-    def training_step(self, batch, batch_idx):
-        output = self.forward(batch)
-        target = torch.randn_like(output)
-        return self.loss_fn(output, target)
+    # define training_step, validation_step, test_step in your own subclass
+    @abstractmethod
+    def training_step(self, batch: dict[str, Any], batch_idx: int) -> torch.Tensor:
+        pass
 
-    def validation_step(self, batch, batch_idx):
-        loss = self.training_step(batch, batch_idx)
-        self.log("val_loss", loss)
-        return loss
+    @abstractmethod
+    def validation_step(
+        self, batch: dict[str, torch.Tensor | dict], batch_idx: int
+    ) -> torch.Tensor:
+        pass
 
-    def test_step(self, batch, batch_idx):
-        loss = self.training_step(batch, batch_idx)
-        self.log("test_loss", loss)
-        return loss
+    @abstractmethod
+    def test_step(
+        self, batch: dict[str, torch.Tensor | dict], batch_idx: int
+    ) -> torch.Tensor:
+        pass
 
+    def on_train_epoch_start(self) -> None:
+        self.stage = "train"
+        return super().on_train_epoch_start()
+
+    def on_validation_epoch_start(self) -> None:
+        self.stage = "val"
+        return super().on_validation_epoch_start()
+
+    def on_test_epoch_start(self) -> None:
+        self.stage = "test"
+        return super().on_test_epoch_start()
+
+    @final
     def configure_loss(self):
         if isinstance(self.loss, Sequence):
+            # add a closure variable to let static type checker know the type of loss_fn
+            loss_sequence: Sequence = self.loss
 
-            def loss_fn(*args: Sequence[torch.Tensor | int | str]):  # type: ignore
+            def loss_fn(*args: Sequence[torch.Tensor | int | str | Sequence[torch.Tensor | int | str]]):  # type: ignore
                 loss = 0
-                for i, loss_fn in enumerate(self.loss):
+                for i, loss_fn in enumerate(loss_sequence):
                     loss += loss_fn(*args[i])
                 return (
                     torch.Tensor(loss) if not isinstance(loss, torch.Tensor) else loss
                 )
 
         else:
+            single_loss: torch.nn.modules.loss._Loss = self.loss
 
             def loss_fn(*args: torch.Tensor | int | str):
-                loss = self.loss(*args)
+                loss = single_loss(*args)
                 # type: ignore
                 return (
                     torch.Tensor(loss) if not isinstance(loss, torch.Tensor) else loss
@@ -91,6 +113,24 @@ class MInterface(pl2.LightningModule):
 
 
 class ClassifierInterface(MInterface):
+    def __init__(self, *args, **kwargs):
+        # Get the signature of the parent __init__ method
+        parent_signature = inspect.signature(super().__init__)
+
+        # Validate the arguments against the parent's signature
+        bound_arguments = parent_signature.bind(*args, **kwargs)
+        bound_arguments.apply_defaults()  # Ensure default values are included
+
+        # Forward the validated arguments to the parent
+        super().__init__(*bound_arguments.args, **bound_arguments.kwargs)
+
+        self.confusion_matrix = ConfusionMatrix(
+            task="multiclass",
+            num_classes=bound_arguments.kwargs["model_args"]["num_classes"],
+        )
+
+    __init__.__signature__ = inspect.signature(MInterface.__init__)  # type: ignore
+
     def training_step(self, batch: dict[str, Any], batch_idx: int) -> torch.Tensor:
         # How pytorch collect_fn handle nested dict:
         # batch["meta"]["dataset_id"][sample_idx] -> torch.Tensor
@@ -98,13 +138,33 @@ class ClassifierInterface(MInterface):
         exg: torch.Tensor = batch["exg"]
         label: str = batch["label"]
         outputs = self.forward(exg)
+        pred = outputs.argmax(dim=1)
         loss = self.loss_fn(outputs, label)  # type: ignore
-        if self.training:
-            self.log("train_loss", loss)  # Log as 'train_loss' during training
-        else:
-            self.log("val_loss", loss)
-        # for sample_idx in range(len(batch)):
-        #     self.log_dict({f"dataset-{batch["meta"][sample_idx]["dataset_id"]:03d}-subject-{batch["meta"][sample_idx]["subject_id"]:03d}-trial-{}": outputs[sample_idx]})
+        stage = self.stage
+        self.log(f"{stage}_loss", loss, prog_bar=True)
+        # Log as 'train_loss' during training , 'val_loss' during validation/testing
+        for sample_idx in range(len(batch)):
+            self.log_dict(
+                {
+                    # accuracy accumulated and reduced on each trial
+                    f"{meta["entry"][sample_idx]}_{stage}_acc": (
+                        pred[sample_idx] == label[sample_idx]
+                    ).float(),
+                    # accuracy accumulated and reduced on each subject
+                    f"dataset-{meta["dataset"]:03d}-subject-{meta["subject"][sample_idx]:03d}_{stage}_acc": (
+                        pred[sample_idx] == label[sample_idx]
+                    ).float(),
+                    # accuracy accumulated and reduced on each dataset
+                    f"dataset-{meta["dataset"]:03d}_{stage}_acc": (
+                        pred[sample_idx] == label[sample_idx]
+                    ).float(),
+                    # accuracy accumulated and reduced on each class
+                    f"{str(label[sample_idx])}_{stage}_acc": (
+                        pred[sample_idx] == label[sample_idx]
+                    ).float(),
+                    # confusion matrix
+                }
+            )
         return loss
 
     def validation_step(
@@ -124,8 +184,8 @@ class RegressionInterface(MInterface):
     def training_step(
         self, batch: dict[str, torch.Tensor | dict], batch_idx: int
     ) -> torch.Tensor:
-        inputs = batch["exg"]
-        targets = batch["audio"]
+        inputs: torch.Tensor = batch["exg"]  # type: ignore
+        targets: torch.Tensor = batch["audio"]  # type: ignore
         outputs = self.forward(inputs)
         loss = self.loss_fn(outputs, targets)  # type: ignore
         if self.training:

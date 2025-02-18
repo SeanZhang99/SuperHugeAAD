@@ -1,6 +1,7 @@
 """Code to calculate mel spectrograms."""
 
 import math
+from random import randint
 
 import librosa
 import numpy as np
@@ -56,6 +57,20 @@ def calculate_mel_spectrogram(
     # DC removal
     audio = audio - np.mean(audio)
 
+    # Calculate the required length of the mel spectrogram
+    audio = np.pad(
+        audio,
+        (
+            (
+                0,
+                0,
+            ),
+            (0, n_fft - 1),
+        ),
+        "constant",
+        constant_values=(0, 0),
+    )
+
     mel_spectrogram = librosa.feature.melspectrogram(
         y=audio,
         window="hann",
@@ -70,6 +85,7 @@ def calculate_mel_spectrogram(
         n_mels=nb_filters,
         center=False,
     )
+
     return mel_spectrogram
 
 

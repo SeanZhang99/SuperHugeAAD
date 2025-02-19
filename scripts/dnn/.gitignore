@@ -5,7 +5,7 @@ lightning_logs/
 MNIST/
 weights/
 /backup
-vscode/*
+.vscode/
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json

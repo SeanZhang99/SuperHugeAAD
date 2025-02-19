@@ -135,6 +135,7 @@ class EegDataset(Dataset):
                 overlap=config.overlap,
                 transform=config.transform,
                 metadata_fields=config.metadata_fields,
+                **kwargs,
             )
             for mode in dataset_modes
         ]
@@ -197,7 +198,7 @@ class EegDataset(Dataset):
         required_keys = ["exg_path", "files", "metadata", "metadata_fields"]
         self._validate_kwargs(kwargs.keys(), required_keys)
 
-        self.exg_path = kwargs["exg_path"]
+        self.exg_path: str = kwargs["exg_path"]
         self.files = kwargs["files"]
         self.metadata: MetaData = kwargs["metadata"]
         self.segment_length = kwargs.get("fs", 128) * kwargs.get(

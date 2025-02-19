@@ -29,8 +29,6 @@ class EegRegressionBaseDataset(EegDataset):
         super().__init__(**kwargs)
         config = EEGDatasetWithSpeechFeatureCreationConfig(**kwargs)
 
-        self.speech_feature_path = config.speech_feature_path
-
         # 处理支持的语音特征别名
         feature_type = config.speech_feature_key.lower()
         if feature_type in ENV_ALIASE:
@@ -41,6 +39,10 @@ class EegRegressionBaseDataset(EegDataset):
             raise ValueError(
                 f"EEG_REGRESSION_BASE_DATASET:__INIT__:VALUE_ERROR: Unsupported speech feature: {feature_type}. Supported values are {ENV_ALIASE+MEL_ALIASE}."
             )
+
+        self.speech_feature_path = os.path.join(
+            self.exg_path.replace("exg", "stimuli"), self.speech_feature_type
+        )
 
     def __getitem__(self, idx):
         """

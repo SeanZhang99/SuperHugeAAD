@@ -1,0 +1,7 @@
+scipy
+torch
+lightning
+pydantic
+numpy
+pyyaml
+einops

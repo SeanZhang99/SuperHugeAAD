@@ -1,0 +1,25 @@
+Metadata-Version: 2.2
+Name: superhuge
+Version: 0.1.0
+Summary: SuperHugeAAD: extending Deep Learning-based Auditory Attention Decoding to more than one singel datasets.
+Home-page: https://github.com/SeanZhang99/SuperHugeAAD
+Author: Yuanming Zhang
+Author-email: Yuanming Zhang <yuanming.zhang@smail.nju.edu.cn>
+License: MIT
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: scipy
+Requires-Dist: torch
+Requires-Dist: lightning
+Requires-Dist: pydantic
+Requires-Dist: numpy
+Requires-Dist: pyyaml
+Requires-Dist: einops
+Dynamic: author
+Dynamic: home-page
+Dynamic: requires-python
+
+# SuperHugeAAD

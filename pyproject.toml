@@ -1,0 +1,32 @@
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "superhuge"
+version = "0.1.0"
+description = "SuperHugeAAD: extending Deep Learning-based Auditory Attention Decoding to more than one singel datasets."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    { name = "Yuanming Zhang", email = "yuanming.zhang@smail.nju.edu.cn" }
+]
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent"
+]
+dependencies = [
+    "scipy",
+    "torch",
+    "lightning",
+    "pydantic",
+    "numpy",
+    "pyyaml",
+    "einops"
+]
+
+[project.scripts]
+# Define command-line scripts here

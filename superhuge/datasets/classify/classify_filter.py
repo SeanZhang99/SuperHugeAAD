@@ -150,7 +150,7 @@ def eight_class_filter(
     return result
 
 
-def get_classification_filter(
+def get_classify_filter(
     num_class: int | str,
 ) -> Callable[[ClassifyMetaDataElement], ClassifyMetaDataElement | None]:
     """

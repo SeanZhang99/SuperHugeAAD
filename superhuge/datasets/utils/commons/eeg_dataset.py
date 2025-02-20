@@ -1,3 +1,5 @@
+from ast import Call
+import inspect
 import os
 import pickle
 from collections.abc import Callable, Iterable
@@ -8,15 +10,14 @@ import numpy
 from pydantic import BaseModel
 from torch.utils.data import Dataset
 
-
 from ..metadata_processing.data import (
     ClassifyMetaDataElement,
-    RegressionMetaDataElement,
-    GroupingFunction,
-    MetaDataField,
-    MetaDataElement,
-    MetaData,
     DatasetSubjectTrialEntry,
+    GroupingFunction,
+    MetaData,
+    MetaDataElement,
+    MetaDataField,
+    RegressionMetaDataElement,
 )
 from ..metadata_processing.operation import loto
 
@@ -164,7 +165,45 @@ class EegDataset(Dataset):
     def meta_filter_func_parser(
         cls, meta_filter_func: Callable | None, *args, **kwargs
     ):
-        return meta_filter_func
+        """
+        meta_filter_func_parser
+
+        Args:
+            meta_filter_func (Callable | None): 元数据过滤函数。
+            *args: 位置参数。
+            **kwargs: 关键字参数。
+
+        Returns:
+            Callable | None: 元数据过滤函数。
+
+        Raises:
+            TypeError: meta_filter_func 必须是可调用对象或 None。
+
+        Running logics:
+            - 如果 meta_filter_func 是 None，则返回 None。
+            - 如果 meta_filter_func 是可调用对象:
+                - 获取 meta_filter_func 的签名。
+                - 如果 meta_filter_func 的返回注释是 ClassifyMetaDataElement 或 RegressionMetaDataElement 或 None，则返回 meta_filter_func。在这种情况下, meta_filter_func 是一个有效的元数据过滤函数。
+                - 如果 meta_filter_func 的返回注释是可调用对象，则返回 meta_filter_func 的调用结果。在这种情况下, meta_filter_func 是一个元数据过滤函数的工厂函数。
+            - 否则，抛出 TypeError。
+        """
+        if meta_filter_func is None:
+            return None
+        elif isinstance(meta_filter_func, Callable):
+            return_args = inspect.signature(meta_filter_func).return_annotation
+            if isinstance(return_args, Callable):
+                return meta_filter_func(*args, **kwargs)
+            else:
+                for return_arg in return_args.__args__:
+                    if not (issubclass(return_arg, (MetaDataElement, type(None)))):
+                        raise TypeError(
+                            f"EEG_DATASET:META_FILTER_FUNC_PARSER:TYPE_ERROR: meta_filter_func must: \n1. return a MetaDataElement or None, or \n2. be a factory function returning a callable of (1.), \nbut got {return_args}"
+                        )
+                return meta_filter_func
+        else:
+            raise TypeError(
+                f"EEG_DATASET:META_FILTER_FUNC_PARSER:TYPE_ERROR: meta_filter_func must be a callable or None, but got {type(meta_filter_func)}"
+            )
 
     @classmethod
     def load_metadata(cls, metafile_path, metadata_fields) -> MetaData:

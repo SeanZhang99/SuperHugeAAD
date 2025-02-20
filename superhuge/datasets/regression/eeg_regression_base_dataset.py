@@ -90,9 +90,9 @@ class EegRegressionBaseDataset(EegDataset):
             assert (
                 target in ALLOWED_SPEECH_FEATURES
             ), f"EEG_REGRESSION_BASE_DATASET:META_FILTER_FUNC_PARSER:ASSERTION:TARGET:VALUE_ERROR: target must be a string from: {ALLOWED_SPEECH_FEATURES}"
-            meta_filter_func = get_regression_filter(target)
+            return get_regression_filter(target)
         elif isinstance(meta_filter_func, Callable):
-            return meta_filter_func
+            return super().meta_filter_func_parser(meta_filter_func, *args, **kwargs)
         else:
             raise TypeError(
                 f"EEG_REGRESSION_BASE_DATASET:META_FILTER_FUNC_PARSER:TYPE_ERROR: meta_filter_func must be a Callable or None, got {type(meta_filter_func)}"

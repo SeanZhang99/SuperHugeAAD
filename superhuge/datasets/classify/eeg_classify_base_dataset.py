@@ -5,7 +5,7 @@ from ..utils.metadata_processing.data import ClassifyMetaDataElement
 from .classify_filter import (
     ALLOWED_NUM_CLASS_INT,
     ALLOWED_NUM_CLASS_STRING,
-    get_classification_filter,
+    get_classify_filter,
 )
 
 
@@ -47,9 +47,9 @@ class EegClassifyBaseDataset(EegDataset):
             assert (isinstance(target, int) and target in ALLOWED_NUM_CLASS_INT) or (
                 isinstance(target, str) and target in ALLOWED_NUM_CLASS_STRING
             ), f"EEG_CLASSIFY_BASE_DATASET:META_FILTER_FUNC_PARSER:ASSERTION:VALUE_ERROR: target must be a valid integer from {ALLOWED_NUM_CLASS_INT} or a valid string from {ALLOWED_NUM_CLASS_STRING}"
-            meta_filter_func = get_classification_filter(target)
+            return get_classify_filter(target)
         elif isinstance(meta_filter_func, Callable):
-            return meta_filter_func
+            return super().meta_filter_func_parser(meta_filter_func, *args, **kwargs)
         else:
             raise TypeError(
                 f"EEG_CLASSIFY_BASE_DATASET:META_FILTER_FUNC_PARSER:TYPE_ERROR: meta_filter_func must be a Callable or None, got {type(meta_filter_func)}"

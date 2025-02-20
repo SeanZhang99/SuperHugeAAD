@@ -1,4 +1,4 @@
-from .common_datasets import DInterface, EegDataset
+from .commons import DInterface, EegDataset
 from .metadata_processing import (
     MetaData,
     leave_one_out_input_decorator,

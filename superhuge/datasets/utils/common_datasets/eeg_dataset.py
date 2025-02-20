@@ -9,8 +9,16 @@ from pydantic import BaseModel
 from torch.utils.data import Dataset
 
 
-from .metadata_processing import *
-from ..functional.get_function_caller import get_caller
+from ..metadata_processing.data import (
+    ClassifyMetaDataElement,
+    RegressionMetaDataElement,
+    GroupingFunction,
+    MetaDataField,
+    MetaDataElement,
+    MetaData,
+    DatasetSubjectTrialEntry,
+)
+from ..metadata_processing.operation import loto
 
 
 class CreateDatasetsInputConfig(BaseModel):
@@ -207,13 +215,18 @@ class EegDataset(Dataset):
         self.overlap = kwargs.get("overlap", 1)  # 默认无重叠
         self.transform = kwargs.get("transform", None)
 
+        # Ensure files are a subset of metadata's keys
+        assert set(self.files).issubset(
+            self.metadata.keys()
+        ), "Files must be a subset of metadata's keys"
+
         # 计算总样本数目
         self.count_samples()
 
     def count_samples(self):
         self.total_samples = 0
-        for file_meta in self.metadata.values():
-            signal_length = file_meta.signal_length
+        for file in self.files:
+            signal_length = self.metadata[file].signal_length
             stride = self.segment_length // self.overlap
             self.total_samples += max(
                 0, (signal_length - self.segment_length) // stride + 1
@@ -258,7 +271,8 @@ class EegDataset(Dataset):
             tuple: 文件索引和信号段索引。
         """
         cumulative = 0
-        for file_idx, file_meta in enumerate(self.metadata.values()):
+        for file_idx, file in enumerate(self.files):
+            file_meta = self.metadata[file]
             signal_length = file_meta.signal_length
             stride = self.segment_length // self.overlap
             num_segments = max(0, (signal_length - self.segment_length) // stride + 1)
@@ -279,7 +293,7 @@ class EegDataset(Dataset):
         for key in required_keys:
             if key not in kwargs:
                 raise KeyError(
-                    f"EEG_DATASET:VALIDATE_KWARGS:KEY_ERROR: Missing required key '{key}' in kwargs {kwargs}. The function is called from {get_caller()}. You should go back to the caller function and check the kwargs to be validated"
+                    f"EEG_DATASET:VALIDATE_KWARGS:KEY_ERROR: Missing required key '{key}' in kwargs {kwargs}. You should go back to the caller function and check the kwargs to be validated"
                 )
 
 

@@ -2,11 +2,11 @@ import os
 from collections.abc import Callable
 
 from pydantic import BaseModel
-from scipy.io import loadmat
+import numpy as np
 
-from .eeg_dataset import CreateDatasetsInputConfig, EegDataset
-from .metadata_processing import RegressionMetaDataElement
-from .regression_filter import ALLOWED_SPEECH_FEATURES, get_regression_filter
+from ..utils.common_datasets.eeg_dataset import EegDataset
+from ..utils.metadata_processing.data import RegressionMetaDataElement
+from .regress_filter import ALLOWED_SPEECH_FEATURES, get_regression_filter
 
 
 ENV_ALIASE = ["env", "envelope"]
@@ -51,17 +51,10 @@ class EegRegressionBaseDataset(EegDataset):
         """
         meta, exg = super().__getitem__(idx).values()
 
-        # 获取语音特征文件名
-        speech_feature_file = meta[self.speech_feature_type]
-
         # 加载语音特征
-        speech_feature_path = os.path.join(
-            self.speech_feature_path, speech_feature_file
+        speech_feature = np.load(
+            os.path.join(self.speech_feature_path, meta[self.speech_feature_type])
         )
-        mat_data = loadmat(speech_feature_path)
-
-        # 根据 key 提取特征
-        speech_feature = mat_data[self.speech_feature_type]
 
         # 根据 segment_length 和 overlap 截取语音特征段
         _, segment_idx = self._map_idx_to_file_and_segment(idx)

@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from .metadata_processing import RegressionMetaDataElement
+from ..utils.metadata_processing.data import RegressionMetaDataElement
 
 __all__ = ["get_regression_filter"]
 

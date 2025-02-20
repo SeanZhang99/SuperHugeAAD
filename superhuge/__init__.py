@@ -1,3 +1,3 @@
-from .src import models, datasets, functional
+from . import models, datasets, utils
 
-__all__ = ["models", "datasets", "functional"]
+__all__ = ["models", "datasets", "utils"]

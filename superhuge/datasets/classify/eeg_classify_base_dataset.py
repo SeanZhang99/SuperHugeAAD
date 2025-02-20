@@ -1,14 +1,12 @@
 from collections.abc import Callable
 
-from numpy import isin
-
-from .classfy_filter import (
-    get_classification_filter,
+from ..utils.common_datasets.eeg_dataset import EegDataset
+from ..utils.metadata_processing.data import ClassifyMetaDataElement
+from .classify_filter import (
     ALLOWED_NUM_CLASS_INT,
     ALLOWED_NUM_CLASS_STRING,
+    get_classification_filter,
 )
-from .eeg_dataset import EegDataset
-from .metadata_processing import Callable, ClassifyMetaDataElement
 
 
 class EegClassifyBaseDataset(EegDataset):

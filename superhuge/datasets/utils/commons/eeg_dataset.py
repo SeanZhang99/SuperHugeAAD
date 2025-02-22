@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-=======
-from ast import Call
->>>>>>> origin/main
 import inspect
 import os
 import pickle

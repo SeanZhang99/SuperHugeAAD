@@ -131,6 +131,7 @@ def generate_test_metadata(
     max_trials_per_subject=20,
 ) -> MetaData:
     metadata = {}
+    random.seed(42)
     for i in range(num_datasets):
         for j in range(num_subjects_per_dataset):
             num_trials = random.randint(min_trials_per_subject, max_trials_per_subject)

@@ -13,3 +13,4 @@ weights/
 !.vscode/*.code-snippets
 superhuge.egg-info/
 build/
+*egg-info/

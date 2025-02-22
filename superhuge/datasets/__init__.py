@@ -1,7 +1,7 @@
 from .classify import (
     EegClassifyBaseDataset,
     EegClassifyDatasetWithSpectrum,
-    get_classification_filter,
+    get_classify_filter,
 )
 from .regression import EegRegressionBaseDataset, get_regression_filter
 from .utils import (
@@ -24,7 +24,7 @@ __all__ = [
     "EegRegressionBaseDataset",
     "MetaData",
     "RegressionMetaDataElement",
-    "get_classification_filter",
+    "get_classify_filter",
     "get_regression_filter",
     "leave_one_out_input_decorator",
 ]

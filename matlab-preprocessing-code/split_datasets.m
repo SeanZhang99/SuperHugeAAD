@@ -10,7 +10,7 @@ for dataset_id = 1:length(dataset_names)
     dataset_info = dataset_infos(dataset_id);
     fs = dataset_info.fs;
 
-    save_path = fullfile('E:\split_datasets', dataset_name);  % 修改为你实际的存储目录
+    save_path = fullfile(save_basepath, dataset_name);  % 修改为你实际的存储目录
     if ~exist(save_path, 'dir')
         mkdir(save_path);  % 如果目录不存在，创建目录
     end

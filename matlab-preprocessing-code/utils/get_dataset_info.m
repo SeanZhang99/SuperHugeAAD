@@ -24,7 +24,9 @@ for dataset_name = dataset_names
             num_trial = 32;
             num_subject = 17;
             desired_length = 115 * fs;
-            channel = ["Cz"; "Fz"; "Fp1"; "F7"; "F3"; "FC1"; "C3"; "FC5"; "FT9"; "T7"; "CP5"; "CP1"; "P3"; "P7"; "PO9"; "O1"; "Pz"; "Oz"; "O2"; "PO10"; "P8"; "P4"; "CP2"; "CP6"; "T8"; "FT10"; "FC6"; "C4"; "FC2"; "F4"; "F8"; "Fp2"];
+            channel = ["Cz"; "Fz"; "Fp1"; "F7"; "F3"; "FC1"; "C3"; "FC5"; "FT9"; "T7"; "CP5";
+                "CP1"; "P3"; "P7"; "PO9"; "O1"; "Pz"; "Oz"; "O2"; "PO10"; "P8"; "P4"; "CP2";
+                "CP6"; "T8"; "FT10"; "FC6"; "C4"; "FC2"; "F4"; "F8"; "Fp2"];
         case "NJU_preproc"
             base_path = "E:\EEG_RAW_DATA\NJU-15class-Emotiv-AAD\exg\preprocessed";
             audio_path = "E:\EEG_RAW_DATA\NJU-15class-Emotiv-AAD\stimuli\";
@@ -35,15 +37,6 @@ for dataset_name = dataset_names
             num_trial = 32;
             desired_length = 115 * fs;
         case {"KUL_raw","KUL_preprocessed"}
-            base_path = "E:\EEG dataset\KUL";
-            audio_path = "E:\EEG dataset\KUL\stimuli\stimuli";
-            fs = 128;
-            filelists = dir(fullfile(base_path,"S*.mat"));
-            nch = 64;
-            f_upper = 64;
-            num_trial = 20;
-            desired_length = 1.2e4;
-        case "KUL_preprocessed"
             base_path = "E:\EEG dataset\KUL";
             audio_path = "E:\EEG dataset\KUL\stimuli\stimuli";
             fs = 128;
@@ -79,23 +72,6 @@ for dataset_name = dataset_names
             num_trial = 10;
             desired_length = 10e4;
             n_subject = length(dir(fullfile(base_path,"sub-*")));
-        case "sparKULee_preproc"
-            base_path = "E:\EEG_RAW_DATA\sparrKULee\derivatives\preprocessed_eeg";
-            audio_path = "E:\EEG_RAW_DATA\sparrKULee\derivatives\preprocessed_stimuli";
-            fs = 128;
-            tmp_list = dir(fullfile(base_path,"sub-*","ses*"));
-            f = fieldnames(tmp_list)';
-            f{2,1} = {};
-            filelists = struct(f{:});
-            for ff = 1:length(tmp_list)
-                if (tmp_list(ff).name ~= ".") && (tmp_list(ff).name ~= "..")
-                    filelists(end+1) = tmp_list(ff);
-                end
-            end
-            nch = 64;
-            f_upper = 64;
-            num_trial = 10;
-            desired_length = 10e4;
         case "DTU_preprocessed"
             base_path = "E:\EEG dataset\DTU\DATA_preproc";
             audio_path = "";
@@ -105,7 +81,12 @@ for dataset_name = dataset_names
             f_upper = 32;
             desired_length = 3200;
             num_trial = 60;
-            channel = ["Fp1"; "AF7"; "AF3"; "F1"; "F3"; "F5"; "F7"; "FT7"; "FC5"; "FC3"; "FC1"; "C1"; "C3"; "C5"; "T7"; "TP7"; "CP5"; "CP3"; "CP1"; "P1"; "P3"; "P5"; "P7"; "P9"; "PO7"; "PO3"; "O1"; "Iz"; "Oz"; "POz"; "Pz"; "CPz"; "Fpz"; "Fp2"; "AF8"; "AF4"; "AFz"; "Fz"; "F2"; "F4"; "F6"; "F8"; "FT8"; "FC6"; "FC4"; "FC2"; "FCz"; "Cz"; "C2"; "C4"; "C6"; "T8"; "TP8"; "CP6"; "CP4"; "CP2"; "P2"; "P4"; "P6"; "P8"; "P10"; "PO8"; "PO4"; "O2"; "EXG1"; "EXG2";
+            channel = ["Fp1"; "AF7"; "AF3"; "F1"; "F3"; "F5"; "F7"; "FT7"; "FC5"; "FC3"; 
+                "FC1"; "C1"; "C3"; "C5"; "T7"; "TP7"; "CP5"; "CP3"; "CP1"; "P1"; "P3"; "P5";
+                "P7"; "P9"; "PO7"; "PO3"; "O1"; "Iz"; "Oz"; "POz"; "Pz"; "CPz"; "Fpz"; "Fp2";
+                "AF8"; "AF4"; "AFz"; "Fz"; "F2"; "F4"; "F6"; "F8"; "FT8"; "FC6"; "FC4"; "FC2";
+                "FCz"; "Cz"; "C2"; "C4"; "C6"; "T8"; "TP8"; "CP6"; "CP4"; "CP2"; "P2"; "P4"; 
+                "P6"; "P8"; "P10"; "PO8"; "PO4"; "O2"; "EXG1"; "EXG2";
 ];
         case "MAD-EEG_preprocessed"
             base_path = "E:\\EEG dataset\\MAD-EEG\\madeeg_preprocessed.hdf5"
@@ -169,7 +150,12 @@ for dataset_name = dataset_names
             f_upper = 64;
             num_trial = 6;
             desired_length = 76800;
-            channel = ["Fp1"; "AF7"; "AF3"; "F1"; "F3"; "F5"; "F7"; "FT7"; "FC5"; "FC3"; "FC1"; "C1"; "C3"; "C5"; "T7"; "TP7"; "CP5"; "CP3"; "CP1"; "P1"; "P3"; "P5"; "P7"; "P9"; "PO7"; "PO3"; "O1"; "Iz"; "Oz"; "POz"; "Pz"; "CPz"; "Fpz"; "Fp2"; "AF8"; "AF4"; "AFz"; "Fz"; "F2"; "F4"; "F6"; "F8"; "FT8"; "FC6"; "FC4"; "FC2"; "FCz"; "Cz"; "C2"; "C4"; "C6"; "T8"; "TP8"; "CP6"; "CP4"; "CP2"; "P2"; "P4"; "P6"; "P8"; "P10"; "PO8"; "PO4"; "O2"; "EXG3"; "EXG4"; "EXG5"; "EXG6"];
+            channel = ["Fp1"; "AF7"; "AF3"; "F1"; "F3"; "F5"; "F7"; "FT7"; "FC5"; "FC3";
+                "FC1"; "C1"; "C3"; "C5"; "T7"; "TP7"; "CP5"; "CP3"; "CP1"; "P1"; "P3"; 
+                "P5"; "P7"; "P9"; "PO7"; "PO3"; "O1"; "Iz"; "Oz"; "POz"; "Pz"; "CPz"; "Fpz"; 
+                "Fp2"; "AF8"; "AF4"; "AFz"; "Fz"; "F2"; "F4"; "F6"; "F8"; "FT8"; "FC6"; "FC4";
+                "FC2"; "FCz"; "Cz"; "C2"; "C4"; "C6"; "T8"; "TP8"; "CP6"; "CP4"; "CP2"; "P2"; 
+                "P4"; "P6"; "P8"; "P10"; "PO8"; "PO4"; "O2"; "EXG3"; "EXG4"; "EXG5"; "EXG6"];
         case "ASA_preprocessed"
             base_path = "E:\EEG dataset\ASA";
             audio_path = "";

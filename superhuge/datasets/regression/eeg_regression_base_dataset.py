@@ -62,7 +62,11 @@ class EegRegressionBaseDataset(EegDataset):
         start_idx = segment_idx * stride
         speech_segment = speech_feature[start_idx : start_idx + self.segment_length, :]
 
-        return {"meta": meta, "exg": exg, "audio": speech_segment}
+        return {
+            "meta": meta,
+            "exg": np.float32(exg),
+            "audio": np.float32(speech_segment),
+        }
 
     @classmethod
     def meta_filter_func_parser(

@@ -18,6 +18,7 @@ Requires-Dist: pydantic
 Requires-Dist: numpy
 Requires-Dist: pyyaml
 Requires-Dist: einops
+Requires-Dist: ray
 Dynamic: author
 Dynamic: home-page
 Dynamic: requires-python

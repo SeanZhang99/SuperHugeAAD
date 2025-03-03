@@ -25,7 +25,8 @@ dependencies = [
     "pydantic",
     "numpy",
     "pyyaml",
-    "einops"
+    "einops",
+    "ray",
 ]
 
 [project.scripts]

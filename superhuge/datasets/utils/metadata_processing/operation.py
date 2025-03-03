@@ -54,12 +54,14 @@ def loto(
         - test_set
         - val_trials
     )
+    train_trials = list(train_trials)
+    train_trials.sort()
+    val_trials = list(val_trials)
+    val_trials.sort()
+    test_set = list(test_set)
+    test_set.sort()
 
-    return {
-        "train": list(train_trials),
-        "val": list(val_trials),
-        "test": list(test_set),
-    }
+    return {"train": train_trials, "val": val_trials, "test": test_set}
 
 
 @leave_one_out_input_decorator

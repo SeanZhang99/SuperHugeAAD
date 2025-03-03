@@ -48,17 +48,20 @@ class DInterface(pl2.LightningDataModule):
         self.create_datasets()
 
     def create_datasets(self):
-        class_args = list(
-            inspect.signature(
+        required_args = [
+            p.name
+            for p in inspect.signature(
                 self.config.dataset_class.create_datasets
-            ).parameters.keys()
-        )
+            ).parameters.values()
+            if p.default == inspect.Parameter.empty
+            and p.kind
+            in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+        ]
 
-        for key in self.config.dataset_args.keys():
-            if key not in class_args:
-                raise ValueError(
-                    f"DATA_INTERFACE:D_INTERFACE:CREATE_DATASETS:INVALID_DATASET_ARGS:VALUE_ERROR Argument {key} is not a valid argument for {self.config.dataset_class.create_datasets}. Expected arguments are {class_args}"
-                )
+        for arg in required_args:
+            assert (
+                arg in required_args
+            ), f"DATA_INTERFACE:D_INTERFACE:CREATE_DATASETS:MISSING_REQUIRED_ARG:VALUE_ERROR Missing required argument {arg} for {self.config.dataset_class.create_datasets}. Required arguments are {required_args}"
 
         self.trainset, self.valset, self.testset = (
             self.config.dataset_class.create_datasets(**self.config.dataset_args)

@@ -99,7 +99,12 @@ for dataset_id = 1:length(dataset_names)
             metadata{entry}{"num_channel"} = py.int(dataset_info.nch);
             metadata{entry}{"fs"} = py.int(fs);
             metadata{entry}{"dataset_name"} = py.str(dataset_name);
-            metadata{entry}{"channel"} = py.str(strjoin(dataset_info(end).channel, ','));
+            if isfield(dataset_info(end), 'channel') && ~isempty(dataset_info(end).channel)
+                metadata{entry}{"channel"} = py.str(strjoin(dataset_info(end).channel, ','));
+            else
+                metadata{entry}{"channel"} = py.str("");
+            end
+
             if label~="";metadata{entry}{"label"}=py.str(label);end
             if stimuli_path~="";metadata{entry}{"stimuli_path"}=py.str(stimuli_path);metadata{entry}{"stimuli_fs"}=py.int(stimuli_fs);end
             if env_path~="";metadata{entry}{"env_path"}=py.str(env_path);metadata{entry}{"env_fs"}=py.int(fs);end

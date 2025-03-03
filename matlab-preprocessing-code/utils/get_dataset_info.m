@@ -120,15 +120,15 @@ for dataset_name = dataset_names
                 "HEOR"; "HEOL"; "VEOU"; "VEOL"
             ];
         case "Estart-2019_raw"
-            base_path = "E:\EEG dataset\Estart_2019\eeg"
-            audio_path = "E:\EEG dataset\Estart_2019\audiobooks\audiobooks";
-            fs = 256;
-            filelists = [1];
-            nch = 20;
+            base_path = "E:\EEG_dataset_Superhuge\Estart_2019\eeg"
+            audio_path = "E:\EEG_dataset_Superhuge\Estart_2019\audiobooks\audiobooks\fM";
+            fs = 1000;
+            filelists = dir(fullfile(base_path,"*.h5"));
+            nch = 63;
             f_upper = 128;
-            desired_length = 5052;
-            num_trial = 22;
-            num_subject = 16;
+            desired_length = 140000;
+            num_trial = 4;
+            num_subject = 18;
             dataset_infos.filelists = filelists;
             channel = [];
         case "Data-for-CS_preprocessed"

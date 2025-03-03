@@ -66,6 +66,9 @@ for trial_idx = trial_idxs
                 exg = data_struct.EEG_space.data;
                 label = int32(data_struct.EEG_space.event.latency);
                 %env = fastif(label==1,data_struct.data.wavA{trial_idx},data_struct.data.wavB{trial_idx});
+        case "Estart-2019_raw"
+                exg = data_struct.group__fM.("part_"+num2str(trial_idx))(:);
+                stimuli_path = "part_" + string(trial_idx) + "_story.wav";
         case "Data-for-CS_preprocessed"
                 exg = data_struct.mergedStruct.data(trial_idx,:,:);
                 label =  string(data_struct.mergedStruct.label(trial_idx,:,:));

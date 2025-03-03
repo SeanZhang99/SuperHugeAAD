@@ -5,17 +5,15 @@ switch dataset_name
     case {"sparKULee_raw","sparKULee_preproc"}
         s = [];
     case "Estart-2019_raw"
-    h5Files = dir(fullfile(dataset_path, '*.h5'));
-    dataStruct = struct();
-    for k = 1:length(h5Files)
-        fileName = fullfile(dataset_path, h5Files(k).name);
+        fileName = dataset_path; 
         fileInfo = h5info(fileName);
-        fileData = struct();
+        s = struct();
+        
         for i = 1:length(fileInfo.Groups)
             groupName = fileInfo.Groups(i).Name;
-            fieldName = strrep(groupName, '/', '_');
+            fieldName = char(strrep(groupName, '/', '_'));
             if isstrprop(fieldName(1), 'digit') || fieldName(1) == '_'
-                fieldName = ['group_' fieldName];
+                fieldName = ["group_"+fieldName];
             end
             datasets = fileInfo.Groups(i).Datasets;
             groupData = struct();
@@ -23,10 +21,9 @@ switch dataset_name
                 datasetName = datasets(j).Name;
                 groupData.(datasetName) = h5read(fileName, [groupName '/' datasetName]);
             end
-            fileData.(fieldName) = groupData;
+            s.(fieldName) = groupData;
         end
-        dataStruct.(h5Files(k).name) = fileData;
-    end
+   
     otherwise
         s = load(dataset_path);
 end

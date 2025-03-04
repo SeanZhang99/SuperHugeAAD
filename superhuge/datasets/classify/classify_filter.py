@@ -2,7 +2,7 @@ from collections.abc import Callable
 
 from ..utils.metadata_processing.data import ClassifyMetaDataElement
 
-__all__ = ["get_classification_filter"]
+__all__ = ["get_classify_filter"]
 
 # Define the allowed number of class strings
 ALLOWED_NUM_CLASS_STRING = [

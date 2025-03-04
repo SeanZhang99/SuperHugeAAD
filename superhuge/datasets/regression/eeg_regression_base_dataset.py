@@ -62,6 +62,10 @@ class EegRegressionBaseDataset(EegDataset):
         start_idx = segment_idx * stride
         speech_segment = speech_feature[start_idx : start_idx + self.segment_length, :]
 
+        if self.transform:
+            for transform in self.transform:
+                speech_segment = transform(speech_segment)
+
         return {
             "meta": meta,
             "exg": np.float32(exg),

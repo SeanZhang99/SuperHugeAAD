@@ -3,7 +3,7 @@ import os
 import pickle
 from collections.abc import Callable, Iterable
 from importlib import import_module
-from typing import Any
+from typing import Any, Sequence
 
 import numpy
 from pydantic import BaseModel
@@ -35,7 +35,7 @@ class CreateDatasetsInputConfig(BaseModel):
     window_length: int
     fs: int
     overlap: int
-    transform: Callable | None
+    transform: Callable | Sequence[Callable] | None
     metadata_fields: list[MetaDataField]
 
 
@@ -67,7 +67,10 @@ class EegDataset(Dataset):
             "num_channel",
             "fs",
         ],
-        transform: Callable | None = None,
+        transform: (
+            Callable[..., Callable] | Sequence[Callable[..., Callable]] | None
+        ) = None,
+        transform_args: Sequence[dict[str, Any]] | None = None,
         **kwargs,
     ):
         """
@@ -83,7 +86,8 @@ class EegDataset(Dataset):
             window_length (int): 截取的信号段长度（秒）。
             fs (int): 采样频率。
             overlap (int): 重叠比例。
-            transform (callable, optional): 数据变换函数。
+            transform (callable, optional): 数据变换函数的工厂函数Callable[...,Callable]。
+            transform_args: 变换函数的参数。
             metadata_fields (list): 需要记录的元数据字段。
 
         Returns:
@@ -97,10 +101,24 @@ class EegDataset(Dataset):
             module_name, func_name = meta_group_func.rsplit(".", 1)
             meta_group_func = getattr(import_module(module_name), func_name)
 
+        if isinstance(transform, str):
+            module_name, func_name = transform.rsplit(".", 1)
+            transform = getattr(import_module(module_name), func_name)
+        elif isinstance(transform, Sequence):
+            transform = [
+                (
+                    getattr(import_module(t.rsplit(".", 1)[0]), t.rsplit(".", 1)[1])
+                    if isinstance(t, str)
+                    else t
+                )
+                for t in transform
+            ]
+
         meta_group_func = loto if meta_group_func is None else meta_group_func
         metadata_fields = list(
             set(metadata_fields) | set(cls.metadata_cls.model_fields.keys())
         )
+
         config = CreateDatasetsInputConfig(
             meta_path=os.path.join(root_path, "meta", "metadata.pkl"),
             exg_path=os.path.join(root_path, "exg"),
@@ -113,7 +131,16 @@ class EegDataset(Dataset):
             window_length=window_length,
             fs=fs,
             overlap=overlap,
-            transform=transform,
+            transform=(
+                [transform(**transform_args[0])]
+                if isinstance(transform, Callable) and transform_args
+                else (
+                    [t(**a) for t, a in zip(transform, transform_args)]
+                    if isinstance(transform, Sequence)
+                    and isinstance(transform_args, Sequence)
+                    else None
+                )
+            ),
             metadata_fields=metadata_fields,
             **kwargs,
         )
@@ -252,6 +279,7 @@ class EegDataset(Dataset):
         )  # 默认截取长度为1280
         self.overlap = kwargs.get("overlap", 1)  # 默认无重叠
         self.transform = kwargs.get("transform", None)
+        self.transform_args = kwargs.get("transform_args", None)
 
         # Ensure files are a subset of metadata's keys
         assert set(self.files).issubset(
@@ -291,7 +319,8 @@ class EegDataset(Dataset):
 
         # 应用变换
         if self.transform:
-            exg = self.transform(exg)
+            for transform in self.transform:
+                exg = transform(exg)
 
         # 获取元数据
         meta = self.metadata[file_name].model_dump()

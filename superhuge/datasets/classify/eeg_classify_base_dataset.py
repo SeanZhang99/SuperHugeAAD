@@ -1,7 +1,7 @@
 from collections.abc import Callable
 
-from ..utils.commons.eeg_dataset import EegDataset
-from ..utils.metadata_processing.data import ClassifyMetaDataElement
+from ..commons.eeg_dataset import EegDataset
+from ..metadata_processing.data import ClassifyMetaDataElement
 from .classify_filter import (
     ALLOWED_NUM_CLASS_INT,
     ALLOWED_NUM_CLASS_STRING,

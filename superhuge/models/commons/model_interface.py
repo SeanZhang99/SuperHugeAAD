@@ -16,11 +16,12 @@ from collections.abc import Callable, Sequence
 import inspect
 from typing import Any, final
 import einops
+import keras
 import torch
 from abc import ABC, abstractmethod
 
 import lightning as pl2
-import torchmetrics
+from torchmetrics.functional import pearson_corrcoef
 from torchmetrics.classification import ConfusionMatrix
 
 from .model_template import ModelTemplate
@@ -36,6 +37,7 @@ class MInterface(pl2.LightningModule, ABC):
         loss: torch.nn.modules.loss._Loss | Sequence[torch.nn.modules.loss._Loss],
         loss_hparams: Sequence[float] | None = None,
         precision: torch.dtype = torch.float32,
+        ckpt_path: str | None = None,
     ):
         super().__init__()
         self.precision = precision
@@ -53,15 +55,20 @@ class MInterface(pl2.LightningModule, ABC):
             self.model = model_class(**model_args).to(self.precision)
         else:
             raise TypeError(
-                f"SUPERHUGE:MODELS:MODEL_INTERFACE:__INIT__:{model_class} shoule be (a sequence of) 'torch.nn.modules.loss._Loss', but got {type(model_class)}"
+                f"SUPERHUGE:MODELS:MODEL_INTERFACE:__INIT__:{model_class} shoule be a 'torch.nn.Module' with method 'create_models' or a callable returning a model, but got {type(model_class)}"
             )
+        if ckpt_path is not None:
+            if isinstance(self.model, keras.Model):
+                self.model.load_weights(ckpt_path, skip_mismatch=True, by_name=True)
+            else:
+                self.model.load_state_dict(torch.load(ckpt_path), strict=False)
         self.loss = loss
         self.loss_hparams = loss_hparams
         self.lr = lr
         self.configure_loss()
         self.stage = "train"
 
-    def forward(self, *inputs: torch.Tensor):
+    def forward(self, *inputs: torch.Tensor) -> torch.Tensor:
         return self.model(*inputs)
 
     # define training_step, validation_step, test_step in your own subclass
@@ -81,14 +88,17 @@ class MInterface(pl2.LightningModule, ABC):
     ) -> torch.Tensor:
         pass
 
+    @final
     def on_train_epoch_start(self) -> None:
         self.stage = "train"
         return super().on_train_epoch_start()
 
+    @final
     def on_validation_epoch_start(self) -> None:
         self.stage = "val"
         return super().on_validation_epoch_start()
 
+    @final
     def on_test_epoch_start(self) -> None:
         self.stage = "test"
         return super().on_test_epoch_start()
@@ -189,14 +199,24 @@ class ClassifierInterface(MInterface):
 
 
 class RegressionInterface(MInterface):
+
+    @abstractmethod
+    def get_stats(
+        self, x_pred: torch.Tensor, y_pred: torch.Tensor, batch_size: int | None = None
+    ):
+        pass
+
     def training_step(
         self, batch: dict[str, torch.Tensor | dict], batch_idx: int
     ) -> torch.Tensor:
-        inputs: torch.Tensor = batch["exg"]  # type: ignore
+        # extract input and target, call forward, and calculate loss
         targets: torch.Tensor = batch["audio"]  # type: ignore
-        outputs = self.forward(inputs)
-        loss = self.loss_fn(targets, outputs)  # type: ignore
-        self.log(f"{self.stage}/loss", loss)  # Log as 'train_loss' during training
+        predictions = self.forward(batch["exg"])
+        loss = self.loss_fn(targets, predictions).mean()  # type: ignore
+
+        self.get_stats(predictions, targets, batch_size=targets.shape[0])
+        self.log(f"{self.stage}/loss", loss, batch_size=targets.shape[0])
+
         return loss
 
     def validation_step(
@@ -215,44 +235,33 @@ class RegressionInterface(MInterface):
 class cEEGridRegressionInterface(RegressionInterface):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.a_pcorr = torchmetrics.PearsonCorrCoef(16)
-        self.u_pcorr1 = torchmetrics.PearsonCorrCoef(16)
-        self.u_pcorr2 = torchmetrics.PearsonCorrCoef(16)
 
-    def training_step(
-        self, batch: dict[str, torch.Tensor | dict], batch_idx: int
-    ) -> torch.Tensor:
-        # extract input and target, call forward, and calculate loss
-        inputs: torch.Tensor = batch["exg"]  # type: ignore
-        targets: torch.Tensor = batch["audio"]  # type: ignore
-        predictions = self.forward(inputs)
-        loss = self.loss_fn(targets, predictions)  # type: ignore
+    def get_stats(
+        self, x_pred: torch.Tensor, y_pred: torch.Tensor, batch_size: int | None = None
+    ) -> tuple:
+        stats: dict[str, torch.Tensor] = {}
 
-        # convert tensor formats, prepare calculate pearson correlation, and prediction accuracy
-        targets = einops.rearrange(targets, "b t f -> t b f")
-        predictions = einops.rearrange(predictions, "b t -> t b")
-        a_pcorr = self.a_pcorr(predictions, targets[:, :, 0])
-        u_pcorr1 = self.u_pcorr1(predictions, targets[:, :, 1])
-        u_pcorr2 = self.u_pcorr2(predictions, targets[:, :, 2])
-        acc = torch.logical_and(a_pcorr > u_pcorr1, a_pcorr > u_pcorr2).to(
-            torch.float32
-        )
+        y_pred_labels = ["a", *[f"u{index}" for index in range(1, y_pred.shape[-1])]]
 
-        # log loss and pearson correlation
-        self.log(f"{self.stage}/loss", loss)
-        self.log(f"{self.stage}/a_pcorr", a_pcorr.mean())
-        self.log(f"{self.stage}/u_pcorr", u_pcorr1.mean())
-        self.log(f"{self.stage}/u_pcorr", u_pcorr2.mean())
-        self.log(f"{self.stage}/acc", acc.mean())
+        x_pred = einops.rearrange(x_pred, "batch time feature -> time batch feature")
+        y_pred = einops.rearrange(y_pred, "batch time feature -> time batch feature")
 
-        return loss
+        # label meaning: 'a': attended, 'u+digit': unattended
+        for j, label in enumerate(y_pred_labels):
+            stats[f"{self.stage}/{label}_pcc"] = pearson_corrcoef(
+                x_pred[:, :, 0], y_pred[:, :, j]
+            )
 
-    def validation_step(
-        self, batch: dict[str, torch.Tensor | dict], batch_idx: int
-    ) -> torch.Tensor:
-        return self.training_step(batch, batch_idx)
+        stats[f"{self.stage}/acc"] = (
+            torch.argmax(
+                torch.stack(
+                    [stats[f"{self.stage}/{label}_pcc"] for label in y_pred_labels],
+                    dim=1,
+                ),
+                dim=1,
+            )
+            == 0
+        ).type_as(x_pred)
+        self.log_dict({k: v.mean() for k, v in stats.items()}, batch_size=batch_size)
 
-    def test_step(
-        self, batch: dict[str, torch.Tensor | dict], batch_idx: int
-    ) -> torch.Tensor:
-        return self.validation_step(batch, batch_idx)
+        return stats

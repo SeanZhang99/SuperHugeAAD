@@ -4,15 +4,14 @@ from .classify import (
     get_classify_filter,
 )
 from .regression import EegRegressionBaseDataset, get_regression_filter
-from .utils import (
+from .metadata_processing import (
     ClassifyMetaDataElement,
     CrossValidationEntry,
-    DInterface,
-    EegDataset,
     MetaData,
     RegressionMetaDataElement,
     leave_one_out_input_decorator,
 )
+from .commons import DInterface, EegDataset
 
 __all__ = [
     "ClassifyMetaDataElement",

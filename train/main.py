@@ -22,16 +22,15 @@
 """
 import os
 import torch
-from src.functional.multi_run_cli import MultiRunCLI
+from superhuge.utils.multi_run_cli import MultiRunCLI
 
 torch.set_float32_matmul_precision("medium")
 
 
 if __name__ == "__main__":
-    project_path = os.path.dirname(os.path.abspath(__file__)).split("src")[0]
+    project_path = os.path.dirname(os.path.abspath(__file__))
     config_path = os.path.join(project_path, "configs")
     cli = MultiRunCLI(
-        "fit",
         "--task_config",
         os.path.join(config_path, "task_config.yaml"),
         "--config",

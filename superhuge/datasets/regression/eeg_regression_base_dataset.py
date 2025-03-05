@@ -4,8 +4,8 @@ from collections.abc import Callable
 from pydantic import BaseModel
 import numpy as np
 
-from ..utils.commons.eeg_dataset import EegDataset
-from ..utils.metadata_processing.data import RegressionMetaDataElement
+from ..commons.eeg_dataset import EegDataset
+from ..metadata_processing.data import RegressionMetaDataElement
 from .regress_filter import ALLOWED_SPEECH_FEATURES, get_regression_filter
 
 

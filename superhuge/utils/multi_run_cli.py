@@ -7,7 +7,7 @@ from .task_config_parser import TaskConfigParser
 
 class MultiRunCLI:
     def __init__(self, *args: str) -> None:
-        self.cli_argv = list(args) + sys.argv[1:]
+        self.cli_argv = list(args)
         self.task_config_path, self.cli_argv = self.__extract_task_config()
         assert (
             self.task_config_path is not None
@@ -35,4 +35,10 @@ class MultiRunCLI:
             cli = LightningCLI(
                 parser_kwargs={"parser_mode": "omegaconf"},
                 args=self.cli_argv + config_list,
+                run=False,
+            )
+            cli.trainer.fit(
+                cli.model,
+                cli.datamodule.train_dataloader(),
+                cli.datamodule.val_dataloader(),
             )

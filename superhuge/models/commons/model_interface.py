@@ -215,7 +215,7 @@ class RegressionInterface(MInterface):
         loss = self.loss_fn(targets, predictions).mean()  # type: ignore
 
         self.get_stats(predictions, targets, batch_size=targets.shape[0])
-        self.log(f"{self.stage}/loss", loss, batch_size=targets.shape[0])
+        self.log(f"{self.stage}/loss", loss, batch_size=targets.shape[0], prog_bar=True)
 
         return loss
 
@@ -262,6 +262,10 @@ class cEEGridRegressionInterface(RegressionInterface):
             )
             == 0
         ).type_as(x_pred)
-        self.log_dict({k: v.mean() for k, v in stats.items()}, batch_size=batch_size)
+        self.log_dict(
+            {k: v.mean() for k, v in stats.items()},
+            batch_size=batch_size,
+            prog_bar=True,
+        )
 
         return stats

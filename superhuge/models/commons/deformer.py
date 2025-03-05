@@ -333,7 +333,3 @@ class Conv2dWithConstraint(nn.Conv2d):
                 self.weight.data, p=2, dim=0, maxnorm=self.max_norm
             )
         return super(Conv2dWithConstraint, self).forward(input)
-
-
-def count_parameters(model: torch.nn.Module):
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)

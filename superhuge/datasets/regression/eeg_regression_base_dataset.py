@@ -14,7 +14,6 @@ MEL_ALIASE = ["mel", "mel spectrum", "mfcc"]
 
 
 class EEGDatasetWithSpeechFeatureCreationConfig(BaseModel, extra="allow"):
-    speech_feature_path: str
     speech_feature_key: str
 
 
@@ -53,14 +52,16 @@ class EegRegressionBaseDataset(EegDataset):
 
         # 加载语音特征
         speech_feature = np.load(
-            os.path.join(self.speech_feature_path, meta[self.speech_feature_type])
+            os.path.join(
+                self.speech_feature_path, meta[self.speech_feature_type].split("\\")[-1]
+            )
         )
 
         # 根据 segment_length 和 overlap 截取语音特征段
         _, segment_idx = self._map_idx_to_file_and_segment(idx)
         stride = self.segment_length // self.overlap
         start_idx = segment_idx * stride
-        speech_segment = speech_feature[start_idx : start_idx + self.segment_length, :]
+        speech_segment = speech_feature[start_idx : start_idx + self.segment_length]
 
         if self.transform:
             for transform in self.transform:

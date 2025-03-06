@@ -16,9 +16,20 @@ directional_focus_decoding:
               "label",
             ]
           n_folds: 5
+    model:
+      class_path: superhuge.models.commons.model_interface.ClassifyInterface
+      init_args:
+        loss:
+          class_path: torch.nn.modules.loss.CrossEntropyLoss
+          init_args:
+            weight: null
+            size_average: null
+            ignore_index: -100
+            reduce: null
+            reduction: "mean"
   tasks:
     binary_leftright:
-      enable: 1
+      enable: 0
       data:
         init_args:
           dataset_args:
@@ -62,6 +73,61 @@ directional_focus_decoding:
           model_args:
             num_class: 8
 
+  cross_validation:
+    leave_one_trial_out:
+      enable: 0
+      data:
+        init_args:
+          dataset_args:
+            meta_group_func: superhuge.datasets.metadata_processing.operation.loto
+    leave_one_subject_out:
+      enable: 0
+      data:
+        init_args:
+          dataset_args:
+            meta_group_func: superhuge.datasets.metadata_processing.operation.loso
+    leave_one_dataset_out:
+      enable: 0
+      data:
+        init_args:
+          dataset_args:
+            meta_group_func: superhuge.datasets.metadata_processing.operation.lodo
+
+speech_reconstruction:
+  type: regression
+  general:
+    data:
+      init_args:
+        dataset_class: superhuge.datasets.regression.eeg_regression_base_dataset.EegRegressionBaseDataset
+        dataset_args:
+          metadata_fields:
+            [
+              "dataset_id",
+              "subject_id",
+              "trial_id",
+              "signal_length",
+              "num_channel",
+              "fs",
+              "label",
+            ]
+          n_folds: 5
+
+    model:
+      class_path: superhuge.models.commons.model_interface.RegressionInterface
+      init_args:
+        loss:
+          class_path: torch.nn.modules.loss.MSELoss
+  tasks:
+    envelope_reconstruction:
+      enable: 1
+      data:
+        init_args:
+          dataset_args:
+            meta_filter_func_args:
+              - env
+            speech_feature_path: "E:/derivatives/SuperHuge/stimuli/env"
+            speech_feature_key: env
+  
   cross_validation:
     leave_one_trial_out:
       enable: 1

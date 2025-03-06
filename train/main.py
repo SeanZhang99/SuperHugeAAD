@@ -24,25 +24,25 @@ import os
 
 os.environ["KERAS_BACKEND"] = "torch"
 import torch
+import keras
 from superhuge.utils.multi_run_cli import MultiRunCLI
+from superhuge.utils.pick_model_config import pick_file
 
+keras.config.set_image_data_format("channels_first")
 torch.set_float32_matmul_precision("medium")
 
 
 if __name__ == "__main__":
     project_path = os.path.dirname(os.path.abspath(__file__))
     config_path = os.path.join(project_path, "configs")
+    model_config = pick_file(project_path)
+    if not model_config:
+        model_config = os.path.join(config_path, "models", "rebok_deformer.yaml")
     cli = MultiRunCLI(
         "--task_config",
         os.path.join(config_path, "task_config.yaml"),
         "--config",
-        os.path.join(config_path, "trainer_config.yaml"),
+        os.path.join(config_path, "config.yaml"),
         "--model",
-        os.path.join(config_path, "model_config.yaml"),
-        "--data",
-        os.path.join(config_path, "data_config.yaml"),
-        "--optimizer",
-        os.path.join(config_path, "optimizer_config.yaml"),
-        "--lr_scheduler",
-        os.path.join(config_path, "lr_scheduler_config.yaml"),
+        model_config,
     )

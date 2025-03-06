@@ -251,6 +251,8 @@ class EegDataset(Dataset):
         for entry, data in metadata.items():
             tmp_dict = {}
             for k, v in data.items():
+                if "path" in k:
+                    k = k.split("_")[0]
                 if k in metadata_fields:
                     tmp_dict[k] = v
             if set(metadata_fields).issubset(set(tmp_dict.keys())):

@@ -1,3 +1,6 @@
+import keras
+
+keras.config.set_image_data_format("channels_first")
 from importlib import import_module
 from typing import Callable
 from keras import layers, Input, Model, KerasTensor, constraints, Layer
@@ -25,7 +28,7 @@ def preconv(input: KerasTensor, num_kernels: int, temporal_kernel_size: int):
     )(input)
     x = layers.Conv2D(
         num_kernels,
-        (input.shape[-1], 1),
+        (input.shape[-2], 1),
         padding="valid",
         kernel_constraint=constraints.max_norm(2),
     )(x)
@@ -107,7 +110,7 @@ def transformer(
         x_cg = x
         x_cg = layers.MultiHeadAttention(
             num_heads=num_heads, key_dim=dim_heads, dropout=dp_rate
-        )(x_cg)
+        )(x_cg, x_cg)
         x_cg = layers.LayerNormalization()(x_cg + x)
 
         x_fg = fg_cnn(
@@ -203,14 +206,14 @@ def deformer(
 
     if preconv_callable is None:
         preconv_callable = preconv
-    # elif isinstance(preconv_callable, str):
-    #     module_name, func_name = preconv_callable.rsplit(".", 1)
-    #     preconv_callable = getattr(import_module(module_name), func_name)
+    elif isinstance(preconv_callable, str):
+        module_name, func_name = preconv_callable.rsplit(".", 1)
+        preconv_callable = getattr(import_module(module_name), func_name)
     if transformer_callable is None:
         transformer_callable = transformer
-    # elif isinstance(transformer_callable, str):
-    #     module_name, func_name = transformer_callable.rsplit(".", 1)
-    #     transformer_callable = getattr(import_module(module_name), func_name)
+    elif isinstance(transformer_callable, str):
+        module_name, func_name = transformer_callable.rsplit(".", 1)
+        transformer_callable = getattr(import_module(module_name), func_name)
     validate_callable(preconv_callable, preconv)
     validate_callable(transformer_callable, transformer)
 
@@ -228,5 +231,7 @@ def deformer(
         ff_hidden_dim,
         dp_rate,
     )(x)
+
+    x = layers.Lambda(lambda x: rearrange(x, "b k t -> b t k"))(x)
 
     return Model(inputs=input, outputs=x)

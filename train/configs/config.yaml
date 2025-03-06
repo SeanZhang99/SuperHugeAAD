@@ -1,11 +1,54 @@
 ---
+data:
+  class_path: superhuge.datasets.commons.data_interface.DInterface
+  init_args:
+    dataloader_args:
+      batch_size: 16
+      num_workers: 2
+      persistent_workers: true
+    dataset_args:
+      fs: 128
+      metadata_fields:
+        - dataset_id
+        - subject_id
+        - trial_id
+        - signal_length
+        - num_channel
+        - fs
+        - label
+      n_folds: 5
+      overlap: 1
+      root_path: E:/derivatives/SuperHuge
+      transform: null
+      window_length: 10
+    dataset_class: superhuge.datasets.classify.eeg_classify_base_dataset.EegClassifyBaseDataset
 # lightning.pytorch==2.5.0.post0
+lr_scheduler:
+  class_path: lightning.pytorch.cli.ReduceLROnPlateau
+  init_args:
+    cooldown: 5
+    eps: 1.e-8
+    factor: 0.5
+    min_lr: 1.e-8
+    mode: min
+    monitor: val/loss
+    patience: 5
+    threshold: 0.0001
+    threshold_mode: rel
+    verbose: false
+optimizer:
+  class_path: Adam
+  init_args:
+    betas: [0.9, 0.999]
+    eps: 1.e-8
+    lr: 1.e-4
+    weight_decay: 1.e-4
 seed_everything: 42
 trainer:
-  accelerator: cpu
+  accelerator: auto
   accumulate_grad_batches: 1
   barebones: false
-  benchmark: null
+  benchmark: false
   callbacks:
     - class_path: lightning.pytorch.callbacks.LearningRateMonitor
       init_args:
@@ -14,24 +57,27 @@ trainer:
       init_args:
         min_delta: 0.01
         mode: min
-        monitor: val_loss
+        monitor: val/loss
         patience: 10
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
         mode: min
-        monitor: val_loss
+        monitor: val/loss
         save_last: true
         save_top_k: 2
         save_weights_only: true
+    - class_path: superhuge.utils.fancy_progress_bar.FancyProgressBar
+      init_args:
+        refresh_rate: 50
   check_val_every_n_epoch: 1
   default_root_dir: null
   detect_anomaly: false
-  deterministic: null
+  deterministic: true
   devices: auto
   enable_checkpointing: null
   enable_model_summary: null
   enable_progress_bar: null
-  fast_dev_run: false
+  fast_dev_run: true
   gradient_clip_algorithm: null
   gradient_clip_val: null
   inference_mode: true

@@ -24,14 +24,19 @@ import lightning as pl2
 from torchmetrics.functional import pearson_corrcoef
 from torchmetrics.classification import ConfusionMatrix
 
+from superhuge.datasets import regression
+
 from .model_template import ModelTemplate
+from .hoods import classify_hood, regression_hood
 
 
 class MInterface(pl2.LightningModule, ABC):
     def __init__(
         self,
-        model_class: type[ModelTemplate] | Callable[..., ModelTemplate],
-        model_args: dict[str, Any],
+        /,
+        *,
+        model_class: type[ModelTemplate] | Callable,
+        model_args: dict,
         loss: torch.nn.modules.loss._Loss | Sequence[torch.nn.modules.loss._Loss],
         loss_hparams: Sequence[float] | None = None,
         precision: torch.dtype = torch.float32,
@@ -64,6 +69,29 @@ class MInterface(pl2.LightningModule, ABC):
         self.loss_hparams = loss_hparams
         self.configure_loss()
         self.stage = "train"
+
+        self.get_input_size(**model_args)
+
+    def get_input_size(self, /, **kwargs) -> tuple[int, int]:
+        if "input_length" in kwargs:
+            input_length = kwargs["input_length"]
+        elif "window_length" in kwargs and "fs" in kwargs:
+            input_length = kwargs["window_length"] * kwargs["fs"]
+        else:
+            raise ValueError(
+                f"SUPERHUGE:MODELS:MODEL_INTERFACE:__INIT__: Cannot interfere the input length from {kwargs}"
+            )
+        if "num_channel" in kwargs:
+            num_channel = kwargs["num_channel"]
+        elif "num_electrodes" in kwargs:
+            num_channel = kwargs["num_electrodes"]
+        else:
+            raise ValueError(
+                f"SUPERHUGE:MODELS:MODEL_INTERFACE:__INIT__: Cannot interfere the number of channels from {kwargs}"
+            )
+        self.input_size = (input_length, num_channel)
+
+        return self.input_size
 
     def forward(self, *inputs: torch.Tensor) -> torch.Tensor:
         return self.model(*inputs)
@@ -128,21 +156,27 @@ class MInterface(pl2.LightningModule, ABC):
 
 
 class ClassifierInterface(MInterface):
-    def __init__(self, *args, **kwargs):
+
+    def __init__(self, **kwargs):
         # Get the signature of the parent __init__ method
         parent_signature = inspect.signature(super().__init__)
 
         # Validate the arguments against the parent's signature
-        bound_arguments = parent_signature.bind(*args, **kwargs)
+        bound_arguments = parent_signature.bind(**kwargs)
         bound_arguments.apply_defaults()  # Ensure default values are included
 
         # Forward the validated arguments to the parent
-        super().__init__(*bound_arguments.args, **bound_arguments.kwargs)
+        super().__init__(**bound_arguments.kwargs)
+
+        model_args: dict = bound_arguments.arguments["model_args"]
+        num_class = model_args["num_class"]
 
         self.confusion_matrix = ConfusionMatrix(
             task="multiclass",
-            num_classes=bound_arguments.arguments["model_args"]["num_class"],
+            num_classes=num_class,
         )
+
+        self.hood = classify_hood(self.input_size, num_class)
 
     __init__.__signature__ = inspect.signature(MInterface.__init__)  # type: ignore
 
@@ -152,7 +186,7 @@ class ClassifierInterface(MInterface):
         meta: dict[str, Any] = batch["meta"]
         exg: torch.Tensor = batch["exg"]
         label: str = batch["label"]
-        outputs = self.forward(exg)
+        outputs: torch.Tensor = self.hood(self.forward(exg))
         pred = outputs.argmax(dim=1)
         loss = self.loss_fn(outputs, label)  # type: ignore
         stage = self.stage
@@ -196,19 +230,27 @@ class ClassifierInterface(MInterface):
 
 
 class RegressionInterface(MInterface):
+    def __init__(self, **kwargs):
+        # Get the signature of the parent __init__ method
+        parent_signature = inspect.signature(super().__init__)
 
-    @abstractmethod
-    def get_stats(
-        self, x_pred: torch.Tensor, y_pred: torch.Tensor, batch_size: int | None = None
-    ):
-        pass
+        # Validate the arguments against the parent's signature
+        bound_arguments = parent_signature.bind(**kwargs)
+        bound_arguments.apply_defaults()
+
+        # Forward the validated arguments to the parent
+        super().__init__(**bound_arguments.kwargs)
+
+        self.hood = regression_hood(self.input_size)
+
+    __init__.__signature__ = inspect.signature(MInterface.__init__)  # type: ignore
 
     def training_step(
         self, batch: dict[str, torch.Tensor | dict], batch_idx: int
     ) -> torch.Tensor:
         # extract input and target, call forward, and calculate loss
         targets: torch.Tensor = batch["audio"]  # type: ignore
-        predictions = self.forward(batch["exg"])
+        predictions = self.hood(self.forward(batch["exg"]))
         loss = self.loss_fn(predictions, targets).mean()  # type: ignore
 
         self.get_stats(predictions, targets, batch_size=targets.shape[0])
@@ -228,16 +270,15 @@ class RegressionInterface(MInterface):
     ) -> torch.Tensor:
         return self.validation_step(batch, batch_idx)
 
-
-class cEEGridRegressionInterface(RegressionInterface):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def get_stats(
         self, x_pred: torch.Tensor, y_pred: torch.Tensor, batch_size: int | None = None
     ) -> tuple:
         stats: dict[str, torch.Tensor] = {}
 
+        if x_pred.ndim == 2:
+            x_pred = einops.rearrange(x_pred, "batch time -> batch time 1")
+        if y_pred.ndim == 2:
+            y_pred = einops.rearrange(y_pred, "batch time -> batch time 1")
         y_pred_labels = ["a", *[f"u{index}" for index in range(1, y_pred.shape[-1])]]
 
         x_pred = einops.rearrange(x_pred, "batch time feature -> time batch feature")

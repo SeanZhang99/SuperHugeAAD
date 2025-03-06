@@ -113,9 +113,9 @@ for dataset_id = 1:length(dataset_names)
             metadata{entry}{"fs"} = py.int(fs);
             metadata{entry}{"dataset_name"} = py.str(dataset_name);
             if string(label)~="";metadata{entry}{"label"}=label;end
-            if stimuli_path~="";metadata{entry}{"stimuli_path"}=py.str(stimuli_path);metadata{entry}{"stimuli_fs"}=py.int(stimuli_fs);end
-            if env_path~="";metadata{entry}{"env_path"}=py.str(env_path);metadata{entry}{"env_fs"}=py.int(fs);end
-            if mel_path~="";metadata{entry}{"mel_path"}=py.str(mel_path);metadata{entry}{"mel_fs"}=py.int(fs);end
+            if stimuli_path~="";metadata{entry}{"stimuli"}=py.str(stimuli_path);metadata{entry}{"stimuli_fs"}=py.int(stimuli_fs);end
+            if env_path~="";metadata{entry}{"env"}=py.str(env_path);metadata{entry}{"env_fs"}=py.int(fs);end
+            if mel_path~="";metadata{entry}{"mel"}=py.str(mel_path);metadata{entry}{"mel_fs"}=py.int(fs);end
         end
     end
 end

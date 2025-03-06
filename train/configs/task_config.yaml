@@ -3,7 +3,7 @@ directional_focus_decoding:
   general:
     data:
       init_args:
-        dataset_class: src.datasets.eeg_classify_base_dataset.EegClassifyBaseDataset
+        dataset_class: superhuge.datasets.classify.eeg_classify_base_dataset.EegClassifyBaseDataset
         dataset_args:
           metadata_fields:
             [
@@ -68,16 +68,16 @@ directional_focus_decoding:
       data:
         init_args:
           dataset_args:
-            meta_group_func: src.datasets.metadata_processing.loto
+            meta_group_func: superhuge.datasets.metadata_processing.operation.loto
     leave_one_subject_out:
       enable: 0
       data:
         init_args:
           dataset_args:
-            meta_group_func: src.datasets.metadata_processing.loso
+            meta_group_func: superhuge.datasets.metadata_processing.operation.loso
     leave_one_dataset_out:
       enable: 0
       data:
         init_args:
           dataset_args:
-            meta_group_func: src.datasets.metadata_processing.lodo
+            meta_group_func: superhuge.datasets.metadata_processing.operation.lodo

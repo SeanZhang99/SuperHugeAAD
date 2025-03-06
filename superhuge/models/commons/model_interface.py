@@ -30,10 +30,8 @@ from .model_template import ModelTemplate
 class MInterface(pl2.LightningModule, ABC):
     def __init__(
         self,
-        /,
         model_class: type[ModelTemplate] | Callable[..., ModelTemplate],
         model_args: dict[str, Any],
-        lr: float,
         loss: torch.nn.modules.loss._Loss | Sequence[torch.nn.modules.loss._Loss],
         loss_hparams: Sequence[float] | None = None,
         precision: torch.dtype = torch.float32,
@@ -64,7 +62,6 @@ class MInterface(pl2.LightningModule, ABC):
                 self.model.load_state_dict(torch.load(ckpt_path), strict=False)
         self.loss = loss
         self.loss_hparams = loss_hparams
-        self.lr = lr
         self.configure_loss()
         self.stage = "train"
 
@@ -144,7 +141,7 @@ class ClassifierInterface(MInterface):
 
         self.confusion_matrix = ConfusionMatrix(
             task="multiclass",
-            num_classes=bound_arguments.kwargs["model_args"]["num_classes"],
+            num_classes=bound_arguments.arguments["model_args"]["num_class"],
         )
 
     __init__.__signature__ = inspect.signature(MInterface.__init__)  # type: ignore
@@ -212,7 +209,7 @@ class RegressionInterface(MInterface):
         # extract input and target, call forward, and calculate loss
         targets: torch.Tensor = batch["audio"]  # type: ignore
         predictions = self.forward(batch["exg"])
-        loss = self.loss_fn(targets, predictions).mean()  # type: ignore
+        loss = self.loss_fn(predictions, targets).mean()  # type: ignore
 
         self.get_stats(predictions, targets, batch_size=targets.shape[0])
         self.log(f"{self.stage}/loss", loss, batch_size=targets.shape[0], prog_bar=True)

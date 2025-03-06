@@ -246,7 +246,6 @@ class Transformer(nn.Module):
             ),
             nn.BatchNorm1d(in_chan),
             nn.ELU(),
-            nn.MaxPool1d(kernel_size=2, stride=2) if use_max_pool else nn.Identity(),
         )
 
     def __init__(

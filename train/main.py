@@ -21,6 +21,8 @@
     DInterface can be seen as transparent to all your args.    
 """
 import os
+
+os.environ["KERAS_BACKEND"] = "torch"
 import torch
 from superhuge.utils.multi_run_cli import MultiRunCLI
 

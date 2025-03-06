@@ -8,31 +8,9 @@ from einops import rearrange
 from keras import layers, Model, Input
 import keras
 
-from .model_template import ModelTemplate
+from ..model_template import ModelTemplate
 
 
-def cnn_block(in_chan, out_chan, kernel_size, num_chan, last_layer):
-    input_layer = Input(shape=(None, None, in_chan))
-    x = layers.Conv2D(
-        out_chan,
-        kernel_size,
-        padding="same",
-        kernel_constraint=keras.constraints.max_norm(2),
-    )(input_layer)
-    x = layers.Conv2D(
-        out_chan,
-        (num_chan, 1),
-        padding="valid",
-        kernel_constraint=keras.constraints.max_norm(2),
-    )(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.ELU()(x)
-    x = (
-        layers.Lambda(lambda x: einops.rearrange(x, "b f c t -> b c f t"))(x)
-        if not last_layer
-        else x
-    )
-    return Model(inputs=input_layer, outputs=x)
 
 
 def create_models(
@@ -56,17 +34,13 @@ def create_models(
     eeg = layers.Lambda(lambda x: einops.rearrange(x, "b t (f c) -> b f c t", f=1))(
         input_eeg
     )
-    x = cnn_block(
+    x = preconv(
         1, num_kernels, (1, temporal_kernel_size), num_channel, last_layer=True
     )(eeg)
 
     x = layers.Lambda(lambda x: einops.rearrange(x, "b k c f -> b k (c f)"))(x)
-    pos_embedding = layers.Embedding(
-        input_dim=num_kernels, output_dim=int(0.5 * fs * window_length)
-    )(x)
-    x = layers.Add()([x, pos_embedding])
 
-    x = build_transformer(
+    x = transformer(
         x,
         dropout,
         mha_depth,
@@ -85,7 +59,7 @@ def create_models(
     return Model(inputs=input_eeg, outputs=output)
 
 
-def build_transformer(
+def transformer(
     x,
     dropout,
     depth,

@@ -119,7 +119,7 @@ class MetricNextLineProgress(CustomProgress):
 
 
 class FancyProgressBar(RichProgressBar):
-    def __init__(self, refresh_rate: int = 1):
+    def __init__(self, refresh_rate: int = 5):
         parent_signature = inspect.signature(super().__init__)
 
         # Validate the arguments against the parent's signature
@@ -127,7 +127,7 @@ class FancyProgressBar(RichProgressBar):
         bound_arguments.apply_defaults()  # Ensure default values are included
 
         # Forward the validated arguments to the parent
-        super().__init__(**bound_arguments.kwargs)
+        super().__init__(*bound_arguments.args, **bound_arguments.kwargs)
 
     def _init_progress(self, trainer: "pl.Trainer") -> None:
         if self.is_enabled and (self.progress is None or self._progress_stopped):
@@ -147,6 +147,7 @@ class FancyProgressBar(RichProgressBar):
                 auto_refresh=False,
                 disable=self.is_disabled,
                 console=self._console,
+                refresh_per_second=1 / self._refresh_rate,
             )
             self.progress.start()
             # progress has started

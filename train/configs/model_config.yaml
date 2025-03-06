@@ -1,22 +1,19 @@
-class_path: src.models.model_interface.ClassifierInterface
+class_path: superhuge.models.commons.model_interface.ClassifierInterface
 init_args:
-  model_class: src.models.deformer.Deformer
+  model_class: superhuge.models.commons.rebok_deformer.deformer
   model_args:
-    skip_pool: false
-    symmetric_qk: false
-    dropout: 0.5
-    num_kernels: 13
-    temporal_kernel_size: 64
+    window_length: 10
+    fs: 128,
+    num_kernels: 32
+    temporal_kernel_size: 17
     mha_depth: 4
     mha_num_heads: 32
-    mha_dim_heads: 1024
-    mha_hidden_dim: 32
-    fc_num_neurons: 256
-    fs: 128
-    window_length: 10
-    num_channel: 32
-    num_class: 2
-  lr: 1e-3
+    mha_dim_heads: 128
+    ff_hidden_dim: 256
+    num_electrodes: 32
+    dp_rate: .5
+    preconv_callable: superhuge.models.commons.rebok_deformer.preconv
+    transformer_callable: superhuge.models.commons.rebok_deformer.transformer
   loss:
     class_path: torch.nn.modules.loss.CrossEntropyLoss
     init_args:

@@ -1,0 +1,180 @@
+clear;clc;close all;
+addpath(".\utils\");
+
+config;
+
+dataset_infos = get_dataset_info(dataset_names);
+metadata = py.dict;
+
+for dataset_id = 1:length(dataset_names)
+    dataset_name = dataset_names(dataset_id);
+    dataset_info = dataset_infos(dataset_id);
+    fs = dataset_info.fs;
+
+    save_path = fullfile(save_basepath, dataset_name); 
+    if ~exist(save_path, 'dir')
+        mkdir(save_path);  
+    end
+    exg_path = fullfile(save_path,"exg");
+    wav_path = fullfile(save_path,"stimuli");
+    compet_wav_path = fullfile(save_path, "compet_stimuli");
+    mkdir(exg_path);
+    mkdir(wav_path);
+    mkdir(compet_wav_path);
+    meta_path = fullfile(save_path, "meta");
+    if ~exist(meta_path, 'dir')
+        mkdir(meta_path);  
+    end
+    for feature_type = ["wav", "env", "mel"]
+        mkdir(fullfile(wav_path, feature_type));
+        mkdir(fullfile(compet_wav_path, feature_type)); 
+    end
+    for subject_id = 1:fastif(DEBUG_MODE,1,dataset_info.num_subject)
+        data_struct = load_data_struct(fullfile(dataset_info.filelists(subject_id).folder,dataset_info.filelists(subject_id).name),dataset_name);
+        for trial_id = 1:fastif(DEBUG_MODE,1,dataset_info.num_trial)
+            entry = sprintf("dataset-%03d-subject-%03d-trial-%03d",dataset_id,subject_id,trial_id);
+
+            trial_info = extract_trials(data_struct,dataset_info.base_path,trial_id,dataset_name,[]);
+            trial_info = trial_info(1);
+
+            exg = trial_info.exg;
+            label = trial_info.label;
+            stimuli_path = trial_info.stimuli_path;
+            compet_stimuli_path = trial_info.compet_stimuli_path;
+            env_path = trial_info.env_path;
+            compet_env_path = trial_info.compet_env_path;
+            mel_path = trial_info.mel_path;
+            stimuli = trial_info.stimuli;
+            compet_stimuli = trial_info.compet_stimuli;
+            stimuli_fs = trial_info.stimuli_fs;
+            env = trial_info.env;
+            compet_env = trial_info.compet_env;
+            mel = trial_info.mel;
+
+            if isnan(exg)
+                % trial index exceed
+                break
+            end
+            if EXG_OVERRIDE || ~exist(fullfile(exg_path,sprintf("%s.npy",entry)),"file")
+                py.numpy.save(fullfile(exg_path,sprintf("%s.npy",entry)),py.numpy.array(exg));
+            end
+
+            % 处理 stimuli_path 和 compet_stimuli_path
+            stimuli_types = {"stimuli", "compet_stimuli"};
+            paths = {stimuli_path, compet_stimuli_path};
+            stimuli_data = {[], []};
+            stimuli_fs = [NaN, NaN];
+            
+            % 处理 stimuli 和 compet_stimuli
+            for i = 1:length(stimuli_types)
+                if paths{i} ~= "" 
+                    [stimuli_data{i}, stimuli_fs(i)] = load_stimuli(dataset_info.audio_path, paths{i});
+                    assert(~isnan(stimuli_fs(i)));
+                    paths{i} = split(paths{i}, "."); 
+                    paths{i} = paths{i}(1);
+                elseif ~isempty(stimuli_data{i}) 
+                    paths{i} = entry + "_" + stimuli_types{i} + "_wav";
+                    assert(~isnan(stimuli_fs(i)));
+                end
+            end
+            
+            stimuli_path = paths{1};
+            compet_stimuli_path = paths{2};
+            
+            % 保存 stimuli 和 compet_stimuli
+            if stimuli_path ~= "" && (STIMULI_OVERRIDE || ~exist(fullfile(wav_path, "wav", sprintf("%s.npy", stimuli_path)), "file"))
+                py.numpy.save(fullfile(wav_path, "wav", sprintf("%s.npy", stimuli_path)), ...
+                              py.numpy.array(stimuli));
+            end
+            
+            if compet_stimuli_path ~= "" && (STIMULI_OVERRIDE || ~exist(fullfile(compet_wav_path, "wav", sprintf("%s.npy", compet_stimuli_path)), "file"))
+                py.numpy.save(fullfile(compet_wav_path, "wav", sprintf("%s.npy", compet_stimuli_path)), ...
+                              py.numpy.array(compet_stimuli));
+            end
+
+            stimuli_is_available = stimuli_path~=""&&~isempty(stimuli);
+
+            env_types = {"env", "compet_env"}; 
+            env_data  = {env,  compet_env}; 
+            
+            for i = 1:length(env_types)
+                if i == 1
+                    out_dir = fullfile(wav_path, "env");           
+                else
+                    out_dir = fullfile(compet_wav_path, "env");   
+                end
+                
+                if ~isempty(env_data{i})  
+                    env_filename = sprintf("%s_%s", entry, env_types{i});  
+                    py.numpy.save(fullfile(out_dir, sprintf("%s.npy", env_filename)), ...
+                                  py.numpy.array(env_data{i}));
+                end
+            end
+
+
+           mel_filenames = {[], []};
+            for i = 1:length(stimuli_types)
+                if i == 1
+                    base_dir = fullfile(wav_path, "mel");          
+                else
+                    base_dir = fullfile(compet_wav_path, "mel");   
+                end
+                
+                if mel_path ~= ""
+                    tmp = split(mel_path, ".");
+                    mel_filenames{i} = tmp{1};
+                elseif paths{i} ~= ""
+                    mel_filenames{i} = sprintf("%s_%s_mel", dataset_name, paths{i});
+                elseif ~isempty(mel)
+                    mel_filenames{i} = sprintf("%s_%s_mel", entry, stimuli_types{i});
+                end
+                
+                if paths{i} ~= "" && ~isempty(mel_filenames{i}) ...
+                   && (STIMULI_OVERRIDE || ~exist(fullfile(base_dir, sprintf("%s.npy", mel_filenames{i})), "file"))
+                    if isempty(mel) && mel_path ~= ""
+                        [mel, ~] = load_stimuli(dataset_info.audio_path, mel_path);
+                        mel = py.numpy.array(mel);
+                    end
+                    
+                    if isempty(mel) && ~isempty(stimuli_data{i})
+                        mel = py.mel.calculate_mel_spectrogram(...
+                            audio=py.numpy.array(stimuli_data{i}), ...
+                            fs=py.int(stimuli_fs(i)), ...
+                            target_fs=py.int(fs));
+                    end
+                    
+                    py.numpy.save(fullfile(base_dir, sprintf("%s.npy", mel_filenames{i})), mel);
+                end
+            end
+            %prepare metadata
+            entry = py.str(entry);
+            metadata{entry} = py.dict;
+            metadata{entry}{"dataset_id"} = py.int(dataset_id);
+            metadata{entry}{"subject_id"} = py.int(subject_id);
+            metadata{entry}{"trial_id"} = py.int(trial_id);
+            metadata{entry}{"signal_length"} = py.len(exg);
+            metadata{entry}{"num_channel"} = py.int(dataset_info.nch);
+            metadata{entry}{"fs"} = py.int(fs);
+            metadata{entry}{"dataset_name"} = py.str(dataset_name);
+            if isfield(dataset_info(end), 'channel') && ~isempty(dataset_info(end).channel)
+                metadata{entry}{"channel"} = py.str(strjoin(dataset_info(end).channel, ','));
+            else
+                metadata{entry}{"channel"} = py.str("");
+            end
+
+            if label~="";metadata{entry}{"label"}=py.str(label);end
+            if stimuli_path~="";metadata{entry}{"stimuli_path"}=py.str(stimuli_path);metadata{entry}{"stimuli_fs"}=py.int(stimuli_fs(1));end
+            if compet_stimuli_path~="";metadata{entry}{"compet_stimuli_path"}=py.str(compet_stimuli_path);metadata{entry}{"stimuli_fs"}=py.int(stimuli_fs(2));end
+            if env_path~="";metadata{entry}{"env_path"}=py.str(env_path);metadata{entry}{"env_fs"}=py.int(fs);end
+            if compet_env_path~="";metadata{entry}{"compet_env_path"}=py.str(compet_env_path);metadata{entry}{"env_fs"}=py.int(fs);end
+            if mel_path~="";metadata{entry}{"mel_path"}=py.str(mel);metadata{entry}{"mel_fs"}=py.int(fs);end
+            clearvars -except data_struct dataset_name metadata dataset_infos dataset_info fs dataset_id subject_id trial_id dataset_names save_path save_basepath meta_path exg_path wav_path compet_wav_path EXG_OVERRIDE STIMULI_OVERRIDE ENVELOPE_OVERRIDE MEL_SPECTRUM_OVERRIDE DEBUG_MODE
+        end
+    end
+end
+
+%% save metadata
+pickle = py.importlib.import_module('pickle');
+with_open = py.open(fullfile(meta_path,"metadata.pkl"),"wb");
+pickle.dump(metadata,with_open);
+with_open.close;

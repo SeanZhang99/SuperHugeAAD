@@ -2,7 +2,7 @@ function s = load_data_struct(dataset_path,dataset_name)
 %LOAD_DATA_STRUCT Summary of this function goes here
 %   Detailed explanation goes here
 switch dataset_name
-    case {"sparKULee_raw","sparKULee_preproc"}
+    case {"sparKULee_raw","sparKULee_preprocessed"}
         s = [];
     case "Estart-2019_raw"
         fileName = dataset_path; 

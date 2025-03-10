@@ -10,25 +10,7 @@ for dataset_id = 1:length(dataset_names)
     dataset_name = dataset_names(dataset_id);
     dataset_info = dataset_infos(dataset_id);
     fs = dataset_info.fs;
-
-    save_path = fullfile(save_basepath, dataset_name); 
-    if ~exist(save_path, 'dir')
-        mkdir(save_path);  
-    end
-    exg_path = fullfile(save_path,"exg");
-    wav_path = fullfile(save_path,"stimuli");
-    compet_wav_path = fullfile(save_path, "compet_stimuli");
-    mkdir(exg_path);
-    mkdir(wav_path);
-    mkdir(compet_wav_path);
-    meta_path = fullfile(save_path, "meta");
-    if ~exist(meta_path, 'dir')
-        mkdir(meta_path);  
-    end
-    for feature_type = ["wav", "env", "mel"]
-        mkdir(fullfile(wav_path, feature_type));
-        mkdir(fullfile(compet_wav_path, feature_type)); 
-    end
+   
     for subject_id = 1:fastif(DEBUG_MODE,1,dataset_info.num_subject)
         data_struct = load_data_struct(fullfile(dataset_info.filelists(subject_id).folder,dataset_info.filelists(subject_id).name),dataset_name);
         for trial_id = 1:fastif(DEBUG_MODE,1,dataset_info.num_trial)
@@ -84,32 +66,48 @@ for dataset_id = 1:length(dataset_names)
             % 保存 stimuli 和 compet_stimuli
             if stimuli_path ~= "" && (STIMULI_OVERRIDE || ~exist(fullfile(wav_path, "wav", sprintf("%s.npy", stimuli_path)), "file"))
                 py.numpy.save(fullfile(wav_path, "wav", sprintf("%s.npy", stimuli_path)), ...
-                              py.numpy.array(stimuli));
+                              py.numpy.array(stimuli_data{1}));
             end
             
             if compet_stimuli_path ~= "" && (STIMULI_OVERRIDE || ~exist(fullfile(compet_wav_path, "wav", sprintf("%s.npy", compet_stimuli_path)), "file"))
                 py.numpy.save(fullfile(compet_wav_path, "wav", sprintf("%s.npy", compet_stimuli_path)), ...
-                              py.numpy.array(compet_stimuli));
+                              py.numpy.array(stimuli_data{2}));
             end
 
-            stimuli_is_available = stimuli_path~=""&&~isempty(stimuli);
+            stimuli_is_available = stimuli_path~=""&&~isempty(stimuli_data);
 
-            env_types = {"env", "compet_env"}; 
-            env_data  = {env,  compet_env}; 
+            env_filenames = {"", ""};
             
-            for i = 1:length(env_types)
+            for i = 1:length(stimuli_types)
                 if i == 1
-                    out_dir = fullfile(wav_path, "env");           
+                    base_dir = fullfile(wav_path, "env");          
                 else
-                    out_dir = fullfile(compet_wav_path, "env");   
+                    base_dir = fullfile(compet_wav_path, "env");   
                 end
-                
-                if ~isempty(env_data{i})  
-                    env_filename = sprintf("%s_%s", entry, env_types{i});  
-                    py.numpy.save(fullfile(out_dir, sprintf("%s.npy", env_filename)), ...
-                                  py.numpy.array(env_data{i}));
+            
+                if env_path ~= ""
+                    tmp = split(env_path, ".");
+                    env_filenames{i} = tmp{1};
+                elseif stimuli_is_available
+                    env_filenames{i} = sprintf("%s_%s_env", dataset_name, paths{i});
+                elseif ~isempty(env)
+                    env_filenames{i} = sprintf("%s_%s_env", entry, stimuli_types{i});
+                end
+            
+                if ~strcmp(env_filenames{i}, "") ...
+                   && (ENVELOPE_OVERRIDE || ~exist(fullfile(base_dir, sprintf("%s.npy", env_filenames{i})), "file"))
+                    
+                    if isempty(env) && stimuli_is_available
+                    [~,env] = calculateEnvelopeERBGammatone(stimuli_data{i},stimuli_fs(i),15,.3);
+                    env = resample(env,fs,stimuli_fs(i));
+                    end
+            
+                    if isempty(env) && env_path ~="";[env,~] = load_stimuli(dataset_info.audio_path,env_path);end
+            
+                    py.numpy.save(fullfile(base_dir, sprintf("%s.npy", env_filenames{i})), env);
                 end
             end
+
 
 
            mel_filenames = {[], []};
@@ -128,10 +126,10 @@ for dataset_id = 1:length(dataset_names)
                 elseif ~isempty(mel)
                     mel_filenames{i} = sprintf("%s_%s_mel", entry, stimuli_types{i});
                 end
-                
-                if paths{i} ~= "" && ~isempty(mel_filenames{i}) ...
+               
+                if ~strcmp(mel_filenames{i}, "") ...
                    && (STIMULI_OVERRIDE || ~exist(fullfile(base_dir, sprintf("%s.npy", mel_filenames{i})), "file"))
-                    if isempty(mel) && mel_path ~= ""
+                    if ~strcmp(mel_path, "")
                         [mel, ~] = load_stimuli(dataset_info.audio_path, mel_path);
                         mel = py.numpy.array(mel);
                     end
@@ -142,9 +140,10 @@ for dataset_id = 1:length(dataset_names)
                             fs=py.int(stimuli_fs(i)), ...
                             target_fs=py.int(fs));
                     end
-                    
+
                     py.numpy.save(fullfile(base_dir, sprintf("%s.npy", mel_filenames{i})), mel);
                 end
+
             end
             %prepare metadata
             entry = py.str(entry);
@@ -175,6 +174,6 @@ end
 
 %% save metadata
 pickle = py.importlib.import_module('pickle');
-with_open = py.open(fullfile(meta_path,"metadata.pkl"),"wb");
+with_open = py.open(fullfile(save_path, "meta","metadata.pkl"),"wb");
 pickle.dump(metadata,with_open);
 with_open.close;

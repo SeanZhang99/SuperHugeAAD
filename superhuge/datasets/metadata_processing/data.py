@@ -66,15 +66,13 @@ class GroupingFunction(Protocol):
         for expected_param_name, expected_param_type in expected_params.items():
             if expected_param_name not in func_signature.parameters:
                 raise ValueError(
-                    f"METADATA_PROCESSING:GROUPING_FUNCTION:VALIDATE:FUNCTION_SIGNATURE_VALIDATION:SIGNATURE_ERROR: Missing required parameter: {
-                        expected_param_name}"
+                    f"METADATA_PROCESSING:GROUPING_FUNCTION:VALIDATE:FUNCTION_SIGNATURE_VALIDATION:SIGNATURE_ERROR: Missing required parameter: {expected_param_name}"
                 )
 
             func_param_type = func_signature.parameters[expected_param_name].annotation
             if func_param_type is inspect._empty:
                 raise TypeError(
-                    f"METADATA_PROCESSING:GROUPING_FUNCTION:VALIDATE:FUNCTION_SIGNATURE_VALIDATION:ANNOTATION_ERROR: Parameter {
-                        expected_param_name} must have a type annotation."
+                    f"METADATA_PROCESSING:GROUPING_FUNCTION:VALIDATE:FUNCTION_SIGNATURE_VALIDATION:ANNOTATION_ERROR: Parameter {expected_param_name} must have a type annotation."
                 )
 
             if (
@@ -82,8 +80,7 @@ class GroupingFunction(Protocol):
                 and func_param_type not in expected_param_type
             ):
                 raise TypeError(
-                    f"METADATA_PROCESSING:GROUPING_FUNCTION:VALIDATE:FUNCTION_SIGNATURE_VALIDATION:ANNOTATION_ERROR: Expected parameter {expected_param_name} to be {
-                        expected_param_type}, but got {func_param_type}"
+                    f"METADATA_PROCESSING:GROUPING_FUNCTION:VALIDATE:FUNCTION_SIGNATURE_VALIDATION:ANNOTATION_ERROR: Expected parameter {expected_param_name} to be {expected_param_type}, but got {func_param_type}"
                 )
             # 验证类型是否匹配
 

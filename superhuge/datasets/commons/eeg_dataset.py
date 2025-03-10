@@ -179,13 +179,15 @@ class EegDataset(Dataset):
 
     @classmethod
     def filt_metadata(cls, metadata: MetaData, meta_filter_func: Callable | None):
-        filtered_metadata: MetaData = {}
         if meta_filter_func:
+            filtered_metadata: MetaData = {}
             for dataset_entry, metadata_element in metadata.items():
                 metadata_element = meta_filter_func(metadata_element)
                 if metadata_element is not None:
                     filtered_metadata[dataset_entry] = metadata_element
-        return filtered_metadata
+            return filtered_metadata
+        else:
+            return metadata
 
     @classmethod
     def meta_filter_func_parser(

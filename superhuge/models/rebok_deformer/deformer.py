@@ -6,6 +6,47 @@ from typing import Callable
 from keras import layers, Input, Model, KerasTensor, constraints, Layer
 from einops import rearrange
 import inspect
+from pydantic import BaseModel, Field
+from typing import Annotated
+
+
+class PreconvParams(BaseModel):
+    num_kernels: Annotated[int, Field(gt=0)]
+    temporal_kernel_size: Annotated[int, Field(gt=0)]
+
+
+class FgCnnParams(BaseModel):
+    temporal_kernel_size: Annotated[int, Field(gt=0)]
+    dp_rate: Annotated[float, Field(ge=0, le=1)]
+
+
+class FeedforwardParams(BaseModel):
+    hidden_dim: Annotated[int, Field(gt=0)]
+    dp_rate: Annotated[float, Field(ge=0, le=1)]
+
+
+class TransformerParams(BaseModel):
+    depth: Annotated[int, Field(gt=0)]
+    num_heads: Annotated[int, Field(gt=0)]
+    dim_heads: Annotated[int, Field(gt=0)]
+    fg_cnn_temporal_kernel_size: Annotated[int, Field(gt=0)]
+    ff_hidden_dims: Annotated[int, Field(gt=0)]
+    dp_rate: Annotated[float, Field(ge=0, le=1)]
+
+
+class DeformerParams(BaseModel):
+    window_length: Annotated[int, Field(gt=0)]
+    fs: Annotated[int, Field(gt=0)]
+    num_kernels: Annotated[int, Field(gt=0)]
+    temporal_kernel_size: Annotated[int, Field(gt=0)]
+    mha_depth: Annotated[int, Field(gt=0)]
+    mha_num_heads: Annotated[int, Field(gt=0)]
+    mha_dim_heads: Annotated[int, Field(gt=0)]
+    ff_hidden_dim: Annotated[int, Field(gt=0)]
+    num_electrodes: Annotated[int, Field(gt=0)]
+    dp_rate: Annotated[float, Field(ge=0, le=1)]
+    preconv_callable: Callable[..., Model] | str | None = None
+    transformer_callable: Callable[..., Model] | str | None = None
 
 
 def preconv(input: KerasTensor, num_kernels: int, temporal_kernel_size: int):
@@ -20,6 +61,9 @@ def preconv(input: KerasTensor, num_kernels: int, temporal_kernel_size: int):
     Returns:
         Model: Keras Model with the preconv layers applied.
     """
+    params = PreconvParams(
+        num_kernels=num_kernels, temporal_kernel_size=temporal_kernel_size
+    )
     x = layers.Conv2D(
         num_kernels,
         (1, temporal_kernel_size),
@@ -50,6 +94,7 @@ def fg_cnn(input: KerasTensor, temporal_kernel_size: int, dp_rate: float):
     Returns:
         Model: Keras Model with the fg_cnn layers applied.
     """
+    params = FgCnnParams(temporal_kernel_size=temporal_kernel_size, dp_rate=dp_rate)
     x = layers.Dropout(dp_rate)(input)
     x = layers.Conv1D(
         filters=input.shape[1], kernel_size=temporal_kernel_size, padding="same"
@@ -72,6 +117,7 @@ def feedforward(input: KerasTensor, hidden_dim: int, dp_rate: float):
     Returns:
         Model: Keras Model with the feedforward layers applied.
     """
+    params = FeedforwardParams(hidden_dim=hidden_dim, dp_rate=dp_rate)
     x = layers.Dense(hidden_dim)(input)
     x = layers.ELU()(x)
     x = layers.Dropout(dp_rate)(x)
@@ -105,6 +151,14 @@ def transformer(
     Returns:
         Model: Keras Model with the transformer layers applied.
     """
+    params = TransformerParams(
+        depth=depth,
+        num_heads=num_heads,
+        dim_heads=dim_heads,
+        fg_cnn_temporal_kernel_size=fg_cnn_temporal_kernel_size,
+        ff_hidden_dims=ff_hidden_dims,
+        dp_rate=dp_rate,
+    )
     x = input
     for i in range(depth):
         x_cg = x
@@ -187,22 +241,38 @@ def deformer(
         ff_hidden_dim (int): Dimension of the hidden layer in the feedforward network.
         num_electrodes (int): Number of electrodes in the input data.
         dp_rate (float): Dropout rate.
-        preconv_callable (Callable[..., Model] | None): Custom preconv function.
-        transformer_callable (Callable[..., Model] | None): Custom transformer function.
+        preconv_callable (Callable[..., Model] | str | None): Custom preconv function.
+        transformer_callable (Callable[..., Model] | str | None): Custom transformer function.
 
     Returns:
         Model: Keras Model with the deformer architecture.
     """
 
-    def validate_callable(callable_func: Callable, reference_func: Callable):
-        if not callable(callable_func):
-            raise TypeError(f"The provided argument {callable_func} is not callable")
+    params = DeformerParams(
+        window_length=window_length,
+        fs=fs,
+        num_kernels=num_kernels,
+        temporal_kernel_size=temporal_kernel_size,
+        mha_depth=mha_depth,
+        mha_num_heads=mha_num_heads,
+        mha_dim_heads=mha_dim_heads,
+        ff_hidden_dim=ff_hidden_dim,
+        num_electrodes=num_electrodes,
+        dp_rate=dp_rate,
+        preconv_callable=preconv_callable,
+        transformer_callable=transformer_callable,
+    )
+
+    def validate_callable(validate_target, reference_func: Callable) -> Callable:
+        if not callable(validate_target):
+            raise TypeError(f"The provided argument {validate_target} is not callable")
         ref_signature = inspect.signature(reference_func)
-        callable_signature = inspect.signature(callable_func)
+        callable_signature = inspect.signature(validate_target)
         if ref_signature != callable_signature:
             raise TypeError(
-                f"The provided callable {callable_func.__name__} does not match the required signature. \nGiven signature: {callable_signature}, expected signature {ref_signature}."
+                f"The provided callable {validate_target.__name__} does not match the required signature. \nGiven signature: {callable_signature}, expected signature {ref_signature}."
             )
+        return validate_target
 
     if preconv_callable is None:
         preconv_callable = preconv
@@ -214,8 +284,8 @@ def deformer(
     elif isinstance(transformer_callable, str):
         module_name, func_name = transformer_callable.rsplit(".", 1)
         transformer_callable = getattr(import_module(module_name), func_name)
-    validate_callable(preconv_callable, preconv)
-    validate_callable(transformer_callable, transformer)
+    preconv_callable = validate_callable(preconv_callable, preconv)
+    transformer_callable = validate_callable(transformer_callable, transformer)
 
     input = Input((window_length * fs, num_electrodes))
     x = layers.Lambda(lambda x: rearrange(x, "b t c -> b 1 c t"))(input)

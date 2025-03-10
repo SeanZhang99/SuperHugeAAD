@@ -1,5 +1,28 @@
 from .deformer import *
+from pydantic import BaseModel, Field
+from typing import Annotated
 
+class RebokTransformerParams(BaseModel):
+    depth: Annotated[int, Field(gt=0)]
+    num_heads: Annotated[int, Field(gt=0)]
+    dim_heads: Annotated[int, Field(gt=0)]
+    fg_cnn_temporal_kernel_size: Annotated[int, Field(gt=0)]
+    ff_hidden_dims: Annotated[int, Field(gt=0)]
+    dp_rate: Annotated[float, Field(ge=0, le=1)]
+
+class RebokDeformerParams(BaseModel):
+    window_length: Annotated[int, Field(gt=0)]
+    fs: Annotated[int, Field(gt=0)]
+    num_kernels: Annotated[int, Field(gt=0)]
+    temporal_kernel_size: Annotated[int, Field(gt=0)]
+    mha_depth: Annotated[int, Field(gt=0)]
+    mha_num_heads: Annotated[int, Field(gt=0)]
+    mha_dim_heads: Annotated[int, Field(gt=0)]
+    ff_hidden_dim: Annotated[int, Field(gt=0)]
+    num_electrodes: Annotated[int, Field(gt=0)]
+    dp_rate: Annotated[float, Field(ge=0, le=1)]
+    preconv_callable: Callable[..., Model] | str | None = None
+    transformer_callable: Callable[..., Model] | str | None = None
 
 def rebok_transformer(
     input: KerasTensor,
@@ -25,6 +48,14 @@ def rebok_transformer(
     Returns:
         Model: Keras Model with the transformer layers applied.
     """
+    params = RebokTransformerParams(
+        depth=depth,
+        num_heads=num_heads,
+        dim_heads=dim_heads,
+        fg_cnn_temporal_kernel_size=fg_cnn_temporal_kernel_size,
+        ff_hidden_dims=ff_hidden_dims,
+        dp_rate=dp_rate
+    )
 
     mha = layers.MultiHeadAttention(
         num_heads=num_heads, key_dim=dim_heads, dropout=dp_rate
@@ -77,6 +108,21 @@ def rebok_deformer(
         preconv_callable (Callable[..., Model]|str|None): Callable or string to create the preconv model.
         transformer_callable (Callable[..., Model]|str|None): Callable or string to create the transformer model.
     """
+    params = RebokDeformerParams(
+        window_length=window_length,
+        fs=fs,
+        num_kernels=num_kernels,
+        temporal_kernel_size=temporal_kernel_size,
+        mha_depth=mha_depth,
+        mha_num_heads=mha_num_heads,
+        mha_dim_heads=mha_dim_heads,
+        ff_hidden_dim=ff_hidden_dim,
+        num_electrodes=num_electrodes,
+        dp_rate=dp_rate,
+        preconv_callable=preconv_callable,
+        transformer_callable=transformer_callable
+    )
+
     if preconv_callable is None:
         preconv_callable = preconv
     if transformer_callable is None:

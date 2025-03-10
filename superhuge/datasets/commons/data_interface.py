@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import importlib
 import inspect
 from typing import Any
 
@@ -39,6 +40,7 @@ class DInterface(pl2.LightningDataModule):
         dataloader_args: dict,
     ):
         super().__init__()
+
         config = DInterfaceConfig(
             dataset_args=dataset_args,
             dataloader_args=dataloader_args,

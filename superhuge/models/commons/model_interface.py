@@ -15,6 +15,7 @@
 from collections.abc import Callable, Sequence
 import inspect
 from typing import Any, final
+from warnings import warn
 import einops
 import keras
 import torch
@@ -35,15 +36,13 @@ class MInterface(pl2.LightningModule, ABC):
         self,
         /,
         *,
-        model_class: type[ModelTemplate] | Callable,
+        model_class: type[ModelTemplate] | Callable[..., keras.Model],
         model_args: dict,
         loss: torch.nn.modules.loss._Loss | Sequence[torch.nn.modules.loss._Loss],
         loss_hparams: Sequence[float] | None = None,
-        precision: torch.dtype = torch.float32,
         ckpt_path: str | None = None,
     ):
         super().__init__()
-        self.precision = precision
         if isinstance(loss, Sequence):
             assert isinstance(loss_hparams, Sequence) and len(loss) == len(
                 loss_hparams
@@ -53,9 +52,10 @@ class MInterface(pl2.LightningModule, ABC):
                 loss_hparams is None
             ), f"When specifying a single loss, you should not specify the loss weights, but got {loss} and {loss_hparams}"
         if isinstance(model_class, type):
-            self.model = model_class.create_models(**model_args).to(self.precision)
+            self.model = model_class.create_models(**model_args)
         elif isinstance(model_class, Callable):
-            self.model = model_class(**model_args).to(self.precision)
+            self.model = model_class(**model_args)
+            self.model.to(self.device)
         else:
             raise TypeError(
                 f"SUPERHUGE:MODELS:MODEL_INTERFACE:__INIT__:{model_class} shoule be a 'torch.nn.Module' with method 'create_models' or a callable returning a model, but got {type(model_class)}"
@@ -72,19 +72,22 @@ class MInterface(pl2.LightningModule, ABC):
 
         self.get_input_size(**model_args)
 
-    def get_input_size(self, /, **kwargs) -> tuple[int, int]:
+    def get_input_size(self, /, **kwargs) -> tuple[int | None, int]:
         if "input_length" in kwargs:
             input_length = kwargs["input_length"]
         elif "window_length" in kwargs and "fs" in kwargs:
             input_length = kwargs["window_length"] * kwargs["fs"]
         else:
-            raise ValueError(
-                f"SUPERHUGE:MODELS:MODEL_INTERFACE:__INIT__: Cannot interfere the input length from {kwargs}"
+            warn(
+                f"SUPERHUGE:MODELS:MODEL_INTERFACE:__INIT__: Cannot interfere the input length from {kwargs}, Using None as input_length"
             )
+            input_length = None
         if "num_channel" in kwargs:
             num_channel = kwargs["num_channel"]
         elif "num_electrodes" in kwargs:
             num_channel = kwargs["num_electrodes"]
+        elif "input_channels" in kwargs:
+            num_channel = kwargs["input_channels"]
         else:
             raise ValueError(
                 f"SUPERHUGE:MODELS:MODEL_INTERFACE:__INIT__: Cannot interfere the number of channels from {kwargs}"
@@ -196,15 +199,15 @@ class ClassifierInterface(MInterface):
             self.log_dict(
                 {
                     # accuracy accumulated and reduced on each trial
-                    f"{meta["entry"][sample_idx]}_{stage}_acc": (
+                    f'{meta["entry"][sample_idx]}_{stage}_acc': (
                         pred[sample_idx] == label[sample_idx]
                     ).float(),
                     # accuracy accumulated and reduced on each subject
-                    f"dataset-{meta["dataset"]:03d}-subject-{meta["subject"][sample_idx]:03d}_{stage}_acc": (
+                    f'dataset-{meta["dataset"]:03d}-subject-{meta["subject"][sample_idx]:03d}_{stage}_acc': (
                         pred[sample_idx] == label[sample_idx]
                     ).float(),
                     # accuracy accumulated and reduced on each dataset
-                    f"dataset-{meta["dataset"]:03d}_{stage}_acc": (
+                    f'dataset-{meta["dataset"]:03d}_{stage}_acc': (
                         pred[sample_idx] == label[sample_idx]
                     ).float(),
                     # accuracy accumulated and reduced on each class
@@ -250,7 +253,12 @@ class RegressionInterface(MInterface):
     ) -> torch.Tensor:
         # extract input and target, call forward, and calculate loss
         targets: torch.Tensor = batch["audio"]  # type: ignore
-        predictions = self.hood(self.forward(batch["exg"]))
+        exg: torch.Tensor = batch["exg"]  # type: ignore
+        predictions: torch.Tensor = self.hood(self.forward(exg))
+        if predictions.ndim == 2:
+            predictions = einops.rearrange(predictions, "batch time -> batch time 1")
+        if targets.ndim == 2:
+            targets = einops.rearrange(targets, "batch time -> batch time 1")
         loss = self.loss_fn(predictions, targets).mean()  # type: ignore
 
         self.get_stats(predictions, targets, batch_size=targets.shape[0])
@@ -272,13 +280,9 @@ class RegressionInterface(MInterface):
 
     def get_stats(
         self, x_pred: torch.Tensor, y_pred: torch.Tensor, batch_size: int | None = None
-    ) -> tuple:
+    ) -> dict[str, torch.Tensor]:
         stats: dict[str, torch.Tensor] = {}
 
-        if x_pred.ndim == 2:
-            x_pred = einops.rearrange(x_pred, "batch time -> batch time 1")
-        if y_pred.ndim == 2:
-            y_pred = einops.rearrange(y_pred, "batch time -> batch time 1")
         y_pred_labels = ["a", *[f"u{index}" for index in range(1, y_pred.shape[-1])]]
 
         x_pred = einops.rearrange(x_pred, "batch time feature -> time batch feature")

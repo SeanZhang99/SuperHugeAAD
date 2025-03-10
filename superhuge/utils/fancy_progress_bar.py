@@ -1,17 +1,29 @@
-from lightning.pytorch.callbacks import RichProgressBar
 import inspect
-from typing import Any, Iterable, Union, cast
-from lightning.pytorch.callbacks.progress.rich_progress import *
+from collections.abc import Iterable
+from typing import cast
+
+import lightning.pytorch as pl
+from lightning.pytorch.callbacks import RichProgressBar
+from lightning.pytorch.callbacks.progress.rich_progress import (
+    CustomProgress,
+    MetricsTextColumn,
+)
+from rich import get_console, reconfigure
+from rich.console import RenderableType
+from rich.progress import Task, TaskID
+from rich.style import Style
 from rich.table import Table
+from rich.text import Text
 
 
 class MetricsTableColumn(MetricsTextColumn):
+    max_refresh = 5
     """A column containing table."""
 
     def __init__(
         self,
-        trainer: "pl.Trainer",
-        style: Union[str, "Style"],
+        trainer: pl.Trainer,
+        style: str | Style,
         text_delimiter: str,
         metrics_format: str,
     ):
@@ -22,7 +34,7 @@ class MetricsTableColumn(MetricsTextColumn):
             metrics_format=metrics_format,
         )
 
-    def render(self, task: "Task"):
+    def render(self, task: "Task"):  # type: ignore
         assert isinstance(self._trainer.progress_bar_callback, RichProgressBar)
         if (
             self._trainer.state.fn != "fit"
@@ -41,36 +53,33 @@ class MetricsTableColumn(MetricsTextColumn):
         if self._trainer.training and task.id != self._current_task_id:
             return self._tasks[task.id]
 
+        table = self._generate_metrics_table()
+        return table
+
+    def _generate_metrics_table(self):
         self._metrics.pop("v_num", None)
         train_metrics = {
-            k.split(
-                "/",
-            )[-1]: v
+            k.split("/", 1)[-1]: v
             for k, v in self._metrics.items()
-            if "train" in k
+            if isinstance(k, str) and "train" in k
         }
         val_metrics = {
-            k.split(
-                "/",
-            )[-1]: v
+            k.split("/", 1)[-1]: v
             for k, v in self._metrics.items()
-            if "val" in k
+            if isinstance(k, str) and "val" in k
         }
         test_metrics = {
-            k.split(
-                "/",
-            )[-1]: v
+            k.split("/", 1)[-1]: v
             for k, v in self._metrics.items()
-            if "test" in k
+            if isinstance(k, str) and "test" in k
         }
 
         all_keys = sorted(
             set(
                 [
-                    key.split(
-                        "/",
-                    )[-1]
+                    key.split("/", 1)[-1]
                     for key in self._metrics.keys()
+                    if isinstance(key, str)
                 ]
             )
         )
@@ -99,6 +108,7 @@ class MetricsTableColumn(MetricsTextColumn):
 
 
 class MetricNextLineProgress(CustomProgress):
+
     def __init__(self, metric_table: MetricsTableColumn, *columns, **kwargs):
         self._metric_table = metric_table
         super().__init__(*columns, **kwargs)
@@ -147,8 +157,21 @@ class FancyProgressBar(RichProgressBar):
                 auto_refresh=False,
                 disable=self.is_disabled,
                 console=self._console,
-                refresh_per_second=1 / self._refresh_rate,
             )
             self.progress.start()
             # progress has started
             self._progress_stopped = False
+
+    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
+        self._update(self.train_progress_bar_id, batch_idx + 1)
+        self._update_metrics(trainer, pl_module)
+        if (batch_idx + 1) // self.refresh_rate == 0:
+            self.refresh()
+
+    def on_validation_batch_start(
+        self, trainer, pl_module, batch, batch_idx, dataloader_idx=0
+    ):
+        if (batch_idx + 1) // self.refresh_rate == 0:
+            return super().on_validation_batch_start(
+                trainer, pl_module, batch, batch_idx, dataloader_idx
+            )

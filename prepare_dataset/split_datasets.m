@@ -12,11 +12,11 @@ for dataset_id = 1:length(dataset_names)
     dataset_info = dataset_infos(dataset_id);
     fs = dataset_info.fs;
     
-    for subject_id = 1:fastif(DEBUG_MODE,1,dataset_info.num_subject)
+    for subject_id = 1:fastif(DEBUG_MODE,2,dataset_info.num_subject)
 
         data_struct = load_data_struct(fullfile(dataset_info.filelists(subject_id).folder,dataset_info.filelists(subject_id).name),dataset_name);
 
-        for trial_id = 1:fastif(DEBUG_MODE,1,dataset_info.num_trial)
+        for trial_id = 1:fastif(DEBUG_MODE,2,dataset_info.num_trial)
             entry = sprintf("dataset-%03d-subject-%03d-trial-%03d",dataset_id,subject_id,trial_id);
 
             trial_info = extract_trials(data_struct,dataset_info.base_path,trial_id,dataset_name,[]);

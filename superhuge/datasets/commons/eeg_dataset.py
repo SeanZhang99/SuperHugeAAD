@@ -9,6 +9,8 @@ import numpy
 from pydantic import BaseModel
 from torch.utils.data import Dataset
 
+from ...utils.transforms.abc import Transform
+
 from ..metadata_processing.data import (
     ClassifyMetaDataElement,
     DatasetSubjectTrialEntry,
@@ -67,10 +69,7 @@ class EegDataset(Dataset):
             "num_channel",
             "fs",
         ],
-        transform: (
-            Callable[..., Callable] | Sequence[Callable[..., Callable]] | None
-        ) = None,
-        transform_args: Sequence[dict[str, Any]] | None = None,
+        transform: Transform | Sequence[Transform] | None = None,
         **kwargs,
     ):
         """
@@ -87,7 +86,6 @@ class EegDataset(Dataset):
             fs (int): 采样频率。
             overlap (int): 重叠比例。
             transform (callable, optional): 数据变换函数的工厂函数Callable[...,Callable]。
-            transform_args: 变换函数的参数。
             metadata_fields (list): 需要记录的元数据字段。
 
         Returns:
@@ -132,14 +130,11 @@ class EegDataset(Dataset):
             fs=fs,
             overlap=overlap,
             transform=(
-                [transform(**transform_args[0])]
-                if isinstance(transform, Callable) and transform_args
-                else (
-                    [t(**a) for t, a in zip(transform, transform_args)]
-                    if isinstance(transform, Sequence)
-                    and isinstance(transform_args, Sequence)
-                    else None
-                )
+                [
+                    transform,
+                ]
+                if isinstance(transform, Transform)
+                else transform
             ),
             metadata_fields=metadata_fields,
             **kwargs,
@@ -269,26 +264,25 @@ class EegDataset(Dataset):
             metadata (dict): 包含每个试次的元信息。
             segment_length (int): 截取的信号段长度。
             overlap (int): 重叠比例，决定截取步长。
-            transform (callable, optional): 应用在样本上的变换函数。
+            transform (Transform | None): 应用在样本上的变换函数。
             metadata_fields (list): 需要记录的元数据字段。
         """
         required_keys = ["exg_path", "files", "metadata", "metadata_fields"]
         self._validate_kwargs(kwargs.keys(), required_keys)
 
         self.exg_path: str = kwargs["exg_path"]
-        self.files = kwargs["files"]
+        self.files: Sequence[str] = kwargs["files"]
         self.metadata: MetaData = kwargs["metadata"]
-        self.segment_length = kwargs.get("fs", 128) * kwargs.get(
+        self.segment_length: int = kwargs.get("fs", 128) * kwargs.get(
             "window_length", 10
         )  # 默认截取长度为1280
-        self.overlap = kwargs.get("overlap", 1)  # 默认无重叠
-        self.transform = kwargs.get("transform", None)
-        self.transform_args = kwargs.get("transform_args", None)
+        self.overlap: int = kwargs.get("overlap", 1)  # 默认无重叠
+        self.transform: Sequence[Transform] | None = kwargs.get("transform", None)
 
         # Ensure files are a subset of metadata's keys
         assert set(self.files).issubset(
             self.metadata.keys()
-        ), "Files must be a subset of metadata's keys"
+        ), f"Some files specified in `files` do not have corresponding metadata: {set(self.files) - set(self.metadata.keys())}"
 
         # 计算总样本数目
         self.count_samples()
@@ -296,10 +290,13 @@ class EegDataset(Dataset):
     def count_samples(self):
         self.total_samples = 0
         for file in self.files:
-            signal_length = self.metadata[file].signal_length
+            trial_length = self.metadata[file].signal_length
+            assert (
+                trial_length
+            ), f"EEG_DATASET:COUNT_SAMPLES:TRIAL_LENGTH_ERROR: Trial length is not provided for file {file}."
             stride = self.segment_length // self.overlap
             self.total_samples += max(
-                0, (signal_length - self.segment_length) // stride + 1
+                0, (trial_length - self.segment_length) // stride + 1
             )
 
     def __len__(self):
@@ -314,6 +311,11 @@ class EegDataset(Dataset):
         file_path = os.path.join(self.exg_path, file_name + ".npy")
         exg = numpy.load(file_path)
 
+        if self.transform:
+            for transform in self.transform:
+                if transform.apply_on == "before_slicing":
+                    exg = transform(exg)
+
         # 加载信号和标签
 
         # 根据 segment_length 和 overlap 截取信号段
@@ -324,7 +326,11 @@ class EegDataset(Dataset):
         # 应用变换
         if self.transform:
             for transform in self.transform:
-                exg = transform(exg)
+                if (
+                    transform.apply_on == "before_returning"
+                    or transform.apply_on is None
+                ):
+                    exg = transform(exg)
 
         # 获取元数据
         meta = self.metadata[file_name].model_dump()
@@ -344,9 +350,10 @@ class EegDataset(Dataset):
         cumulative = 0
         for file_idx, file in enumerate(self.files):
             file_meta = self.metadata[file]
-            signal_length = file_meta.signal_length
+            trial_length = file_meta.signal_length
+            assert trial_length
             stride = self.segment_length // self.overlap
-            num_segments = max(0, (signal_length - self.segment_length) // stride + 1)
+            num_segments = max(0, (trial_length - self.segment_length) // stride + 1)
             if cumulative + num_segments > idx:
                 segment_idx = idx - cumulative
                 return file_idx, segment_idx

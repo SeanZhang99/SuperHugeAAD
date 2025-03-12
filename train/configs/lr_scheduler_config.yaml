@@ -1,0 +1,12 @@
+class_path: lightning.pytorch.cli.ReduceLROnPlateau
+init_args:
+  monitor: "val_loss"
+  mode: "min"
+  factor: 0.5
+  patience: 5
+  verbose: false
+  threshold: 1e-4
+  threshold_mode: "rel"
+  cooldown: 5
+  min_lr: 1e-8
+  eps: 1e-8

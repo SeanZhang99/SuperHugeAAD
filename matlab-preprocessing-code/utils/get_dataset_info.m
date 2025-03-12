@@ -70,7 +70,7 @@ for dataset_name = dataset_names
             audio_path = "";
             fs = 64;
             filelists = dir(fullfile(base_path,"S*.mat"));
-            nch = 66;
+            nch = 64;
             f_upper = 32;
             desired_length = 3200;
             num_trial = 60;
@@ -79,8 +79,19 @@ for dataset_name = dataset_names
                 "P7"; "P9"; "PO7"; "PO3"; "O1"; "Iz"; "Oz"; "POz"; "Pz"; "CPz"; "Fpz"; "Fp2";
                 "AF8"; "AF4"; "AFz"; "Fz"; "F2"; "F4"; "F6"; "F8"; "FT8"; "FC6"; "FC4"; "FC2";
                 "FCz"; "Cz"; "C2"; "C4"; "C6"; "T8"; "TP8"; "CP6"; "CP4"; "CP2"; "P2"; "P4"; 
-                "P6"; "P8"; "P10"; "PO8"; "PO4"; "O2"; "EXG1"; "EXG2";
+                "P6"; "P8"; "P10"; "PO8"; "PO4"; "O2";
 ];
+        case "MAD-EEG_preprocessed"
+            base_path = "E:\\EEG dataset\\MAD-EEG\\madeeg_preprocessed.hdf5"
+            audio_path = "E:\\EEG dataset\\MAD-EEG\\stimuli\\stimuli";
+            fs = 256;
+            filelists = [1];
+            nch = 20;
+            f_upper = 128;
+            desired_length = 5052;
+            num_trial = 22;
+            num_subject = 16;
+            dataset_infos.filelists = filelists;
         case "PKU-4talker-EEG_preprocessed"
             base_path = "E:\EEG dataset\PKU-4talker-EEG\preprocess_data\data_space";
             audio_path = "";

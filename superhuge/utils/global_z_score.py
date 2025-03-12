@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 
 
-class GloabalZScore(nn.Module):
+class GlobalZScore(nn.Module):
     """
     计算整个训练集的全局均值和标准差 (跨所有时间和通道)
     在训练时更新统计量，在测试时冻结。

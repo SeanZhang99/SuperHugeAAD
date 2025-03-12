@@ -5,12 +5,12 @@ from collections.abc import Callable, Iterable
 from importlib import import_module
 from typing import Any, Sequence
 
-import numpy
+import numpy as np
+import torch
 from pydantic import BaseModel
 from torch.utils.data import Dataset
 
 from ...utils.transforms.abc import Transform
-
 from ..metadata_processing.data import (
     ClassifyMetaDataElement,
     DatasetSubjectTrialEntry,
@@ -37,7 +37,7 @@ class CreateDatasetsInputConfig(BaseModel):
     window_length: int
     fs: int
     overlap: int
-    transform: Callable | Sequence[Callable] | None
+    transform: Sequence[Transform] | None = None
     metadata_fields: list[MetaDataField]
 
 
@@ -69,7 +69,7 @@ class EegDataset(Dataset):
             "num_channel",
             "fs",
         ],
-        transform: Transform | Sequence[Transform] | None = None,
+        transform: Sequence[dict[str, str | dict[str, float]]] | None = None,
         **kwargs,
     ):
         """
@@ -85,7 +85,7 @@ class EegDataset(Dataset):
             window_length (int): 截取的信号段长度（秒）。
             fs (int): 采样频率。
             overlap (int): 重叠比例。
-            transform (callable, optional): 数据变换函数的工厂函数Callable[...,Callable]。
+            transform (Sequence[Transform] | dict[str, Any] | None): 数据变换。
             metadata_fields (list): 需要记录的元数据字段。
 
         Returns:
@@ -99,18 +99,10 @@ class EegDataset(Dataset):
             module_name, func_name = meta_group_func.rsplit(".", 1)
             meta_group_func = getattr(import_module(module_name), func_name)
 
-        if isinstance(transform, str):
-            module_name, func_name = transform.rsplit(".", 1)
-            transform = getattr(import_module(module_name), func_name)
-        elif isinstance(transform, Sequence):
-            transform = [
-                (
-                    getattr(import_module(t.rsplit(".", 1)[0]), t.rsplit(".", 1)[1])
-                    if isinstance(t, str)
-                    else t
-                )
-                for t in transform
-            ]
+        if transform:
+            transforms: list[Transform] | None = [getattr(import_module(kv["class_path"].rsplit(".", 1)[0]), kv["class_path"].rsplit(".", 1)[1])(**kv["init_args"]) for kv in transform]  # type: ignore
+        else:
+            transforms = None
 
         meta_group_func = loto if meta_group_func is None else meta_group_func
         metadata_fields = list(
@@ -129,13 +121,7 @@ class EegDataset(Dataset):
             window_length=window_length,
             fs=fs,
             overlap=overlap,
-            transform=(
-                [
-                    transform,
-                ]
-                if isinstance(transform, Transform)
-                else transform
-            ),
+            transform=transforms,
             metadata_fields=metadata_fields,
             **kwargs,
         )
@@ -309,7 +295,7 @@ class EegDataset(Dataset):
         file_idx, segment_idx = self._map_idx_to_file_and_segment(idx)
         file_name = self.files[file_idx]
         file_path = os.path.join(self.exg_path, file_name + ".npy")
-        exg = numpy.load(file_path)
+        exg = np.load(file_path)
 
         if self.transform:
             for transform in self.transform:

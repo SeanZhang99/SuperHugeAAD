@@ -6,7 +6,7 @@ class TimeShift(Transform):
     """Randomly shifts EEG signals along the time axis."""
 
     def __init__(
-        self, max_shift: int | float = 200, fs: int | None = None, **kwargs
+        self, /, *, max_shift: int | float = 200, fs: int | None = None, **kwargs
     ) -> None:
         kwargs.setdefault("apply_on", "before_slicing")
         super().__init__(**kwargs)
@@ -20,4 +20,7 @@ class TimeShift(Transform):
 
     def __call__(self, x: np.ndarray) -> np.ndarray:
         shift = np.random.randint(-self.max_shift, self.max_shift)
-        return np.roll(x, shift, axis=0)
+        if shift >= 0:
+            return np.pad(x[shift:], ((0, shift), (0, 0)))
+        else:
+            return np.pad(x[:shift], ((-shift, 0), (0, 0)))

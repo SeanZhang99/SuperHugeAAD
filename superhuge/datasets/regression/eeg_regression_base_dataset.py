@@ -5,7 +5,7 @@ from pydantic import BaseModel
 import numpy as np
 
 from ..commons.eeg_dataset import EegDataset
-from ..metadata_processing.data import RegressionMetaDataElement
+from ..metadata_processing.data import MetaDataElement, RegressionMetaDataElement
 from .regress_filter import ALLOWED_SPEECH_FEATURES, get_regression_filter
 
 
@@ -57,6 +57,11 @@ class EegRegressionBaseDataset(EegDataset):
             )
         )
 
+        if self.transform:
+            for transform in self.transform:
+                if transform.apply_on == "before_slicing":
+                    speech_feature = transform(speech_feature)
+
         # 根据 segment_length 和 overlap 截取语音特征段
         _, segment_idx = self._map_idx_to_file_and_segment(idx)
         stride = self.segment_length // self.overlap
@@ -65,7 +70,11 @@ class EegRegressionBaseDataset(EegDataset):
 
         if self.transform:
             for transform in self.transform:
-                speech_segment = transform(speech_segment)
+                if (
+                    transform.apply_on == "before_returning"
+                    or transform.apply_on is None
+                ):
+                    speech_segment = transform(speech_segment)
 
         return {
             "meta": meta,

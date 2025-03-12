@@ -29,6 +29,9 @@ from superhuge.datasets import regression
 
 from .model_template import ModelTemplate
 from .hoods import classify_hood, regression_hood
+from ...utils.global_z_score import GlobalZScore
+
+from lightning.pytorch.callbacks.rich_model_summary import RichModelSummary
 
 
 class MInterface(pl2.LightningModule, ABC):
@@ -41,6 +44,7 @@ class MInterface(pl2.LightningModule, ABC):
         loss: torch.nn.modules.loss._Loss | Sequence[torch.nn.modules.loss._Loss],
         loss_hparams: Sequence[float] | None = None,
         ckpt_path: str | None = None,
+        summary: bool = True,
     ):
         super().__init__()
         if isinstance(loss, Sequence):
@@ -72,6 +76,11 @@ class MInterface(pl2.LightningModule, ABC):
 
         self.get_input_size(**model_args)
 
+        self.global_z_score = GlobalZScore()
+
+        if summary:
+            self.model.summary()
+
     def get_input_size(self, /, **kwargs) -> tuple[int | None, int]:
         if "input_length" in kwargs:
             input_length = kwargs["input_length"]
@@ -97,7 +106,7 @@ class MInterface(pl2.LightningModule, ABC):
         return self.input_size
 
     def forward(self, *inputs: torch.Tensor) -> torch.Tensor:
-        return self.model(*inputs)
+        return self.model(*[self.global_z_score(x) for x in inputs])
 
     # define training_step, validation_step, test_step in your own subclass
     @abstractmethod
@@ -137,10 +146,10 @@ class MInterface(pl2.LightningModule, ABC):
             # add a closure variable to let static type checker know the type of loss_fn
             loss_sequence: Sequence = self.loss
 
-            def loss_fn(*args: Sequence[torch.Tensor | int | str | Sequence[torch.Tensor | int | str]]):  # type: ignore
+            def loss_fn(**kwargs: torch.Tensor | int | str | Sequence[torch.Tensor | int | str]):  # type: ignore
                 loss = 0
-                for i, loss_fn in enumerate(loss_sequence):
-                    loss += loss_fn(*args[i])
+                for loss_fn in loss_sequence:
+                    loss += loss_fn(**kwargs)
                 return (
                     torch.Tensor(loss) if not isinstance(loss, torch.Tensor) else loss
                 )
@@ -148,8 +157,8 @@ class MInterface(pl2.LightningModule, ABC):
         else:
             single_loss: torch.nn.modules.loss._Loss = self.loss
 
-            def loss_fn(*args: torch.Tensor | int | str):
-                loss = single_loss(*args)
+            def loss_fn(**kwargs: torch.Tensor | int | str):
+                loss = single_loss(**kwargs)
                 # type: ignore
                 return (
                     torch.Tensor(loss) if not isinstance(loss, torch.Tensor) else loss
@@ -254,12 +263,13 @@ class RegressionInterface(MInterface):
         # extract input and target, call forward, and calculate loss
         targets: torch.Tensor = batch["audio"]  # type: ignore
         exg: torch.Tensor = batch["exg"]  # type: ignore
-        predictions: torch.Tensor = self.hood(self.forward(exg))
+        intermediate: torch.Tensor = self.forward(exg)
+        predictions: torch.Tensor = self.hood(intermediate)
         if predictions.ndim == 2:
             predictions = einops.rearrange(predictions, "batch time -> batch time 1")
         if targets.ndim == 2:
             targets = einops.rearrange(targets, "batch time -> batch time 1")
-        loss = self.loss_fn(predictions, targets).mean()  # type: ignore
+        loss = self.loss_fn(y_pred=predictions, y_true=targets, current_epoch=self.current_epoch).mean()  # type: ignore
 
         self.get_stats(predictions, targets, batch_size=targets.shape[0])
         self.log(f"{self.stage}/loss", loss, batch_size=targets.shape[0], prog_bar=True)
@@ -304,10 +314,18 @@ class RegressionInterface(MInterface):
             )
             == 0
         ).type_as(x_pred)
+
+        for label in y_pred_labels[1:]:
+            stats[f"{self.stage}/a_pcc-{label}_pcc"] = (
+                stats[f"{self.stage}/a_pcc"] - stats[f"{self.stage}/{label}_pcc"]
+            )
+
         self.log_dict(
             {k: v.mean() for k, v in stats.items()},
             batch_size=batch_size,
             prog_bar=True,
+            on_step=self.stage == "train",
+            on_epoch=self.stage != "train",
         )
 
         return stats

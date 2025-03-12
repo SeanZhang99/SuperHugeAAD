@@ -3,10 +3,10 @@ from scipy.signal import resample
 from .abc import Transform
 
 
-class Downsampling(Transform):
+class Resample(Transform):
     """Reduces EEG sampling rate to improve efficiency."""
 
-    def __init__(self, old_fs: int, new_fs: int, **kwargs) -> None:
+    def __init__(self, /, *, old_fs: int, new_fs: int, **kwargs) -> None:
         super().__init__(**kwargs)
         self.old_fs = old_fs
         self.new_fs = new_fs

@@ -45,3 +45,9 @@ class MultiRunCLI:
                 cli.datamodule.train_dataloader(),
                 cli.datamodule.val_dataloader(),
             )
+            cli.trainer.test(
+                cli.model,
+                cli.datamodule.val_dataloader(),
+                ckpt_path="best",
+                verbose=True,
+            )

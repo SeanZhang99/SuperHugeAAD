@@ -1,6 +1,8 @@
+from pydantic import GetCoreSchemaHandler
+from pydantic_core import core_schema
 from abc import ABC, abstractmethod
-from typing import Sequence
 import numpy as np
+from collections.abc import Sequence
 
 
 class Transform(ABC):
@@ -16,6 +18,11 @@ class Transform(ABC):
                 Defaults to `before_returning`.
             **kwargs: Additional parameters for subclasses.
         """
+        assert apply_on in [
+            None,
+            "before_slicing",
+            "before_returning",
+        ], f"apply_on must be one of `before_slicing`, `before_returning` or `None`, but got {apply_on}."
         self.apply_on = apply_on
         super().__init__()
 
@@ -37,7 +44,21 @@ class Transform(ABC):
     def __repr__(self):
         """Generic representation for all subclasses."""
         params = ", ".join(
-            f"{k}={v if not isinstance(v, (Sequence,np.ndarray)) else type(v)}"
+            f"{k}={v if not isinstance(v, (list,tuple,dict,np.ndarray)) else type(v)}"
             for k, v in self.__dict__.items()
         )
         return f"{self.__class__.__name__}({params})"
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source: type, handler: GetCoreSchemaHandler
+    ) -> core_schema.CoreSchema:
+        return core_schema.no_info_plain_validator_function(cls._validate)
+
+    @classmethod
+    def _validate(cls, value: object) -> "Transform":
+        if not isinstance(value, Transform):
+            raise TypeError(
+                f"Expected an instance of Transform, got {type(value).__name__}"
+            )
+        return value

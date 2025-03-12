@@ -61,7 +61,7 @@ for dataset_name = dataset_names
             end
             nch = 64;
             f_upper = 64;
-            
+            num_trial = 0;
             desired_length = 10e4;
             num_subject = length(dir(fullfile(base_path,"sub-*")));
             channel = [];

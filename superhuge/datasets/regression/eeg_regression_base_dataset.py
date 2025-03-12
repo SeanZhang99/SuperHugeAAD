@@ -6,7 +6,10 @@ import numpy as np
 
 from ..commons.eeg_dataset import EegDataset
 from ..metadata_processing.data import MetaDataElement, RegressionMetaDataElement
-from .regress_filter import ALLOWED_SPEECH_FEATURES, get_regression_filter
+from ..metadata_processing.filters.regress_filter import (
+    ALLOWED_SPEECH_FEATURES,
+    get_regression_filter,
+)
 
 
 ENV_ALIASE = ["env", "envelope"]
@@ -67,6 +70,8 @@ class EegRegressionBaseDataset(EegDataset):
         stride = self.segment_length // self.overlap
         start_idx = segment_idx * stride
         speech_segment = speech_feature[start_idx : start_idx + self.segment_length]
+        if speech_segment.ndim == 1:
+            speech_segment = speech_segment[:, np.newaxis]
 
         if self.transform:
             for transform in self.transform:

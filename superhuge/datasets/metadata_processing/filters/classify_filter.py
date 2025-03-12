@@ -1,6 +1,6 @@
 from collections.abc import Callable
 
-from ..metadata_processing.data import ClassifyMetaDataElement
+from ..data import ClassifyMetaDataElement
 
 __all__ = ["get_classify_filter"]
 

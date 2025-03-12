@@ -10,6 +10,8 @@ import torch
 from pydantic import BaseModel
 from torch.utils.data import Dataset
 
+from ..metadata_processing.filters.composer import MetaDataFilterComposer
+
 from ...utils.transforms.abc import Transform
 from ..metadata_processing.data import (
     ClassifyMetaDataElement,
@@ -20,7 +22,7 @@ from ..metadata_processing.data import (
     MetaDataField,
     RegressionMetaDataElement,
 )
-from ..metadata_processing.operation import loto
+from ..metadata_processing.group import loto
 
 
 class CreateDatasetsInputConfig(BaseModel):
@@ -50,8 +52,7 @@ class EegDataset(Dataset):
         /,
         root_path: str,
         meta_filter_func: (
-            Callable[[ClassifyMetaDataElement], ClassifyMetaDataElement | None]
-            | Callable[[RegressionMetaDataElement], RegressionMetaDataElement]
+            MetaDataFilterComposer
             | None
         ) = None,
         meta_filter_func_args: list = [],
@@ -91,9 +92,9 @@ class EegDataset(Dataset):
         Returns:
             tuple: 包含 train, val, test 数据集的元组。
         """
-        if isinstance(meta_filter_func, str):
-            module_name, func_name = meta_filter_func.rsplit(".", 1)
-            meta_filter_func = getattr(import_module(module_name), func_name)
+        # if isinstance(meta_filter_func, str):
+        #     module_name, func_name = meta_filter_func.rsplit(".", 1)
+        #     meta_filter_func = getattr(import_module(module_name), func_name)
 
         if isinstance(meta_group_func, str):
             module_name, func_name = meta_group_func.rsplit(".", 1)

@@ -1,4 +1,4 @@
-from .operation import leave_one_out_input_decorator
+from .group import leave_one_out_input_decorator
 from .data import (
     MetaData,
     CrossValidationEntry,

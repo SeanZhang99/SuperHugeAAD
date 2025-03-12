@@ -12,8 +12,8 @@ from ..metadata_processing.filters.regress_filter import (
 )
 
 
-ENV_ALIASE = ["env", "envelope"]
-MEL_ALIASE = ["mel", "mel spectrum", "mfcc"]
+ENV_ALIASE = ["env", "envelope", "env_path"]
+MEL_ALIASE = ["mel", "mel spectrum", "mfcc", "mel_path"]
 
 
 class EEGDatasetWithSpeechFeatureCreationConfig(BaseModel, extra="allow"):

@@ -10,13 +10,13 @@ for dataset_id = 1:length(dataset_names)
     dataset_name = dataset_names(dataset_id);
     dataset_info = dataset_infos(dataset_id);
     fs = dataset_info.fs;
-   
-    for subject_id = 1:fastif(DEBUG_MODE,1,dataset_info.num_subject)
+    disp(['Processing dataset: ', dataset_name]);  % 打印当前处理的 dataset_name
+    for subject_id = 1:fastif(DEBUG_MODE,4,dataset_info.num_subject)
         data_struct = load_data_struct(fullfile(dataset_info.filelists(subject_id).folder,dataset_info.filelists(subject_id).name),dataset_name);
-        for trial_id = 1:fastif(DEBUG_MODE,1,dataset_info.num_trial)
+        num_trial = get_num_trials(dataset_name, subject_id, dataset_info);
+        for trial_id = 1:fastif(DEBUG_MODE,4,num_trial)
             entry = sprintf("dataset-%03d-subject-%03d-trial-%03d",dataset_id,subject_id,trial_id);
-
-            trial_info = extract_trials(data_struct,dataset_info.base_path,trial_id,dataset_name,[]);
+            trial_info = extract_trials(data_struct,dataset_info.base_path,trial_id,subject_id,dataset_name,[]);
             trial_info = trial_info(1);
 
             exg = trial_info.exg;
@@ -155,18 +155,14 @@ for dataset_id = 1:length(dataset_names)
             metadata{entry}{"num_channel"} = py.int(dataset_info.nch);
             metadata{entry}{"fs"} = py.int(fs);
             metadata{entry}{"dataset_name"} = py.str(dataset_name);
-            if isfield(dataset_info(end), 'channel') && ~isempty(dataset_info(end).channel)
-                metadata{entry}{"channel"} = py.str(strjoin(dataset_info(end).channel, ','));
-            else
-                metadata{entry}{"channel"} = py.str("");
-            end
+            metadata{entry}{"channel_infos"} = dataset_info.channel_infos;
 
             if label~="";metadata{entry}{"label"}=py.str(label);end
             if stimuli_path~="";metadata{entry}{"stimuli_path"}=py.str(stimuli_path);metadata{entry}{"stimuli_fs"}=py.int(stimuli_fs(1));end
             if compet_stimuli_path~="";metadata{entry}{"compet_stimuli_path"}=py.str(compet_stimuli_path);metadata{entry}{"stimuli_fs"}=py.int(stimuli_fs(2));end
             if env_path~="";metadata{entry}{"env_path"}=py.str(env_path);metadata{entry}{"env_fs"}=py.int(fs);end
             if compet_env_path~="";metadata{entry}{"compet_env_path"}=py.str(compet_env_path);metadata{entry}{"env_fs"}=py.int(fs);end
-            if mel_path~="";metadata{entry}{"mel_path"}=py.str(mel);metadata{entry}{"mel_fs"}=py.int(fs);end
+            if mel_path~="";metadata{entry}{"mel_path"}=py.str(mel_path);metadata{entry}{"mel_fs"}=py.int(fs);end
             clearvars -except data_struct dataset_name metadata dataset_infos dataset_info fs dataset_id subject_id trial_id dataset_names save_path save_basepath meta_path exg_path wav_path compet_wav_path EXG_OVERRIDE STIMULI_OVERRIDE ENVELOPE_OVERRIDE MEL_SPECTRUM_OVERRIDE DEBUG_MODE
         end
     end

@@ -1,4 +1,4 @@
-function trial_infos = extract_trials(data_struct,dataset_path,trial_idxs,dataset_name,desired_length)
+function trial_infos = extract_trials(data_struct,dataset_path,trial_idxs,subject_id,dataset_name,desired_length)
 %EXTRACT_TRIALS Summary of this function goes here
 %   Detailed explanation goes here
 trial_infos = struct("exg",[],"stimuli_path",[],"label",[],"env_path",[],"mel_path",[],"stimuli",[],"env",[],"mel",[],"stimuli_fs",[]);
@@ -46,12 +46,15 @@ for trial_idx = trial_idxs
                 compet_env_path = sprintf("powerlaw subbands %s_dry.mat",join(compet_split_stimuli(1:end-1),"_"));
             end
         case {"sparKULee_raw","sparKULee_preprocessed"}
-            filelists = dir(fullfile(dataset_path,"sub-*","*","*.npy"));
+            subject_id_str = sprintf('%03d', subject_id);
+            filelists = dir(fullfile(dataset_path, ['sub-' subject_id_str], '*', '*.npy'));
             if trial_idx <= length(filelists)
-                exg_py = py.numpy.load(fullfile(filelists(trial_idx).folder,filelists(trial_idx).name))';
-                exg = double(exg_py);
+                exg_py = py.numpy.load(fullfile(filelists(trial_idx).folder,filelists(trial_idx).name));
+                exg = double(exg_py)';
             end
-            target_audio = regexp(filelists(trial_idx).name, 'desc-preproc-audio-(audiobook(?:_\d+)+)_eeg\.npy', "tokens");
+            target_audio = regexp(filelists(trial_idx).name, ...
+                      'desc-preproc-audio-(audiobook(?:_\d+)*?)_(?:artefact_)?eeg\.npy', ...
+                      "tokens");
             env_path = target_audio{1}+"_-_envelope.npy";
             mel_path = target_audio{1}+"_-_mel.npy";
         case "DTU_preprocessed"
@@ -70,10 +73,10 @@ for trial_idx = trial_idxs
                 exg = data_struct.EEG_space.data;
                 label = int32(data_struct.EEG_space.event.latency);
         case "Estart-2019_raw"
-                exg = data_struct.group__fM.("part_"+num2str(trial_idx))(:);
+                exg = data_struct.group__fM.("part_"+num2str(trial_idx));
                 stimuli_path = "part_" + string(trial_idx) + "_story.wav";
         case "Data-for-CS_preprocessed"
-                exg = data_struct.mergedStruct.data(trial_idx,:,:);
+                exg = squeeze(data_struct.mergedStruct.data(trial_idx,:,:));
                 label =  string(data_struct.mergedStruct.label(trial_idx,:,:));
         case "KUL-AV-GC_preprocessed"
                 exg = data_struct.data{1,trial_idx};
@@ -82,10 +85,17 @@ for trial_idx = trial_idxs
                 compet_env = fastif(label=="right",data_struct.stimulus.leftEnvelopes{1,trial_idx},data_struct.stimulus.rightEnvelopes{1,trial_idx});
         case "ASA_preprocessed"
                 exg = data_struct.data{1,trial_idx};
-                if data_struct.labels(trial_idx, 1) == 0
-                    label = 'left';
-                else
-                    label = 'right';
+                switch trial_idx
+                    case {1, 2, 3, 4}
+                        if data_struct.labels(trial_idx, 1) == 0,label = '-90';else,label = '90';end
+                    case {5, 6, 7, 8}
+                        if data_struct.labels(trial_idx, 1) == 0,label = '-60';else,label = '60';end
+                    case {9,10,11,12}
+                        if data_struct.labels(trial_idx, 1) == 0,label = '-45';else,label = '45';end
+                    case {13,14,15,16}
+                        if data_struct.labels(trial_idx, 1) == 0,label = '-30';else,label = '30';end
+                    case {17,18,19,20}
+                        if data_struct.labels(trial_idx, 1) == 0,label = '-5';else,label = '5';end
                 end
         otherwise
             error("Unimplemented dataset %s",dataset_name)

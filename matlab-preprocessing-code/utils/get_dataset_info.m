@@ -7,12 +7,11 @@ arguments (Output)
 end
 dataset_infos = struct("filelists",[], ...
     "num_subject",[],"nch",[],"fs",[],"f_upper",[], ...
-    "num_trial",[],"desired_length",[],"audio_path",[],"base_path",[]);
+    "num_trial",[],"desired_length",[],"audio_path",[],"base_path",[],"channel_infos",[]);
 for dataset_name = dataset_names
     type = split(dataset_name,"_");
     type = type(2);
     num_subject = [];
-    disp(['Processing dataset: ', dataset_name]);  % 打印当前处理的 dataset_name
     switch dataset_name
         case {"NJU_preprocessed"}
             base_path = "D:\EEG dataset\NJU\filter_zscore_asr_ica_no_eye_inspect";
@@ -42,10 +41,10 @@ for dataset_name = dataset_names
             audio_path = "E:\EEG_dataset_Superhuge\BrennansAliceStory\audio\audio";
             fs = 500;
             filelists = dir(fullfile(base_path,"S*.mat"));
-            nch = 60;
+            nch = 62;
             f_upper = 200;
             num_trial = 12;
-            desired_length = 28e3;
+            desired_length = 26e3;
             channel = [];
         case {"sparKULee_raw","sparKULee_preprocessed"}
             base_path = sprintf("E:\\EEG_dataset_Superhuge\\sparrKULee\\sparrKULee\\derivatives\\%s_eeg",type);
@@ -62,7 +61,7 @@ for dataset_name = dataset_names
             end
             nch = 64;
             f_upper = 64;
-            num_trial = 10;
+            
             desired_length = 10e4;
             num_subject = length(dir(fullfile(base_path,"sub-*")));
             channel = [];
@@ -71,7 +70,7 @@ for dataset_name = dataset_names
             audio_path = "";
             fs = 64;
             filelists = dir(fullfile(base_path,"S*.mat"));
-            nch = 64;
+            nch = 66;
             f_upper = 32;
             desired_length = 3200;
             num_trial = 60;
@@ -159,6 +158,12 @@ for dataset_name = dataset_names
         otherwise
             error("Unimplemented dataset %s",dataset_name)
     end
+    py_dict = py.dict();
+    for i = 1:length(channel)
+        channel_info = py.dict();
+        channel_info{'name'} = channel(i);
+        py_dict{int32(i)} = channel_info;
+    end
     nfile = length(filelists);
     dataset_infos(end).desired_length = desired_length;
     dataset_infos(end).f_upper = f_upper;
@@ -169,8 +174,8 @@ for dataset_name = dataset_names
     dataset_infos(end).num_subject = fastif(isempty(num_subject),nfile,num_subject);
     dataset_infos(end).audio_path = audio_path;
     dataset_infos(end).base_path = base_path;
-    dataset_infos(end).channel = channel;  % 新增 channel 字段
+    dataset_infos(end).channel_infos = py_dict;
     dataset_infos(end+1) = struct("filelists",[], ...
     "num_subject",[],"nch",[],"fs",[],"f_upper",[], ...
-    "num_trial",[],"desired_length",[],"audio_path",[],"base_path",[],"channel",[]);
+    "num_trial",[],"desired_length",[],"audio_path",[],"base_path",[],"channel_infos",[]);
 end

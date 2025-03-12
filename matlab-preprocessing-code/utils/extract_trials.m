@@ -53,8 +53,8 @@ for trial_idx = trial_idxs
                 exg = double(exg_py)';
             end
             target_audio = regexp(filelists(trial_idx).name, ...
-                      'desc-preproc-audio-(audiobook(?:_\d+)*?)_(?:artefact_)?eeg\.npy', ...
-                      "tokens");
+                'desc-preproc-audio-(podcast(?:_\d+)?|audiobook(?:_\d+)*?)_(?:\w+_)?eeg\.npy', ...
+                "tokens");
             env_path = target_audio{1}+"_-_envelope.npy";
             mel_path = target_audio{1}+"_-_mel.npy";
         case "DTU_preprocessed"

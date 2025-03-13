@@ -1,8 +1,6 @@
 __pycache__/
 *.pyc
-dataset/
 lightning_logs/
-MNIST/
 weights/
 /backup
 .vscode/
@@ -14,4 +12,5 @@ weights/
 superhuge.egg-info/
 build/
 *egg-info/
+matlab-preprocessing-code/
 prepare_dataset/

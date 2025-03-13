@@ -1,3 +1,4 @@
+from collections import namedtuple
 import inspect
 import os
 import pickle
@@ -51,10 +52,7 @@ class EegDataset(Dataset):
         cls,
         /,
         root_path: str,
-        meta_filter_func: (
-            MetaDataFilterComposer
-            | None
-        ) = None,
+        meta_filter_func: MetaDataFilterComposer | None = None,
         meta_filter_func_args: list = [],
         meta_group_func: GroupingFunction | None = None,
         fold_idx: int = 1,
@@ -157,7 +155,9 @@ class EegDataset(Dataset):
             for mode in dataset_modes
         ]
 
-        return datasets
+        p = namedtuple("datasets", ["train", "val", "test"])
+
+        return p(datasets)
 
     @classmethod
     def filt_metadata(cls, metadata: MetaData, meta_filter_func: Callable | None):

@@ -272,7 +272,14 @@ class RegressionInterface(MInterface):
         loss = self.loss_fn(y_pred=predictions, y_true=targets, current_epoch=self.current_epoch).mean()  # type: ignore
 
         self.get_stats(predictions, targets, batch_size=targets.shape[0])
-        self.log(f"{self.stage}/loss", loss, batch_size=targets.shape[0], prog_bar=True)
+        self.log(
+            f"{self.stage}/loss",
+            loss,
+            batch_size=targets.shape[0],
+            prog_bar=True,
+            on_step=False,
+            on_epoch=True,
+        )
 
         return loss
 
@@ -324,8 +331,8 @@ class RegressionInterface(MInterface):
             {k: v.mean() for k, v in stats.items()},
             batch_size=batch_size,
             prog_bar=True,
-            on_step=self.stage == "train",
-            on_epoch=self.stage != "train",
+            on_step=False,
+            on_epoch=True,
         )
 
         return stats

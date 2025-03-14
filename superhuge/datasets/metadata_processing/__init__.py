@@ -5,6 +5,7 @@ from .data import (
     ClassifyMetaDataElement,
     RegressionMetaDataElement,
 )
+from . import filters
 
 __all__ = [
     "leave_one_out_input_decorator",
@@ -12,4 +13,5 @@ __all__ = [
     "CrossValidationEntry",
     "ClassifyMetaDataElement",
     "RegressionMetaDataElement",
+    "filters",
 ]

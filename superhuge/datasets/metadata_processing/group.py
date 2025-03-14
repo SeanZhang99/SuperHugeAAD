@@ -20,6 +20,7 @@ def leave_one_out_input_decorator(func) -> GroupingFunction:
 def loto(
     metadata: MetaData, fold_index: int, n_folds: int, seed: int = 42, **kwargs: Any
 ) -> CrossValidationEntry:
+    assert 0 <= fold_index < n_folds, f"fold_index must be in the range [0, {n_folds})"
     random.seed(seed)
 
     dataset_subject_trials = {0: {0: []}}

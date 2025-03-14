@@ -55,7 +55,7 @@ class EegDataset(Dataset):
         meta_filter_func: MetaDataFilterComposer | None = None,
         meta_filter_func_args: list = [],
         meta_group_func: GroupingFunction | None = None,
-        fold_idx: int = 1,
+        fold_idx: int = 0,
         n_folds: int = 5,
         window_length: int = 10,
         fs: int = 128,
@@ -108,6 +108,10 @@ class EegDataset(Dataset):
             set(metadata_fields) | set(cls.metadata_cls.model_fields.keys())
         )
 
+        assert (
+            0 <= fold_idx < n_folds
+        ), f"EEG_DATASET:CREATE_DATASETS:FOLD_IDX_ERROR: fold_idx must be in the range [0, {n_folds}), but got {fold_idx}"
+
         config = CreateDatasetsInputConfig(
             meta_path=os.path.join(root_path, "meta", "metadata.pkl"),
             exg_path=os.path.join(root_path, "exg"),
@@ -157,7 +161,7 @@ class EegDataset(Dataset):
 
         p = namedtuple("datasets", ["train", "val", "test"])
 
-        return p(datasets)
+        return p(*datasets)
 
     @classmethod
     def filt_metadata(cls, metadata: MetaData, meta_filter_func: Callable | None):
@@ -233,14 +237,8 @@ class EegDataset(Dataset):
         # convert to MetaData object.
         meta_dict = {}
         for entry, data in metadata.items():
-            tmp_dict = {}
-            for k, v in data.items():
-                if "path" in k:
-                    k = k.split("_")[0]
-                if k in metadata_fields:
-                    tmp_dict[k] = v
-            if set(metadata_fields).issubset(set(tmp_dict.keys())):
-                meta_dict[entry] = cls.metadata_cls(**tmp_dict)
+            if set(metadata_fields).issubset(set(data.keys())):
+                meta_dict[entry] = cls.metadata_cls(**data)
         return meta_dict
 
     def __init__(self, **kwargs):

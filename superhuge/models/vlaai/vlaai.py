@@ -1,12 +1,14 @@
 """Code to construct the VLAAI network."""
 
 import os
-from typing import Callable, Sequence
-from pydantic import BaseModel, Field
-from typing import Annotated
 
 os.environ["KERAS_BACKEND"] = "torch"
+from typing import Annotated, Callable, Sequence
+
 import keras
+from pydantic import BaseModel, Field
+
+keras.config.set_image_data_format("channels_first")
 from keras import Model
 
 
@@ -115,7 +117,8 @@ def extractor(
 
     # Add the convolutional layers
     for num_kernel, kernel_size in zip(num_kernels, kernel_sizes):
-        x = keras.layers.Conv1D(num_kernel, kernel_size, padding="same")(x)
+        x = keras.layers.ZeroPadding1D((kernel_size - 1, 0))(x)
+        x = keras.layers.Conv1D(num_kernel, kernel_size, padding="valid")(x)
         x = normalization_fn()(x)
         x = activation_fn()(x)
 

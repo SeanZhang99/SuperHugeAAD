@@ -6,16 +6,16 @@ class MetaDataFilterComposer:
 
     def __init__(
         self,
-        /,
-        *fitlers: Callable[[MetaDataElement | None], MetaDataElement | None],
+        *filters: Callable[[MetaDataElement | None], MetaDataElement | None],
+        **kwargs,
     ) -> None:
-        self.fitlers = list(fitlers)
+        self.filters = list(filters)
 
     def __call__(
         self, metadata_element: MetaDataElement | None
     ) -> MetaDataElement | None:
         """Filter metadata element."""
-        for filter_func in self.fitlers:
+        for filter_func in self.filters:
             metadata_element = filter_func(metadata_element)
             if metadata_element is None:
                 return None

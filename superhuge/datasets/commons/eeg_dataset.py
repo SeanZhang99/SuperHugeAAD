@@ -109,7 +109,7 @@ class EegDataset(Dataset):
         )
 
         assert (
-            0 <= fold_idx < n_folds
+            0 <= int(fold_idx) < int(n_folds)
         ), f"EEG_DATASET:CREATE_DATASETS:FOLD_IDX_ERROR: fold_idx must be in the range [0, {n_folds}), but got {fold_idx}"
 
         config = CreateDatasetsInputConfig(

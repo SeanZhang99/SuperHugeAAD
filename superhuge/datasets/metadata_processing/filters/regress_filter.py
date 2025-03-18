@@ -14,7 +14,7 @@ def env_filter(
     If the 'env' attribute is present, the function returns the metadata element.
     Otherwise, it returns None.
     """
-    if hasattr(metadata_element, "env"):
+    if hasattr(metadata_element, "env") and getattr(metadata_element, "env"):
         return metadata_element
     return None
 
@@ -27,7 +27,7 @@ def mel_filter(
     If the 'mel' attribute is present, the function returns the metadata element.
     Otherwise, it returns None.
     """
-    if hasattr(metadata_element, "mel"):
+    if hasattr(metadata_element, "mel") and getattr(metadata_element, "mel"):
         return metadata_element
     return None
 

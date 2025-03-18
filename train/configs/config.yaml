@@ -4,8 +4,9 @@ data:
   init_args:
     dataloader_args:
       batch_size: 16
-      num_workers: 2
-      persistent_workers: true
+      # num_workers: 2
+      # persistent_workers: true
+      shuffle: true
     dataset_args:
       fs: 128
       metadata_fields:
@@ -15,13 +16,12 @@ data:
         - signal_length
         - num_channel
         - fs
-        - label
+        - channel_infos
       n_folds: 5
       overlap: 1
       root_path: E:/derivatives/SuperHuge
       transform: null
       window_length: 10
-    dataset_class: superhuge.datasets.classify.eeg_classify_base_dataset.EegClassifyBaseDataset
 # lightning.pytorch==2.5.0.post0
 lr_scheduler:
   class_path: lightning.pytorch.cli.ReduceLROnPlateau

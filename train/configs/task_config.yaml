@@ -79,19 +79,19 @@ directional_focus_decoding:
       data:
         init_args:
           dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.operation.loto
+            meta_group_func: superhuge.datasets.metadata_processing.group.loto
     leave_one_subject_out:
       enable: 0
       data:
         init_args:
           dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.operation.loso
+            meta_group_func: superhuge.datasets.metadata_processing.group.loso
     leave_one_dataset_out:
       enable: 0
       data:
         init_args:
           dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.operation.lodo
+            meta_group_func: superhuge.datasets.metadata_processing.group.lodo
 
 speech_reconstruction:
   type: regression
@@ -127,23 +127,23 @@ speech_reconstruction:
               - env
             speech_feature_path: "E:/derivatives/SuperHuge/stimuli/env"
             speech_feature_key: env
-  
+
   cross_validation:
     leave_one_trial_out:
       enable: 1
       data:
         init_args:
           dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.operation.loto
+            meta_group_func: superhuge.datasets.metadata_processing.group.loto
     leave_one_subject_out:
       enable: 0
       data:
         init_args:
           dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.operation.loso
+            meta_group_func: superhuge.datasets.metadata_processing.group.loso
     leave_one_dataset_out:
       enable: 0
       data:
         init_args:
           dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.operation.lodo
+            meta_group_func: superhuge.datasets.metadata_processing.group.lodo

@@ -1,8 +1,10 @@
 import os
 from collections.abc import Callable
 
+from jinja2 import Template
 from pydantic import BaseModel
 import numpy as np
+import torch
 
 from ..commons.eeg_dataset import EegDataset
 from ..metadata_processing.data import MetaDataElement, RegressionMetaDataElement
@@ -53,10 +55,12 @@ class EegRegressionBaseDataset(EegDataset):
         """
         meta, exg = super().__getitem__(idx).values()
 
+        entry = meta["entry"]
         # 加载语音特征
         speech_feature = np.load(
             os.path.join(
-                self.speech_feature_path, meta[self.speech_feature_type].split("\\")[-1]
+                self.speech_feature_path,
+                f"{entry}_{self.speech_feature_type}.npy",
             )
         )
 

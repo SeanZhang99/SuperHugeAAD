@@ -19,6 +19,8 @@ import lightning as pl2
 from pydantic import BaseModel
 from torch.utils.data import DataLoader
 
+from superhuge.datasets.commons import collect_multidataset
+
 
 from .eeg_dataset import EegDataset
 
@@ -69,7 +71,11 @@ class DInterface(pl2.LightningDataModule):
         )
 
     def create_dataloader(self, dataset):
-        return DataLoader(dataset, **self.config.dataloader_args)
+        return DataLoader(
+            dataset,
+            **self.config.dataloader_args,
+            collate_fn=collect_multidataset.collect_multidataset,
+        )
 
     def train_dataloader(self):
         return self.create_dataloader(self.trainset)

@@ -21,8 +21,8 @@ class MetaDataElement(BaseModel, extra="allow"):
 
 
 class RegressionMetaDataElement(MetaDataElement):
-    env: str | None
-    mel: str | None
+    env: str | int | None
+    mel: str | int | None
 
 
 class ClassifyMetaDataElement(MetaDataElement):

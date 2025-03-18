@@ -15,17 +15,17 @@ def pick_file(root_path: str | None):
 
     if not os.path.exists(default_dir):
         print(
-            f"[bold red]Error:[/bold red] The directory {default_dir} does not exist."
+            f"\n[bold red]Error:[/bold red] The directory {default_dir} does not exist."
         )
         return None
 
     yaml_files = [f for f in os.listdir(default_dir) if f.endswith(".yaml")]
 
     if not yaml_files:
-        print("[bold yellow]No YAML files found.[/bold yellow]")
+        print("\n[bold yellow]No YAML files found.[/bold yellow]")
         return None
 
-    table = Table(title="Available YAML Files")
+    table = Table(title="\nAvailable YAML Files")
     table.add_column("Index", justify="center", style="cyan", no_wrap=True)
     table.add_column("Filename", style="magenta")
 

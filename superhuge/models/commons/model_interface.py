@@ -12,29 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections.abc import Callable, Sequence
 import inspect
+from abc import ABC, abstractmethod
+from collections.abc import Callable, Sequence
 from typing import Any, final
 from warnings import warn
+
 import einops
 import keras
-import torch
-from abc import ABC, abstractmethod
-
 import lightning as pl2
-from torchmetrics.functional import pearson_corrcoef
+import torch
 from torchmetrics.classification import ConfusionMatrix
+from torchmetrics.functional import pearson_corrcoef
 
-from superhuge.datasets import regression
-
-from .model_template import ModelTemplate
-from .hoods import classify_hood, regression_hood
 from ...utils.global_z_score import GlobalZScore
-
-from lightning.pytorch.callbacks.rich_model_summary import RichModelSummary
+from .model_template import ModelTemplate
+from .post_model import classify_post_model, regression_post_model
+from .pre_model import Channel1D, Channel2D
 
 
 class MInterface(pl2.LightningModule, ABC):
+    pre_model: torch.nn.Module = torch.nn.Identity()
+    post_model: torch.nn.Module = torch.nn.Identity()
+
     def __init__(
         self,
         /,
@@ -106,7 +106,10 @@ class MInterface(pl2.LightningModule, ABC):
         return self.input_size
 
     def forward(self, *inputs: torch.Tensor) -> torch.Tensor:
-        return self.model(*[self.global_z_score(x) for x in inputs])
+        x = self.pre_model(*inputs)
+        x = self.model(*[self.global_z_score(x) for x in inputs])
+        x = self.post_model(x)
+        return x
 
     # define training_step, validation_step, test_step in your own subclass
     @abstractmethod
@@ -188,7 +191,7 @@ class ClassifierInterface(MInterface):
             num_classes=num_class,
         )
 
-        self.hood = classify_hood(self.input_size, num_class)
+        self.post_model = classify_post_model(self.input_size, num_class)
 
     __init__.__signature__ = inspect.signature(MInterface.__init__)  # type: ignore
 
@@ -198,7 +201,8 @@ class ClassifierInterface(MInterface):
         meta: dict[str, Any] = batch["meta"]
         exg: torch.Tensor = batch["exg"]
         label: str = batch["label"]
-        outputs: torch.Tensor = self.hood(self.forward(exg))
+        exg = self.forward(exg)
+        outputs: torch.Tensor = self.post_model(exg)
         pred = outputs.argmax(dim=1)
         loss = self.loss_fn(outputs, label)  # type: ignore
         stage = self.stage
@@ -253,33 +257,34 @@ class RegressionInterface(MInterface):
         # Forward the validated arguments to the parent
         super().__init__(**bound_arguments.kwargs)
 
-        self.hood = regression_hood(self.input_size)
+        self.post_model = regression_post_model(self.input_size)
 
     __init__.__signature__ = inspect.signature(MInterface.__init__)  # type: ignore
 
-    def training_step(
-        self, batch: dict[str, torch.Tensor | dict], batch_idx: int
-    ) -> torch.Tensor:
+    def training_step(self, batch: dict[str, dict], batch_idx: int) -> torch.Tensor:
         # extract input and target, call forward, and calculate loss
-        targets: torch.Tensor = batch["audio"]  # type: ignore
-        exg: torch.Tensor = batch["exg"]  # type: ignore
-        intermediate: torch.Tensor = self.forward(exg)
-        predictions: torch.Tensor = self.hood(intermediate)
-        if predictions.ndim == 2:
-            predictions = einops.rearrange(predictions, "batch time -> batch time 1")
-        if targets.ndim == 2:
-            targets = einops.rearrange(targets, "batch time -> batch time 1")
-        loss = self.loss_fn(y_pred=predictions, y_true=targets, current_epoch=self.current_epoch).mean()  # type: ignore
+        loss = 0
+        for data in batch.values():
+            targets: torch.Tensor = data["audio"]  # type: ignore
+            exg: torch.Tensor = data["exg"]  # type: ignore
+            predictions: torch.Tensor = self.forward(exg)
+            if predictions.ndim == 2:
+                predictions = einops.rearrange(
+                    predictions, "batch time -> batch time 1"
+                )
+            if targets.ndim == 2:
+                targets = einops.rearrange(targets, "batch time -> batch time 1")
+            loss = self.loss_fn(y_pred=predictions, y_true=targets, current_epoch=self.current_epoch).mean()  # type: ignore
 
-        self.get_stats(predictions, targets, batch_size=targets.shape[0])
-        self.log(
-            f"{self.stage}/loss",
-            loss,
-            batch_size=targets.shape[0],
-            prog_bar=True,
-            on_step=False,
-            on_epoch=True,
-        )
+            self.get_stats(predictions, targets, batch_size=targets.shape[0])
+            self.log(
+                f"{self.stage}/loss",
+                loss,
+                batch_size=targets.shape[0],
+                prog_bar=True,
+                on_step=False,
+                on_epoch=True,
+            )
 
         return loss
 
@@ -336,3 +341,13 @@ class RegressionInterface(MInterface):
         )
 
         return stats
+
+
+class Channel1DRegressionInterface(RegressionInterface):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.pre_model = Channel1D()
+
+    __init__.__signature__ = inspect.signature(MInterface.__init__)  # type: ignore

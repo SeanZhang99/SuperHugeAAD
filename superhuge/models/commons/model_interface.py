@@ -321,9 +321,9 @@ class RegressionInterface(MInterface):
             torch.argmax(
                 torch.stack(
                     [stats[f"{self.stage}/{label}_pcc"] for label in y_pred_labels],
-                    dim=1,
+                    dim=-1,
                 ),
-                dim=1,
+                dim=-1,
             )
             == 0
         ).type_as(x_pred)

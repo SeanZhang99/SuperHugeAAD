@@ -77,7 +77,7 @@ trainer:
   enable_checkpointing: null
   enable_model_summary: null
   enable_progress_bar: null
-  fast_dev_run: true
+  fast_dev_run: false
   gradient_clip_algorithm: null
   gradient_clip_val: null
   inference_mode: true

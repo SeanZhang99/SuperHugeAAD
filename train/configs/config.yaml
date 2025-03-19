@@ -4,9 +4,8 @@ data:
   init_args:
     dataloader_args:
       batch_size: 16
-      # num_workers: 2
-      # persistent_workers: true
-      shuffle: true
+      num_workers: 2
+      persistent_workers: true
     dataset_args:
       fs: 128
       metadata_fields:

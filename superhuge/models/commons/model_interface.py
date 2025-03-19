@@ -15,6 +15,7 @@
 import inspect
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
+import stat
 from typing import Any, final
 from warnings import warn
 
@@ -332,6 +333,9 @@ class RegressionInterface(MInterface):
             stats[f"{self.stage}/a_pcc-{label}_pcc"] = (
                 stats[f"{self.stage}/a_pcc"] - stats[f"{self.stage}/{label}_pcc"]
             )
+
+        for k, v in stats.items():
+            assert not v.mean().isnan(), f"{k} is nan"
 
         self.log_dict(
             {k: v.mean() for k, v in stats.items()},

@@ -18,14 +18,14 @@ def collect_multidataset(batch: dict):
 
     grouped_batches = defaultdict(list)
 
-    # Group by 'source' type
+    # Group by 'dataset_id'
     for item in batch:
         grouped_batches[item["meta"]["dataset_id"]].append(item)
 
     # Apply default collation separately per source
     collated_batch = {}
-    for source, items in grouped_batches.items():
-        collated_batch[source] = default_collate(
+    for dataset_id, items in grouped_batches.items():
+        collated_batch[dataset_id] = default_collate(
             [{k: v for k, v in item.items()} for item in items]
         )
 

@@ -25,6 +25,8 @@ import torch
 from torchmetrics.classification import ConfusionMatrix
 from torchmetrics.functional import pearson_corrcoef
 
+from ...datasets.metadata_processing.data import MetaData, MetaDataElement
+
 from ...utils.global_z_score import GlobalZScore
 from .model_template import ModelTemplate
 from .post_model import classify_post_model, regression_post_model
@@ -32,9 +34,6 @@ from .pre_model import Channel1D, Channel2D
 
 
 class MInterface(pl2.LightningModule, ABC):
-    pre_model: torch.nn.Module = torch.nn.Identity()
-    post_model: torch.nn.Module = torch.nn.Identity()
-
     def __init__(
         self,
         /,
@@ -59,7 +58,7 @@ class MInterface(pl2.LightningModule, ABC):
             self.model = model_class.create_models(**model_args)
         elif isinstance(model_class, Callable):
             self.model = model_class(**model_args)
-            self.model.to(self.device)
+            self.model
         else:
             raise TypeError(
                 f"SUPERHUGE:MODELS:MODEL_INTERFACE:__INIT__:{model_class} shoule be a 'torch.nn.Module' with method 'create_models' or a callable returning a model, but got {type(model_class)}"
@@ -77,6 +76,9 @@ class MInterface(pl2.LightningModule, ABC):
         self.get_input_size(**model_args)
 
         self.global_z_score = GlobalZScore()
+
+        self.pre_model: torch.nn.Module = torch.nn.Identity()
+        self.post_model: torch.nn.Module = torch.nn.Identity()
 
         if summary:
             self.model.summary()
@@ -105,11 +107,11 @@ class MInterface(pl2.LightningModule, ABC):
 
         return self.input_size
 
-    def forward(self, *inputs: torch.Tensor) -> torch.Tensor:
-        x = self.pre_model(*inputs)
-        x = self.model(*[self.global_z_score(x) for x in inputs])
-        x = self.post_model(x)
-        return x
+    def forward(self, data) -> torch.Tensor:
+        pre_inputs = self.pre_model(data["exg"])
+        output = self.model(*[self.global_z_score(x) for x in pre_inputs])
+        post_outputs = self.post_model(output)
+        return post_outputs
 
     # define training_step, validation_step, test_step in your own subclass
     @abstractmethod
@@ -257,7 +259,7 @@ class RegressionInterface(MInterface):
         # Forward the validated arguments to the parent
         super().__init__(**bound_arguments.kwargs)
 
-        self.post_model = regression_post_model(self.input_size)
+        self.post_model = None
 
     __init__.__signature__ = inspect.signature(MInterface.__init__)  # type: ignore
 
@@ -265,13 +267,12 @@ class RegressionInterface(MInterface):
         # extract input and target, call forward, and calculate loss
         loss = 0
         for data in batch.values():
-            targets: torch.Tensor = data["audio"]  # type: ignore
-            exg: torch.Tensor = data["exg"]  # type: ignore
-            predictions: torch.Tensor = self.forward(exg)
+            predictions: torch.Tensor = self.forward(data)
             if predictions.ndim == 2:
                 predictions = einops.rearrange(
                     predictions, "batch time -> batch time 1"
                 )
+            targets: torch.Tensor = data["audio"]  # type: ignore
             if targets.ndim == 2:
                 targets = einops.rearrange(targets, "batch time -> batch time 1")
             loss = self.loss_fn(y_pred=predictions, y_true=targets, current_epoch=self.current_epoch).mean()  # type: ignore
@@ -351,3 +352,13 @@ class Channel1DRegressionInterface(RegressionInterface):
         self.pre_model = Channel1D()
 
     __init__.__signature__ = inspect.signature(MInterface.__init__)  # type: ignore
+
+    def forward(self, data: dict):
+        exg: torch.Tensor = data["exg"]
+        meta: MetaDataElement = data["meta"]
+        pre_inputs = self.pre_model(exg, meta)
+        output = self.model(self.global_z_score(pre_inputs))
+        if self.post_model is None:
+            self.post_model = regression_post_model(output.shape[1:])
+        post_outputs = self.post_model(output)
+        return post_outputs

@@ -9,7 +9,7 @@ class MSELoss(_Loss):
     def forward(
         self, /, *, y_pred: torch.Tensor, y_true: torch.Tensor, **kwargs
     ) -> torch.Tensor:
-        return torch.nn.functional.mse_loss(y_pred[:, :, 0], y_true[:, :, 0], **kwargs)
+        return torch.nn.functional.mse_loss(y_pred[:, :, 0], y_true[:, :, 0])
 
 
 class ContrastiveMSELoss(_Loss):
@@ -19,13 +19,7 @@ class ContrastiveMSELoss(_Loss):
     def forward(
         self, /, *, y_pred: torch.Tensor, y_true: torch.Tensor, **kwargs
     ) -> torch.Tensor:
-        loss = torch.nn.functional.mse_loss(y_pred[:, :, 0], y_true[:, :, 0], **kwargs)
-        loss -= (
-            torch.nn.functional.mse_loss(y_pred[:, :, 0], y_true[:, :, 1], **kwargs)
-            * 0.5
-        )
-        loss -= (
-            torch.nn.functional.mse_loss(y_pred[:, :, 0], y_true[:, :, 2], **kwargs)
-            * 0.5
-        )
+        loss = torch.nn.functional.mse_loss(y_pred[:, :, 0], y_true[:, :, 0])
+        loss -= torch.nn.functional.mse_loss(y_pred[:, :, 0], y_true[:, :, 1]) * 0.5
+        loss -= torch.nn.functional.mse_loss(y_pred[:, :, 0], y_true[:, :, 2]) * 0.5
         return loss

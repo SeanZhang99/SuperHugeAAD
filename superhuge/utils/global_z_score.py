@@ -1,9 +1,9 @@
 import einops
 import torch
-import torch.nn as nn
+import lightning as pl
 
 
-class GlobalZScore(nn.Module):
+class GlobalZScore(pl.LightningModule):
     """
     计算整个训练集的全局均值和标准差 (跨所有时间和通道)
     在训练时更新统计量，在测试时冻结。
@@ -34,5 +34,5 @@ class GlobalZScore(nn.Module):
             ) * self.running_var + self.momentum * batch_var
 
         # 标准化
-        x = (x - self.running_mean) / (torch.sqrt(self.running_var) + 1e-6)
+        x = (x - self.running_mean.to(x)) / (torch.sqrt(self.running_var.to(x)) + 1e-6)
         return x

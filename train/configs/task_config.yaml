@@ -113,10 +113,10 @@ speech_reconstruction:
           n_folds: 5
 
     model:
-      class_path: superhuge.models.commons.model_interface.RegressionInterface
+      class_path: superhuge.models.commons.model_interface.Channel1DRegressionInterface
       init_args:
         loss:
-          class_path: torch.nn.modules.loss.MSELoss
+          class_path: superhuge.models.loss.mse_loss.MSELoss
   tasks:
     envelope_reconstruction:
       enable: 1
@@ -125,7 +125,6 @@ speech_reconstruction:
           dataset_args:
             meta_filter_func_args:
               - env
-            speech_feature_path: "E:/derivatives/SuperHuge/stimuli/env"
             speech_feature_key: env
 
   cross_validation:

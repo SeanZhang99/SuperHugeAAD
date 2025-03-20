@@ -116,7 +116,7 @@ speech_reconstruction:
       class_path: superhuge.models.commons.model_interface.Channel1DRegressionInterface
       init_args:
         loss:
-          class_path: superhuge.models.loss.mse_loss.MSELoss
+          class_path: superhuge.models.loss.pearson_loss.PearsonLoss
   tasks:
     envelope_reconstruction:
       enable: 1

@@ -267,6 +267,7 @@ class RegressionInterface(MInterface):
     def training_step(self, batch: dict[str, dict], batch_idx: int) -> torch.Tensor:
         # extract input and target, call forward, and calculate loss
         loss = 0
+        batch_size = 0
         for data in batch.values():
             predictions: torch.Tensor = self.forward(data)
             if predictions.ndim == 2:
@@ -276,17 +277,20 @@ class RegressionInterface(MInterface):
             targets: torch.Tensor = data["audio"]  # type: ignore
             if targets.ndim == 2:
                 targets = einops.rearrange(targets, "batch time -> batch time 1")
-            loss = self.loss_fn(y_pred=predictions, y_true=targets, current_epoch=self.current_epoch).mean()  # type: ignore
+            loss += self.loss_fn(y_pred=predictions, y_true=targets, current_epoch=self.current_epoch).sum()  # type: ignore
+            batch_size += targets.shape[0]
 
             self.get_stats(predictions, targets, batch_size=targets.shape[0])
-            self.log(
-                f"{self.stage}/loss",
-                loss,
-                batch_size=targets.shape[0],
-                prog_bar=True,
-                on_step=False,
-                on_epoch=True,
-            )
+
+        loss /= batch_size
+        self.log(
+            f"{self.stage}/loss",
+            loss,
+            batch_size=batch_size,
+            prog_bar=True,
+            on_step=False,
+            on_epoch=True,
+        )
 
         return loss
 
@@ -361,8 +365,18 @@ class Channel1DRegressionInterface(RegressionInterface):
         exg: torch.Tensor = data["exg"]
         meta: MetaDataElement = data["meta"]
         pre_inputs = self.pre_model(exg, meta)
-        output = self.model(self.global_z_score(pre_inputs))
+        # output = self.model(self.global_z_score(pre_inputs))
+        output = self.model(pre_inputs)
         if self.post_model is None:
             self.post_model = regression_post_model(output.shape[1:])
         post_outputs = self.post_model(output)
         return post_outputs
+
+
+class Channel2DRegressionInterface(Channel1DRegressionInterface):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.pre_model = Channel2D()
+
+    __init__.__signature__ = inspect.signature(MInterface.__init__)  # type: ignore

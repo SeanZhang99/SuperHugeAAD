@@ -9,7 +9,7 @@ class GlobalZScore(pl.LightningModule):
     在训练时更新统计量，在测试时冻结。
     """
 
-    def __init__(self, momentum=0.1):
+    def __init__(self, momentum: float = 1e-3):
         super().__init__()
         self.momentum = momentum
         self.register_buffer("running_mean", torch.tensor(0.0))  # 标量均值

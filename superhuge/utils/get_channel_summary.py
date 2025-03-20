@@ -1,31 +1,174 @@
+from collections import OrderedDict
 import pickle
-from typing import Any
+import numpy as np
+from typing import Any, Dict, List, Tuple
+import re
+
+pattern = re.compile(r"([ACFINOPT][CFOpPT]?)([\dz]\d?)")
 
 
-from superhuge.datasets.metadata_processing.data import MetaData
-
-
-def get_channel_summary(metadata_path: str):
+def get_channel_summary(metadata_path: str) -> List[str]:
+    """
+    解析 EEG 通道数据并获取通道名称列表
+    """
     with open(metadata_path, "rb") as f:
-        metadata: dict[str, Any] = pickle.load(f)
-    channel_summary = {}
+        metadata: Dict[str, Any] = pickle.load(f)
+
+    channel_names = set()
     for entry, meta in metadata.items():
         for k, v in meta["channel_infos"].items():
             chan_name = v["name"]
-            if (
-                all(pattern not in chan_name for pattern in ["EX", "EO", "EC"])
-                and chan_name not in channel_summary.keys()
-            ):
-                channel_summary[chan_name] = len(channel_summary)
-    return dict(sorted(channel_summary.items(), key=lambda x: x[0]))
+            if all(pattern not in chan_name for pattern in ["EX", "EO", "EC"]):
+                channel_names.add(chan_name)
+
+    return sorted(channel_names)
 
 
-if __name__ == "__main__":
-    channel_summary = get_channel_summary(r"E:\derivatives\SuperHuge\meta\metadata.pkl")
-    print("CHANNEL1D_ENUM = {")
-    for k, v in channel_summary.items():
+def create_channel_row_mapping(channels: List[str]) -> Dict[str, int]:
+    """
+    生成通道字母标识到行号的映射表，合并FT, FC，T, C, TP, CP等情况
+    """
+    channel_name_to_row = OrderedDict(
+        {
+            "N": None,
+            "Fp": None,
+            "AF": None,
+            "F": None,
+            ("FC", "FT"): None,
+            ("C", "T"): None,
+            ("CP", "TP"): None,
+            "P": None,
+            "PO": None,
+            "O": None,
+            "I": None,
+        }
+    )
+
+    for ch in channels:
+        match = pattern.match(ch)
+        if match:
+            region = match.group(1)
+            for channel_name in channel_name_to_row.keys():
+                if isinstance(channel_name, tuple):
+                    if region in channel_name:
+                        channel_name_to_row[channel_name] = 1
+                        break
+                elif region == channel_name:
+                    # 1 indicate reserve the row
+                    channel_name_to_row[channel_name] = 1
+                    break
+
+    new_channel_name_to_row = OrderedDict()
+
+    i = 0
+    for k, v in channel_name_to_row.items():
+        if v:
+            if isinstance(k, tuple):
+                for kk in k:
+                    new_channel_name_to_row[kk] = i
+            else:
+                new_channel_name_to_row[k] = i
+            i += 1
+
+    return new_channel_name_to_row
+
+
+def create_channel_col_mapping(channels: List[str]) -> Dict[str, int]:
+    channel_name_to_col = OrderedDict(
+        {
+            "11": None,
+            "9": None,
+            "7": None,
+            "5": None,
+            "3": None,
+            "1": None,
+            "z": None,
+            "2": None,
+            "4": None,
+            "6": None,
+            "8": None,
+            "10": None,
+            "12": None,
+        }
+    )
+
+    for ch in channels:
+        if ch.endswith("1"):
+            pass
+        match = pattern.match(ch)
+        if match:
+            region = match.group(1)
+            number = match.group(2)
+            if region == "A":
+                number = str(10 + int(number))
+            if number in channel_name_to_col.keys():
+                channel_name_to_col[number] = 1
+
+    new_channel_name_to_col = OrderedDict()
+
+    i = 0
+    for k, v in channel_name_to_col.items():
+        if v:
+            if isinstance(k, tuple):
+                for kk in k:
+                    new_channel_name_to_col[kk] = i
+            else:
+                new_channel_name_to_col[k] = i
+            i += 1
+
+    return new_channel_name_to_col
+
+
+def infer_channel_positions(channels: List[str]) -> Dict[str, Tuple[int, int]]:
+    """
+    计算通道在二维网格中的位置
+    """
+    row_mapping = create_channel_row_mapping(channels)
+    col_mapping = create_channel_col_mapping(channels)
+    channel_to_position = {}
+    for channel in channels:
+        match = pattern.match(channel)
+        if match:
+            region = match.group(1)
+            number = match.group(2)
+            if region == "A":
+                number = str(10 + int(number))
+            row = row_mapping[region]
+            column = col_mapping[number]
+            channel_to_position[f"{region}{number}"] = (row, column)
+
+    return channel_to_position
+
+
+def map_channels_to_grid(metadata_path: str):
+    """
+    读取元数据并映射 EEG 通道到二维排列
+    """
+    channels = get_channel_summary(metadata_path)
+    positions = infer_channel_positions(channels)
+
+    max_row = max(p[0] for p in positions.values()) + 1
+    max_col = max(p[1] for p in positions.values()) + 1
+
+    grid = np.empty((max_row, max_col), dtype=object)
+    grid.fill(None)
+
+    for ch, (r, c) in positions.items():
+        grid[r, c] = ch
+
+    print("\nSummary of 2D grid mapping of EEG channels:\n")
+    for row in grid:
+        print(" ".join([f"{ch:>5}" if ch else "  ---" for ch in row]))
+
+    print("\nPlease paste the following dict into your code:\n")
+    print("{\n")
+    for k, v in positions.items():
         print(f'    "{k}": {v},')
     print("}")
     print("\n")
-    print(f"num_electrodes: {len(channel_summary)}")
-    pass
+    print("num_electrodes = ", len(positions))
+
+
+if __name__ == "__main__":
+    metadata_path = "E:\\derivatives\\SuperHuge\\meta\\metadata.pkl"
+    map_channels_to_grid(metadata_path)

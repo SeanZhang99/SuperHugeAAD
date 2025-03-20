@@ -91,6 +91,10 @@ class Channel1D(torch.nn.Module):
                 In our implementation, the multidataset collect fn `collect_multidataset.collect_multidataset` handles data from different datasets,grouping them into different keys. And the date_interface will handle this grouped data, pass each group (correspond to samples coming from one specific dataset) into the forward path. Therefore, in this object, x is expected to be from the same dataset, thus with the same channel arrangement, making it possible to perform batch-wise channel rearrangement.
         """
         y = torch.zeros(*x.shape[:-1], len(self.CHANNEL1D_ENUM))
+        # z-score normalization over batch
+        x_mean = x.mean(dim=(1, 2), keepdim=True)
+        x_std = x.std(dim=(1, 2), keepdim=True)
+        x = (x - x_mean) / (x_std + 1e-6)
         for c in metadata["channel_infos"].keys():
             chan_name = metadata["channel_infos"][c]["name"][0]
             if chan_name in self.CHANNEL1D_ENUM:
@@ -101,13 +105,20 @@ class Channel1D(torch.nn.Module):
 class Channel2D(torch.nn.Module):
     CHANNEL2D_ENUM: dict[str, tuple[int]] = {}
 
+    max_row = max([v[0] for v in CHANNEL2D_ENUM.values()])
+    max_col = max([v[1] for v in CHANNEL2D_ENUM.values()])
+
     def __init__(self):
         super().__init__()
 
-    def forward(self, x: torch.Tensor, metadata: MetaDataElement) -> torch.Tensor:
-        y = torch.zeros(*x.shape[:-1], len(self.CHANNEL2D_ENUM))
-        for b in range(x.shape[0]):
-            for c in range(x.shape[-1]):
-                chan_name = metadata.channel_infos[c]["name"][b]
-                y[b, :, *self.CHANNEL2D_ENUM[chan_name]] = x[b, :, c]
+    def forward(self, x: torch.Tensor, metadata: dict) -> torch.Tensor:
+        y = torch.zeros(*x.shape[:-1], self.max_row, self.max_col)
+        # z-score normalization over batch
+        x_mean = x.mean(dim=(1, 2), keepdim=True)
+        x_std = x.std(dim=(1, 2), keepdim=True)
+        x = (x - x_mean) / (x_std + 1e-6)
+        for c in metadata["channel_infos"].keys():
+            chan_name = metadata["channel_infos"][c]["name"][0]
+            if chan_name in self.CHANNEL2D_ENUM:
+                y[:, :, *self.CHANNEL2D_ENUM[chan_name]] = x[:, :, c - 1]
         return y

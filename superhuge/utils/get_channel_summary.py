@@ -161,7 +161,7 @@ def map_channels_to_grid(metadata_path: str):
         print(" ".join([f"{ch:>5}" if ch else "  ---" for ch in row]))
 
     print("\nPlease paste the following dict into your code:\n")
-    print("{\n")
+    print("CHANNEL2D_ENUM = {\n")
     for k, v in positions.items():
         print(f'    "{k}": {v},')
     print("}")
@@ -169,6 +169,19 @@ def map_channels_to_grid(metadata_path: str):
     print("num_electrodes = ", len(positions))
 
 
+def map_channel_to_vector(metadata_path: str):
+    channel_vector = get_channel_summary(metadata_path)
+
+    print("\nPlease paste the following list into your code:\n")
+    print("CHANNEL1D_ENUM = {\n")
+    for i, ch in enumerate(channel_vector):
+        print(f'    "{ch}": {i},')
+    print("}")
+    print("\n")
+    print("num_electrodes = ", len(channel_vector))
+
+
 if __name__ == "__main__":
     metadata_path = "E:\\derivatives\\SuperHuge\\meta\\metadata.pkl"
+    map_channel_to_vector(metadata_path)
     map_channels_to_grid(metadata_path)

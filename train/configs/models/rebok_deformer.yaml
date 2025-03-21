@@ -1,4 +1,4 @@
-class_path: superhuge.models.commons.model_interface.Channel1DRegressionInterface
+class_path: superhuge.models.commons.m_interface.MInterface
 init_args:
   model_class: superhuge.models.rebok_deformer.rebok_deformer.rebok_deformer
   model_args:

@@ -304,4 +304,6 @@ def deformer(
 
     x = layers.Lambda(lambda x: rearrange(x, "b k t -> b t k"))(x)
 
+    x = layers.Dense(units=num_electrodes)(x)
+
     return Model(inputs=input, outputs=x)

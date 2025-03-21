@@ -3,9 +3,6 @@ import torch
 
 
 class MSELoss(_Loss):
-    def __init__(self):
-        super().__init__()
-
     def forward(
         self, /, *, y_pred: torch.Tensor, y_true: torch.Tensor, **kwargs
     ) -> torch.Tensor:
@@ -15,9 +12,6 @@ class MSELoss(_Loss):
 
 
 class ContrastiveMSELoss(_Loss):
-    def __init__(self):
-        super().__init__()
-
     def forward(
         self, /, *, y_pred: torch.Tensor, y_true: torch.Tensor, **kwargs
     ) -> torch.Tensor:

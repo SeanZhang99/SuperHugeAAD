@@ -5,9 +5,6 @@ import torch
 
 
 class PearsonLoss(_Loss):
-    def __init__(self):
-        super().__init__()
-
     def forward(
         self, /, *, y_pred: torch.Tensor, y_true: torch.Tensor, **kwargs
     ) -> torch.Tensor:
@@ -17,9 +14,6 @@ class PearsonLoss(_Loss):
 
 
 class ContrastivePearsonLoss(_Loss):
-    def __init__(self):
-        super().__init__()
-
     def forward(
         self, /, *, y_pred: torch.Tensor, y_true: torch.Tensor, **kwargs
     ) -> torch.Tensor:

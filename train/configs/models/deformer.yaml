@@ -1,14 +1,14 @@
-class_path: superhuge.models.commons.model_interface.Channel1DRegressionInterface
+class_path: superhuge.models.commons.m_interface.MInterface
 init_args:
   model_class: superhuge.models.rebok_deformer.deformer.deformer
   model_args:
     window_length: 10
     fs: 128
-    num_kernels: 32
+    num_kernels: 64
     temporal_kernel_size: 17
     mha_depth: 4
     mha_num_heads: 32
-    mha_dim_heads: 128
+    mha_dim_heads: 512
     ff_hidden_dim: 256
     num_electrodes: 68
     dp_rate: .5

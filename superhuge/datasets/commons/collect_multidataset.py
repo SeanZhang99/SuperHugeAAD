@@ -1,6 +1,5 @@
 from collections import defaultdict
-import torch
-from torch.utils.data import DataLoader
+import time
 from torch.utils.data._utils.collate import default_collate
 
 
@@ -25,8 +24,6 @@ def collect_multidataset(batch: dict):
     # Apply default collation separately per source
     collated_batch = {}
     for dataset_id, items in grouped_batches.items():
-        collated_batch[dataset_id] = default_collate(
-            [{k: v for k, v in item.items()} for item in items]
-        )
+        collated_batch[dataset_id] = default_collate(items)
 
     return collated_batch

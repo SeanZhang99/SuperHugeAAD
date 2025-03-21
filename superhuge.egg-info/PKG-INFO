@@ -1,4 +1,4 @@
-Metadata-Version: 2.2
+Metadata-Version: 2.4
 Name: superhuge
 Version: 0.1.0
 Summary: SuperHugeAAD: extending Deep Learning-based Auditory Attention Decoding to more than one singel datasets.
@@ -17,3 +17,6 @@ Requires-Dist: numpy
 Requires-Dist: pyyaml
 Requires-Dist: einops
 Requires-Dist: ray
+Requires-Dist: optuna
+Requires-Dist: rich
+Requires-Dist: keras

@@ -36,7 +36,7 @@ class MultiRunCLI:
     def __run_cli(self):
         for config_list in self.task_config_parser.generate_configs():
             cli = LightningCLI(
-                parser_kwargs={"parser_mode": "omegaconf"},
+                # parser_kwargs={"parser_mode": "omegaconf"},
                 args=self.cli_argv + config_list,
                 run=False,
             )
@@ -51,3 +51,4 @@ class MultiRunCLI:
                 ckpt_path="best",
                 verbose=True,
             )
+            break

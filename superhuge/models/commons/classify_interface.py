@@ -1,4 +1,5 @@
 import inspect
+from turtle import onscreenclick
 
 import torch
 from torchmetrics import ConfusionMatrix
@@ -47,50 +48,44 @@ class ClassifyInterface(MInterface):
     def training_closure(self, data):
         outputs: torch.Tensor = self.forward(data)
         targets = data["label"]
-        targets = torch.Tensor(
-            [
-                (
-                    self.label_hash.setdefault(label, int(len(self.label_hash)))
-                    if isinstance(label, str)
-                    else int(label)
-                )
-                for label in targets
-            ]
-        ).to(outputs.device, torch.long)
+
         return outputs, targets
 
     def get_stats(self, pred: torch.Tensor, label: torch.Tensor, meta: dict):
         pred = pred.argmax(dim=1)
-        for sample_idx in range(pred.shape[0]):
-            # self.log_dict(
-            #     {
-            #         # # accuracy accumulated and reduced on each trial
-            #         f'detail/{self.stage}/{meta["entry"][sample_idx]}_acc': torch.Tensor(
-            #             pred[sample_idx] == label[sample_idx]
-            #         ).float(),
-            #         # accuracy accumulated and reduced on each subject
-            #         f'detail/{self.stage}/dataset-{meta["dataset_id"][sample_idx]:03d}-subject-{meta["subject_id"][sample_idx]:03d}_acc': torch.Tensor(
-            #             pred[sample_idx] == label[sample_idx]
-            #         ).float(),
-            #         # accuracy accumulated and reduced on each dataset
-            #         f'detail/{self.stage}/dataset-{meta["dataset_id"][sample_idx]:03d}_acc': torch.Tensor(
-            #             pred[sample_idx] == label[sample_idx]
-            #         ).float(),
-            #         # confusion matrix
-            #     },
-            #     batch_size=pred.shape[0],
-            #     prog_bar=False,
-            # )
-            self.log_dict(
-                {
-                    # accuracy accumulated and reduced on each class
-                    f"{self.stage}/{int(label[sample_idx])}_acc": torch.Tensor(
-                        pred[sample_idx] == label[sample_idx]
-                    ).float(),
-                },
-                prog_bar=True,
-                batch_size=pred.shape[0],
-            )
+        # for sample_idx in range(pred.shape[0]):
+        # self.log_dict(
+        #     {
+        #         # # accuracy accumulated and reduced on each trial
+        #         f'detail/{self.stage}/{meta["entry"][sample_idx]}_acc': torch.Tensor(
+        #             pred[sample_idx] == label[sample_idx]
+        #         ).float(),
+        #         # accuracy accumulated and reduced on each subject
+        #         f'detail/{self.stage}/dataset-{meta["dataset_id"][sample_idx]:03d}-subject-{meta["subject_id"][sample_idx]:03d}_acc': torch.Tensor(
+        #             pred[sample_idx] == label[sample_idx]
+        #         ).float(),
+        #         # accuracy accumulated and reduced on each dataset
+        #         f'detail/{self.stage}/dataset-{meta["dataset_id"][sample_idx]:03d}_acc': torch.Tensor(
+        #             pred[sample_idx] == label[sample_idx]
+        #         ).float(),
+        #         # confusion matrix
+        # accuracy accumulated and reduced on each class
+        # f"{self.stage}/{int(label[sample_idx])}_acc": torch.Tensor(
+        #     pred[sample_idx] == label[sample_idx]
+        # ).float(),
+        #     },
+        #     batch_size=pred.shape[0],
+        #     prog_bar=False,
+        # )
+        self.log_dict(
+            {
+                f"{self.stage}/acc": (pred == label).float().mean(),
+            },
+            prog_bar=True,
+            batch_size=pred.shape[0],
+            on_epoch=True,
+            on_step=False,
+        )
 
 
 class Channel1DClassifyInterface(ClassifyInterface, ChannelMapping1DInterface):

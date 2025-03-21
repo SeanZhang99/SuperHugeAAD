@@ -75,6 +75,8 @@ class RegressionInterface(MInterface):
             {k: v.mean() for k, v in stats.items()},
             batch_size=x_pred.shape[1],
             prog_bar=True,
+            on_epoch=True,
+            on_step=False,
         )
 
         return stats

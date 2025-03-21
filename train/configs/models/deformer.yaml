@@ -4,13 +4,13 @@ init_args:
   model_args:
     window_length: 10
     fs: 128
-    num_kernels: 64
+    num_kernels: 32
     temporal_kernel_size: 17
     mha_depth: 4
-    mha_num_heads: 32
-    mha_dim_heads: 512
-    ff_hidden_dim: 256
+    mha_num_heads: 16
+    mha_dim_heads: 256
+    ff_hidden_dim: 128
     num_electrodes: 68
-    dp_rate: .5
+    dp_rate: .0
     preconv_callable: superhuge.models.rebok_deformer.deformer.preconv
     transformer_callable: superhuge.models.rebok_deformer.deformer.transformer

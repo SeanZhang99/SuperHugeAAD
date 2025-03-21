@@ -11,6 +11,7 @@ from ..metadata_processing.filters.classify_filter import (
 
 class EegClassifyBaseDataset(EegDataset):
     metadata_cls = ClassifyMetaDataElement
+    label_hash: dict[str, int] = {}
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -19,7 +20,12 @@ class EegClassifyBaseDataset(EegDataset):
 
     def __getitem__(self, idx):
         meta, exg = super().__getitem__(idx).values()
-        label = meta["label"]
+        label: str | int = meta["label"]
+        label = (
+            self.label_hash.setdefault(label, int(len(self.label_hash)))
+            if isinstance(label, str)
+            else label
+        )
         return {"meta": meta, "exg": exg, "label": label}
 
     @classmethod

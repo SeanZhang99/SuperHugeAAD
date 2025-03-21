@@ -5,7 +5,7 @@ from keras import layers, Model, Input
 def classify_post_model(input_size: Sequence[int | None], num_class: int):
     input = Input(shape=input_size)
     x = layers.Flatten()(input)
-    x = layers.Dense(num_class, activation="softmax")(x)
+    x = layers.Dense(num_class)(x)
     return Model(inputs=input, outputs=x)
 
 

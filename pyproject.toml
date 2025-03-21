@@ -22,13 +22,11 @@ classifiers = [
 dependencies = [
     "scipy",
     "torch",
-    "lightning",
+    "lightning[extra]",
     "pydantic",
     "numpy",
     "pyyaml",
     "einops",
-    "ray",
-    "optuna",
     "rich",
     "keras",
 ]

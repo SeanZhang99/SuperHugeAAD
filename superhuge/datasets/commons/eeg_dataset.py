@@ -4,6 +4,7 @@ import os
 import pickle
 from collections.abc import Callable, Iterable
 from importlib import import_module
+import time
 from typing import Any, Sequence
 
 import numpy as np
@@ -322,7 +323,7 @@ class EegDataset(Dataset):
 
         return {"meta": meta, "exg": exg}
 
-    def _map_idx_to_file_and_segment(self, idx):
+    def _map_idx_to_file_and_segment(self, idx: int):
         """
         根据全局索引映射到具体文件和信号段索引。
 
@@ -332,13 +333,15 @@ class EegDataset(Dataset):
         Returns:
             tuple: 文件索引和信号段索引。
         """
-        cumulative = 0
+        cumulative: int = 0
         for file_idx, file in enumerate(self.files):
             file_meta = self.metadata[file]
-            trial_length = file_meta.signal_length
+            trial_length: int = file_meta.signal_length
             assert trial_length
-            stride = self.segment_length // self.overlap
-            num_segments = max(0, (trial_length - self.segment_length) // stride + 1)
+            stride: int = self.segment_length // self.overlap
+            num_segments: int = max(
+                0, (trial_length - self.segment_length) // stride + 1
+            )
             if cumulative + num_segments > idx:
                 segment_idx = idx - cumulative
                 return file_idx, segment_idx

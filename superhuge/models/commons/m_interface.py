@@ -143,7 +143,7 @@ class MInterface(pl2.LightningModule, ABC):
 
     @final
     def training_step(self, batch: dict[str], batch_idx: int) -> torch.Tensor:
-        loss: torch.Tensor = 0
+        loss: torch.Tensor = torch.zeros(1, device=self.device)
         batch_size = 0
         for data in batch.values():
             outputs, targets = self.training_closure(data)
@@ -161,6 +161,8 @@ class MInterface(pl2.LightningModule, ABC):
             loss,
             batch_size=batch_size,
             prog_bar=True,
+            on_step=False,
+            on_epoch=True,
         )
 
         return loss
@@ -204,23 +206,20 @@ class MInterface(pl2.LightningModule, ABC):
             if self.loss_hparams is None:
                 self.loss_hparams = [1] * len(self.loss)
 
+            self.loss_hparams = torch.tensor(self.loss_hparams, device=self.device)
+
             def loss_fn(
                 *args: torch.Tensor | int | str | Sequence[torch.Tensor | int | str],
             ):
-                loss = 0
+                loss = torch.zeros(1, device=self.device)
                 for loss_fn, weight in zip(self.loss, self.loss_hparams):
                     loss += loss_fn(*args) * weight
-                return (
-                    torch.Tensor(loss) if not isinstance(loss, torch.Tensor) else loss
-                )
+                return loss
 
         else:
 
             def loss_fn(*args: torch.Tensor | int | str):
-                loss = self.loss(*args)
-                return (
-                    torch.Tensor(loss) if not isinstance(loss, torch.Tensor) else loss
-                )
+                return self.loss(*args)
 
             loss_fn.__repr__ = f"{self.loss.__repr__().split('(')[0]}"
 

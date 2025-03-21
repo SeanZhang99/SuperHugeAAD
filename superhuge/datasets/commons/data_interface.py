@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import inspect
+from random import shuffle
 from typing import Any
 
 import lightning as pl2
@@ -70,15 +71,17 @@ class DInterface(pl2.LightningDataModule):
             self.config.dataset_class.create_datasets(**self.config.dataset_args)
         )
 
-    def create_dataloader(self, dataset):
+    def create_dataloader(self, dataset, *args, **kwargs):
         return DataLoader(
             dataset,
+            *args,
+            **kwargs,
             **self.config.dataloader_args,
             collate_fn=collect_multidataset.collect_multidataset,
         )
 
     def train_dataloader(self):
-        return self.create_dataloader(self.trainset)
+        return self.create_dataloader(self.trainset, shuffle=True)
 
     def val_dataloader(self):
         return self.create_dataloader(self.valset)

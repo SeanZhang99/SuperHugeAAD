@@ -6,3 +6,6 @@ numpy
 pyyaml
 einops
 ray
+optuna
+rich
+keras

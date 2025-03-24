@@ -61,7 +61,9 @@ class EegRegressionBaseDataset(EegDataset):
             os.path.join(
                 self.speech_feature_path,
                 f"{entry}_{self.speech_feature_type}.npy",
-            )
+            ),
+            mmap_mode="r",
+            allow_pickle=False,
         )
 
         if self.transform:

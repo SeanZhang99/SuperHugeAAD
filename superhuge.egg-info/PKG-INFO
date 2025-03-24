@@ -10,13 +10,13 @@ Classifier: Operating System :: OS Independent
 Requires-Python: >=3.11
 Description-Content-Type: text/markdown
 Requires-Dist: scipy
-Requires-Dist: torch
-Requires-Dist: lightning
+Requires-Dist: torch==2.5.1+cu121
+Requires-Dist: lightning[extra]
 Requires-Dist: pydantic
 Requires-Dist: numpy
 Requires-Dist: pyyaml
 Requires-Dist: einops
-Requires-Dist: ray
-Requires-Dist: optuna
 Requires-Dist: rich
 Requires-Dist: keras
+Requires-Dist: tensorflow-cpu<2.18.0
+Requires-Dist: ipython

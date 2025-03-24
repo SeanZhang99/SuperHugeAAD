@@ -13,16 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-""" This main entrance of the whole project.
+"""This main entrance of the whole project.
 
-    Most of the code should not be changed, please directly
-    add all the input arguments of your model's constructor
-    and the dataset file's constructor. The MInterface and 
-    DInterface can be seen as transparent to all your args.    
+Most of the code should not be changed, please directly
+add all the input arguments of your model's constructor
+and the dataset file's constructor. The MInterface and
+DInterface can be seen as transparent to all your args.
 """
 import os
 
 os.environ["KERAS_BACKEND"] = "torch"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import torch
 import keras
 from superhuge.utils.multi_run_cli import MultiRunCLI

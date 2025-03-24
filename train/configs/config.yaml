@@ -4,9 +4,9 @@ data:
   init_args:
     dataloader_args:
       batch_size: 32
-      num_workers: 0
-      # persistent_workers: false
-      # prefetch_factor: 8
+      num_workers: 2
+      persistent_workers: true
+      prefetch_factor: 8
     dataset_args:
       fs: 128
       metadata_fields:
@@ -20,8 +20,11 @@ data:
       n_folds: 5
       overlap: 1
       root_path: E:/derivatives/SuperHuge
-      transform: null
       window_length: 10
+      transform:
+        - class_path: superhuge.utils.transforms.channel_transform.ChannelRearrangeTransform
+          init_args:
+            apply_on: before_returning
 lr_scheduler:
   class_path: lightning.pytorch.cli.ReduceLROnPlateau
   init_args:
@@ -34,7 +37,6 @@ lr_scheduler:
     patience: 5
     threshold: 0.0001
     threshold_mode: rel
-    verbose: false
 optimizer:
   class_path: Adam
   init_args:
@@ -44,7 +46,7 @@ optimizer:
     weight_decay: 1.e-4
 seed_everything: 42
 trainer:
-  accelerator: auto
+  accelerator: gpu
   accumulate_grad_batches: 1
   barebones: false
   benchmark: false
@@ -72,7 +74,7 @@ trainer:
   default_root_dir: null
   detect_anomaly: false
   deterministic: true
-  devices: auto
+  devices: 1
   enable_checkpointing: null
   enable_model_summary: null
   enable_progress_bar: null
@@ -95,12 +97,12 @@ trainer:
   num_sanity_val_steps: null
   overfit_batches: 0
   plugins: null
-  precision: null
+  precision: 32
   profiler:
     class_path: PyTorchProfiler
-    # init_args:
-    #   dirpath: C:\Users\sean\Documents\Seafile\ZYMdeDocument\24-12-SuperHugeAAD\SuperHugeAAD
-    #   filename: profile
+    init_args:
+      dirpath: .
+      filename: profile
   reload_dataloaders_every_n_epochs: 0
   strategy: auto
   sync_batchnorm: false

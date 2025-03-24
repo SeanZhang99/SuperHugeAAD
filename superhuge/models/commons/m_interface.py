@@ -11,17 +11,16 @@ from superhuge.models.commons import post_model
 
 
 from .model_template import ModelTemplate
+from .lambda_layer import LambdaLayer
 
 
 class MInterface(pl2.LightningModule, ABC):
-    pre_model: torch.nn.Module
-    post_model: torch.nn.Module
 
     def __init__(
         self,
         /,
         *,
-        model_class: type[ModelTemplate] | Callable[..., keras.Model],
+        model_class: Callable[..., keras.Model | torch.nn.Module],
         model_args: dict,
         loss: torch.nn.modules.loss._Loss | Sequence[torch.nn.modules.loss._Loss],
         loss_hparams: Sequence[float] | None = None,
@@ -37,19 +36,15 @@ class MInterface(pl2.LightningModule, ABC):
             assert (
                 loss_hparams is None
             ), f"When specifying a single loss, you should not specify the loss weights, but got {loss} and {loss_hparams}"
-        if isinstance(model_class, type):
-            self.model = model_class.create_models(**model_args)
-        elif isinstance(model_class, Callable):
-            self.model = model_class(**model_args)
-            self.model
-        else:
-            raise TypeError(
-                f"SUPERHUGE:MODELS:MODEL_INTERFACE:__INIT__:{model_class} shoule be a 'torch.nn.Module' with method 'create_models' or a callable returning a model, but got {type(model_class)}"
-            )
+        assert callable(
+            model_class
+        ), f"model_class should be a callable, but got {model_class}"
+        self.model = model_class(**model_args)
+
         if ckpt_path is not None:
             if isinstance(self.model, keras.Model):
                 self.model.load_weights(ckpt_path, skip_mismatch=True, by_name=True)
-            else:
+            elif isinstance(self.model, torch.nn.Module):
                 self.model.load_state_dict(torch.load(ckpt_path), strict=False)
         self.loss = loss
         self.loss_hparams = loss_hparams
@@ -58,8 +53,11 @@ class MInterface(pl2.LightningModule, ABC):
 
         self.get_input_size(**model_args)
 
-        if summary:
+        if summary and hasattr(self.model, "summary"):
             self.model.summary()
+
+        self.pre_model: torch.nn.Module = LambdaLayer(lambda x: x["exg"])
+        self.post_model: torch.nn.Module = torch.nn.Identity()
 
     @final
     def get_input_size(self, /, **kwargs) -> tuple[int | None, int]:
@@ -143,23 +141,18 @@ class MInterface(pl2.LightningModule, ABC):
 
     @final
     def training_step(self, batch: dict[str], batch_idx: int) -> torch.Tensor:
-        loss: torch.Tensor = torch.zeros(1, device=self.device)
-        batch_size = 0
-        for data in batch.values():
-            outputs, targets = self.training_closure(data)
-            loss += self.loss_fn(outputs, targets).sum()
-            batch_size += outputs.shape[0]
-            self.get_stats(
-                outputs,
-                targets,
-                data["meta"],
-            )
+        outputs, targets = self.training_closure(batch)
+        loss = self.loss_fn(outputs, targets).sum()
+        self.get_stats(
+            outputs,
+            targets,
+            batch["meta"],
+        )
 
-        loss /= batch_size
         self.log(
             f"{self.stage}/loss",
             loss,
-            batch_size=batch_size,
+            batch_size=outputs.shape[0],
             prog_bar=True,
             on_step=False,
             on_epoch=True,

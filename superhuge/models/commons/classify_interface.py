@@ -32,8 +32,6 @@ class ClassifyInterface(MInterface):
 
         self.post_model = classify_post_model(self.input_size, num_class)
 
-        self.label_hash: dict[str, int] = {}
-
     sig = inspect.signature(MInterface.__init__)
     __init__.__signature__ = sig.replace(
         parameters=list(sig.parameters.values())

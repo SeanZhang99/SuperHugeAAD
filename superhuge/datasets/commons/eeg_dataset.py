@@ -267,6 +267,7 @@ class EegDataset(Dataset):
         )  # 默认截取长度为1280
         self.overlap: int = kwargs.get("overlap", 1)  # 默认无重叠
         self.transform: Sequence[Transform] | None = kwargs.get("transform", None)
+        self.metadata_fields: list[MetaDataField] = kwargs["metadata_fields"]
 
         # Ensure files are a subset of metadata's keys
         assert set(self.files).issubset(
@@ -328,6 +329,7 @@ class EegDataset(Dataset):
 
         # 获取元数据
         meta = self.metadata[file_name].model_dump()
+        meta = {k: v for k, v in meta.items() if k in self.metadata_fields}
 
         return {"meta": meta, "exg": exg}
 

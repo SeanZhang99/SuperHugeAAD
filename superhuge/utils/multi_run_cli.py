@@ -42,12 +42,11 @@ class MultiRunCLI:
             )
             cli.trainer.fit(
                 cli.model,
-                cli.datamodule.train_dataloader(),
-                cli.datamodule.val_dataloader(),
+                datamodule=cli.datamodule,
             )
             cli.trainer.test(
                 cli.model,
-                cli.datamodule.val_dataloader(),
+                datamodule=cli.datamodule,
                 ckpt_path="best",
                 verbose=True,
             )

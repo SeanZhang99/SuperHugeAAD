@@ -3,10 +3,10 @@ data:
   class_path: superhuge.datasets.commons.data_interface.DInterface
   init_args:
     dataloader_args:
-      batch_size: 32
-      # num_workers: 2
-      # persistent_workers: true
-      # prefetch_factor: 8
+      batch_size: 64
+      num_workers: 4
+      persistent_workers: true
+      prefetch_factor: 8
     dataset_args:
       fs: 128
       metadata_fields:
@@ -88,7 +88,7 @@ trainer:
   limit_val_batches: null
   log_every_n_steps: null
   logger: null
-  max_epochs: 5
+  max_epochs: 20
   max_steps: -1
   max_time: null
   min_epochs: null

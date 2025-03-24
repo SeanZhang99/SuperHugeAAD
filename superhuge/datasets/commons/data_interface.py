@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import inspect
-from random import shuffle
 from typing import Any
 
 import lightning as pl2
@@ -21,6 +20,8 @@ from pydantic import BaseModel
 from torch.utils.data import DataLoader
 from rich.console import Console
 from rich.table import Table
+
+from superhuge.datasets.commons import collate_fn
 
 from .eeg_dataset import EegDataset
 
@@ -80,6 +81,7 @@ class DInterface(pl2.LightningDataModule):
             *args,
             **kwargs,
             **self.config.dataloader_args,
+            collate_fn=collate_fn.custom_collate_fn,
         )
 
     def train_dataloader(self):

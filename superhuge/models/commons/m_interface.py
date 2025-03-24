@@ -7,11 +7,12 @@ import keras
 import lightning as pl2
 import torch
 
-from superhuge.models.commons import post_model
+from superhuge.models.commons import post_model, pre_model
 
 
 from .model_template import ModelTemplate
 from .lambda_layer import LambdaLayer
+from superhuge.models.commons import lambda_layer
 
 
 class MInterface(pl2.LightningModule, ABC):
@@ -56,7 +57,7 @@ class MInterface(pl2.LightningModule, ABC):
         if summary and hasattr(self.model, "summary"):
             self.model.summary()
 
-        self.pre_model: torch.nn.Module = LambdaLayer(lambda x: x["exg"])
+        self.pre_model: torch.nn.Module = lambda_layer.LambdaLayer(lambda x: x["exg"])
         self.post_model: torch.nn.Module = torch.nn.Identity()
 
     @final

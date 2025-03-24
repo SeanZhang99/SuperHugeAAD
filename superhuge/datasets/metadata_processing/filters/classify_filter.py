@@ -40,14 +40,20 @@ def binary_leftright_filter(
         if label.lower() in ["left", "right"]:
             metadata_element.label = label.lower()
             result = metadata_element
+        else:
+            try:
+                label = int(label)
+                metadata_element.label = angle_wrapper(label)
+                result = binary_leftright_filter(metadata_element)
+            except ValueError:
+                result = None
     elif isinstance(label, int):
         label = angle_wrapper(label)
         if 180 < label < 360:
             metadata_element.label = "left"
-            result = metadata_element
         elif 0 < label < 180:
             metadata_element.label = "right"
-            result = metadata_element
+        result = metadata_element
     return result
 
 
@@ -68,14 +74,20 @@ def binary_frontrear_filter(
         if label.lower() in ["front", "rear"]:
             metadata_element.label = label.lower()
             result = metadata_element
+        else:
+            try:
+                label = int(label)
+                metadata_element.label = angle_wrapper(label)
+                result = binary_frontrear_filter(metadata_element)
+            except ValueError:
+                pass
     elif isinstance(label, int):
         label = angle_wrapper(label)
         if 180 < label < 360:
             metadata_element.label = "rear"
-            result = metadata_element
         elif 0 < label < 180:
             metadata_element.label = "front"
-            result = metadata_element
+        result = metadata_element
     return result
 
 
@@ -95,16 +107,20 @@ def four_class_filter(
         label = angle_wrapper(label)
         if 0 <= label < 45 or 315 <= label < 360:
             metadata_element.label = "Front-Right"
-            result = metadata_element
         elif 45 <= label < 135:
             metadata_element.label = "Front-Left"
-            result = metadata_element
         elif 135 <= label < 225:
             metadata_element.label = "Rear-Left"
-            result = metadata_element
         elif 225 <= label < 315:
             metadata_element.label = "Rear-Right"
-            result = metadata_element
+        result = metadata_element
+    elif isinstance(label, str):
+        try:
+            label = int(label)
+            metadata_element.label = angle_wrapper(label)
+            result = four_class_filter(metadata_element)
+        except ValueError:
+            pass
     return result
 
 
@@ -125,28 +141,28 @@ def eight_class_filter(
         label = angle_wrapper(label)
         if 337.5 <= label < 360 or 0 <= label < 22.5:
             metadata_element.label = "North"
-            result = metadata_element
         elif 22.5 <= label < 67.5:
             metadata_element.label = "North-East"
-            result = metadata_element
         elif 67.5 <= label < 112.5:
             metadata_element.label = "East"
-            result = metadata_element
         elif 112.5 <= label < 157.5:
             metadata_element.label = "South-East"
-            result = metadata_element
         elif 157.5 <= label < 202.5:
             metadata_element.label = "South"
-            result = metadata_element
         elif 202.5 <= label < 247.5:
             metadata_element.label = "South-West"
-            result = metadata_element
         elif 247.5 <= label < 292.5:
             metadata_element.label = "West"
-            result = metadata_element
         elif 292.5 <= label < 337.5:
             metadata_element.label = "North-West"
-            result = metadata_element
+        result = metadata_element
+    elif isinstance(label, str):
+        try:
+            label = int(label)
+            metadata_element.label = angle_wrapper(label)
+            result = four_class_filter(metadata_element)
+        except ValueError:
+            pass
     return result
 
 

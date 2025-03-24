@@ -4,10 +4,6 @@ from turtle import onscreenclick
 import torch
 from torchmetrics import ConfusionMatrix
 
-from .channel_mapping_interface import (
-    ChannelMapping1DInterface,
-    ChannelMapping2DInterface,
-)
 from .m_interface import MInterface
 from .post_model import classify_post_model
 
@@ -84,11 +80,3 @@ class ClassifyInterface(MInterface):
             on_epoch=True,
             on_step=False,
         )
-
-
-class Channel1DClassifyInterface(ClassifyInterface, ChannelMapping1DInterface):
-    pass
-
-
-class Channel2DClassifyInterface(ClassifyInterface, ChannelMapping2DInterface):
-    pass

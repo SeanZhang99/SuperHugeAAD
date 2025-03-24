@@ -6,10 +6,6 @@ from torchmetrics.functional import pearson_corrcoef
 
 from .m_interface import MInterface
 from .post_model import regression_post_model
-from .channel_mapping_interface import (
-    ChannelMapping1DInterface,
-    ChannelMapping2DInterface,
-)
 
 
 class RegressionInterface(MInterface):
@@ -80,11 +76,3 @@ class RegressionInterface(MInterface):
         )
 
         return stats
-
-
-class Regression1DInterface(RegressionInterface, ChannelMapping1DInterface):
-    pass
-
-
-class Regression2DInterface(RegressionInterface, ChannelMapping2DInterface):
-    pass

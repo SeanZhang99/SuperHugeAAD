@@ -3,7 +3,7 @@ directional_focus_decoding:
   general:
     data:
       init_args:
-        dataset_class: superhuge.datasets.classify.eeg_classify_base_dataset.EegClassifyBaseDataset
+        dataset_class: src.datasets.eeg_classify_base_dataset.EegClassifyBaseDataset
         dataset_args:
           metadata_fields:
             [
@@ -14,18 +14,11 @@ directional_focus_decoding:
               "num_channel",
               "fs",
               "label",
-              "channel_infos",
-              "entry",
             ]
           n_folds: 5
-    model:
-      class_path: superhuge.models.commons.classify_interface.ClassifyInterface
-      init_args:
-        loss:
-          class_path: superhuge.models.loss.classify.cross_entropy_loss.CrossEntropyLoss
   tasks:
     binary_leftright:
-      enable: 0
+      enable: 1
       data:
         init_args:
           dataset_args:
@@ -33,7 +26,8 @@ directional_focus_decoding:
               - binary_leftright
       model:
         init_args:
-          num_class: 2
+          model_args:
+            num_class: 2
     binary_frontrear:
       enable: 0
       data:
@@ -43,7 +37,8 @@ directional_focus_decoding:
               - binary_frontrear
       model:
         init_args:
-          num_class: 2
+          model_args:
+            num_class: 2
     four-class:
       enable: 0
       data:
@@ -53,7 +48,8 @@ directional_focus_decoding:
               - four-class
       model:
         init_args:
-          num_class: 4
+          model_args:
+            num_class: 4
     eight-class:
       enable: 0
       data:
@@ -63,7 +59,8 @@ directional_focus_decoding:
               - eight-class
       model:
         init_args:
-          num_class: 8
+          model_args:
+            num_class: 8
 
   cross_validation:
     leave_one_trial_out:
@@ -71,70 +68,16 @@ directional_focus_decoding:
       data:
         init_args:
           dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.group.loto
+            meta_group_func: src.datasets.metadata_processing.loto
     leave_one_subject_out:
       enable: 0
       data:
         init_args:
           dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.group.loso
+            meta_group_func: src.datasets.metadata_processing.loso
     leave_one_dataset_out:
       enable: 0
       data:
         init_args:
           dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.group.lodo
-
-speech_reconstruction:
-  type: regression
-  general:
-    data:
-      init_args:
-        dataset_class: superhuge.datasets.regression.eeg_regression_base_dataset.EegRegressionBaseDataset
-        dataset_args:
-          metadata_fields:
-            [
-              "dataset_id",
-              "subject_id",
-              "trial_id",
-              "signal_length",
-              "num_channel",
-              "fs",
-              "channel_infos",
-            ]
-          n_folds: 5
-
-    model:
-      class_path: superhuge.models.commons.regression_interface.RegressionInterface
-      init_args:
-        loss:
-          class_path: superhuge.models.loss.regression.mse_loss.MSELoss
-  tasks:
-    envelope_reconstruction:
-      enable: 1
-      data:
-        init_args:
-          dataset_args:
-            meta_filter_func_args:
-              - env
-            speech_feature_key: env
-
-  cross_validation:
-    leave_one_trial_out:
-      enable: 1
-      data:
-        init_args:
-          dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.group.loto
-    leave_one_subject_out:
-      enable: 0
-      data:
-        init_args:
-          dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.group.loso
-    leave_one_dataset_out:
-      enable: 0
-      data:
-        init_args:
-          dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.group.lodo
+            meta_group_func: src.datasets.metadata_processing.lodo

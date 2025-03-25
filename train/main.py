@@ -13,40 +13,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This package is adopted based on Pytorch Lightning Template project.
-# Author: Yuanming Zhang
+""" This main entrance of the whole project.
 
-"""This main entrance of the whole project.
-
-Most of the code should not be changed, please directly
-add all the input arguments of your model's constructor
-and the dataset file's constructor. The MInterface and
-DInterface can be seen as transparent to all your args.
+    Most of the code should not be changed, please directly
+    add all the input arguments of your model's constructor
+    and the dataset file's constructor. The MInterface and 
+    DInterface can be seen as transparent to all your args.    
 """
 import os
-
-os.environ["KERAS_BACKEND"] = "torch"
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import torch
-import keras
-from superhuge.utils.multi_run_cli import MultiRunCLI
-from superhuge.utils.pick_model_config import pick_file
+from src.functional.multi_run_cli import MultiRunCLI
 
-keras.config.set_image_data_format("channels_first")
 torch.set_float32_matmul_precision("medium")
 
 
 if __name__ == "__main__":
-    project_path = os.path.dirname(os.path.abspath(__file__))
+    project_path = os.path.dirname(os.path.abspath(__file__)).split("src")[0]
     config_path = os.path.join(project_path, "configs")
-    model_config = pick_file(project_path, timeout=10)
-    if not model_config:
-        model_config = os.path.join(config_path, "models", "rebok_deformer.yaml")
     cli = MultiRunCLI(
+        "fit",
         "--task_config",
         os.path.join(config_path, "task_config.yaml"),
         "--config",
-        os.path.join(config_path, "config.yaml"),
+        os.path.join(config_path, "trainer_config.yaml"),
         "--model",
-        model_config,
+        os.path.join(config_path, "model_config.yaml"),
+        "--data",
+        os.path.join(config_path, "data_config.yaml"),
+        "--optimizer",
+        os.path.join(config_path, "optimizer_config.yaml"),
+        "--lr_scheduler",
+        os.path.join(config_path, "lr_scheduler_config.yaml"),
     )

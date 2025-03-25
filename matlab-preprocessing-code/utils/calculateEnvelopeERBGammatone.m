@@ -1,4 +1,4 @@
-function [subbandEnvelopes, combinedEnvelope] = calculateEnvelopeERBGammatone(signal, fs, numBands, p)
+function [combinedEnvelope, subbandEnvelopes] = calculateEnvelopeERBGammatone(signal, fs, freq_range,numBands, p)
 % calculateEnvelopeERBGammatone
 % Computes subband envelopes and combined envelope using ERB-scaled Gammatone filters and power-law processing.
 %
@@ -17,7 +17,7 @@ function [subbandEnvelopes, combinedEnvelope] = calculateEnvelopeERBGammatone(si
 
     % Step 2: Filter the signal into subbands using Gammatone filter bank
         % Create a Gammatone filter for the current center frequency
-    gFilter = gammatoneFilterBank([20,fs/2],numBands,fs);
+    gFilter = gammatoneFilterBank(freq_range,numBands,fs);
     filteredSignal = gFilter(signal);
 
     % Step 3: Apply power-law transformation

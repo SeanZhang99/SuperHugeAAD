@@ -84,7 +84,7 @@ trainer:
   enable_checkpointing: null
   enable_model_summary: null
   enable_progress_bar: null
-  fast_dev_run: null
+  fast_dev_run: 100
   gradient_clip_algorithm: null
   gradient_clip_val: null
   inference_mode: true
@@ -104,11 +104,11 @@ trainer:
   overfit_batches: 0
   plugins: null
   precision: 32
-  # profiler:
-  #   class_path: PyTorchProfiler
-  #   init_args:
-  #     dirpath: .
-  #     filename: profile
+  profiler:
+    class_path: PyTorchProfiler
+    init_args:
+      dirpath: .
+      filename: profile
   reload_dataloaders_every_n_epochs: 0
   strategy: auto
   sync_batchnorm: false

@@ -18,7 +18,7 @@ directional_focus_decoding:
           n_folds: 5
   tasks:
     binary_leftright:
-      enable: 1
+      enable: 9
       data:
         init_args:
           dataset_args:
@@ -81,3 +81,47 @@ directional_focus_decoding:
         init_args:
           dataset_args:
             meta_group_func: src.datasets.metadata_processing.lodo
+
+speech_reconstruction:
+  type: regression
+  general:
+    data:
+      init_args:
+        dataset_class: superhuge.datasets.regression.eeg_regression_base_dataset.EegRegressionBaseDataset
+        dataset_args:
+          n_folds: 5
+
+    model:
+      class_path: superhuge.models.commons.regression_interface.Channel1DRegressionInterface
+      init_args:
+        loss:
+          class_path: superhuge.models.loss.regression.mse_loss.MSELoss
+  tasks:
+    envelope_reconstruction:
+      enable: 1
+      data:
+        init_args:
+          dataset_args:
+            meta_filter_func_args:
+              - env
+            speech_feature_key: env
+
+  cross_validation:
+    leave_one_trial_out:
+      enable: 1
+      data:
+        init_args:
+          dataset_args:
+            meta_group_func: superhuge.datasets.metadata_processing.group.loto
+    leave_one_subject_out:
+      enable: 0
+      data:
+        init_args:
+          dataset_args:
+            meta_group_func: superhuge.datasets.metadata_processing.group.loso
+    leave_one_dataset_out:
+      enable: 0
+      data:
+        init_args:
+          dataset_args:
+            meta_group_func: superhuge.datasets.metadata_processing.group.lodo

@@ -161,18 +161,18 @@ def transformer(
     )
     x = input
     for _ in range(depth):
-        x_cg = x
         x_cg = layers.MultiHeadAttention(
             num_heads=num_heads, key_dim=dim_heads, dropout=dp_rate
-        )(x_cg, x_cg)
+        )(x, x)
         x_cg = layers.LayerNormalization()(x_cg + x)
 
-        x_fg = fg_cnn(
+        # here x is fine-grain x.
+        x = fg_cnn(
             x, temporal_kernel_size=fg_cnn_temporal_kernel_size, dp_rate=dp_rate
         )(x)
 
         x = layers.LayerNormalization()(
-            feedforward(x_cg, hidden_dim=ff_hidden_dims, dp_rate=dp_rate)(x_cg) + x_fg
+            feedforward(x_cg, hidden_dim=ff_hidden_dims, dp_rate=dp_rate)(x_cg) + x
         )
 
     return Model(inputs=input, outputs=x)

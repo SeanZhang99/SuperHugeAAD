@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# This package is adopted based on Pytorch Lightning Template project.
+# Author: Yuanming Zhang
+
 """This main entrance of the whole project.
 
 Most of the code should not be changed, please directly

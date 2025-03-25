@@ -304,7 +304,9 @@ class EegDataset(Dataset):
 
         if self.transform:
             for transform in self.transform:
-                if transform.apply_on == "before_slicing":
+                if transform.when == "before_slicing" and (
+                    "eeg" in transform.whom or "all" in transform.whom
+                ):
                     exg = transform(exg)
                     copied = True
 
@@ -321,9 +323,8 @@ class EegDataset(Dataset):
         # 应用变换
         if self.transform:
             for transform in self.transform:
-                if (
-                    transform.apply_on == "before_returning"
-                    or transform.apply_on is None
+                if transform.when == "before_returning" and (
+                    "eeg" in transform.whom or "all" in transform.whom
                 ):
                     exg = transform(exg)
 

@@ -25,7 +25,12 @@ data:
       transform:
         - class_path: superhuge.utils.transforms.channel_transform.ChannelRearrangeTransform
           init_args:
-            apply_on: before_returning
+            when: before_returning
+            whom: eeg
+        - class_path: superhuge.utils.transforms.pad_speech.PadSpeech
+          init_args:
+            when: before_returning
+            whom: audio
 lr_scheduler:
   class_path: lightning.pytorch.cli.ReduceLROnPlateau
   init_args:

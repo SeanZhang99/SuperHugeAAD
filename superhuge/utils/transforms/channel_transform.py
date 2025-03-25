@@ -1,3 +1,4 @@
+from typing import Sequence
 import numpy as np
 from .abc import Transform
 from ..channel_enum import CHANNEL1D_ENUM
@@ -9,15 +10,20 @@ class ChannelRearrangeTransform(Transform):
     """
 
     def __init__(
-        self, /, *, apply_on: str | None = "before_returning", **kwargs
+        self,
+        /,
+        *,
+        when: str | None = "before_returning",
+        whom: str | Sequence[str] | None = "eeg",
+        **kwargs,
     ) -> None:
         """
         Args:
-            apply_on (str | None, optional): When to apply this transform.
+            when (str | None, optional): When to apply this transform.
                 Defaults to `before_returning`.
             **kwargs: Additional parameters for subclasses.
         """
-        super().__init__(apply_on=apply_on, **kwargs)
+        super().__init__(when=when, whom=whom, **kwargs)
 
     def __call__(self, x: np.ndarray) -> np.ndarray:
         """

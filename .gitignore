@@ -15,3 +15,6 @@ superhuge.egg-info/
 build/
 *.asv
 *egg-info/
+superhuge/
+prepare_dataset/
+train/

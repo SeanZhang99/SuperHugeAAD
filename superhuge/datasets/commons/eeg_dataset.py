@@ -267,6 +267,7 @@ class EegDataset(Dataset):
         )  # 默认截取长度为1280
         self.overlap: int = kwargs.get("overlap", 1)  # 默认无重叠
         self.transform: Sequence[Transform] | None = kwargs.get("transform", None)
+        self.metadata_fields: list[MetaDataField] = kwargs["metadata_fields"]
 
         # Ensure files are a subset of metadata's keys
         assert set(self.files).issubset(
@@ -299,7 +300,10 @@ class EegDataset(Dataset):
         file_idx, segment_idx = self._map_idx_to_file_and_segment(idx)
         file_name = self.files[file_idx]
         file_path = os.path.join(self.exg_path, file_name + ".npy")
-        exg = np.load(file_path, mmap_mode="r", allow_pickle=False)
+        exg: np.ndarray | np.memmap = np.load(
+            file_path, mmap_mode="r", allow_pickle=False
+        )
+        exg = exg.astype(np.float32)
 
         if self.transform:
             for transform in self.transform:

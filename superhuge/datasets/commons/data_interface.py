@@ -86,7 +86,7 @@ class DInterface(pl2.LightningDataModule):
             *args,
             **kwargs,
             **self.config.dataloader_args,
-            collate_fn=collate_fn.custom_collate_fn,
+            collate_fn=collect_multidataset.collect_multidataset,
         )
 
     def train_dataloader(self):

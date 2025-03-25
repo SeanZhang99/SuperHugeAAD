@@ -142,18 +142,23 @@ class MInterface(pl2.LightningModule, ABC):
 
     @final
     def training_step(self, batch: dict[str], batch_idx: int) -> torch.Tensor:
-        outputs, targets = self.training_closure(batch)
-        loss = self.loss_fn(outputs, targets).sum()
-        self.get_stats(
-            outputs,
-            targets,
-            batch["meta"],
-        )
+        loss: torch.Tensor = torch.zeros(1, device=self.device)
+        batch_size = 0
+        for data in batch.values():
+            outputs, targets = self.training_closure(data)
+            loss += self.loss_fn(outputs, targets.to(torch.long)).sum()
+            batch_size += outputs.shape[0]
+            self.get_stats(
+                outputs,
+                targets,
+                data["meta"],
+            )
 
+        loss /= batch_size
         self.log(
             f"{self.stage}/loss",
             loss,
-            batch_size=outputs.shape[0],
+            batch_size=batch_size,
             prog_bar=True,
             on_step=False,
             on_epoch=True,

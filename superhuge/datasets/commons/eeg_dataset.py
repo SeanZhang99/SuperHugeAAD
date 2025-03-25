@@ -329,7 +329,6 @@ class EegDataset(Dataset):
 
         # 获取元数据
         meta = self.metadata[file_name].model_dump()
-        meta = {k: v for k, v in meta.items() if k in self.metadata_fields}
 
         return {"meta": meta, "exg": exg}
 

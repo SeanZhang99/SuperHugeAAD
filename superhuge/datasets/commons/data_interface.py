@@ -44,6 +44,10 @@ class DInterface(pl2.LightningDataModule):
     ):
         super().__init__()
 
+        if not dataloader_args.get("num_workers", None):
+            del dataloader_args["prefetch_factor"]
+            del dataloader_args["persistent_workers"]
+
         config = DInterfaceConfig(
             dataset_args=dataset_args,
             dataloader_args=dataloader_args,

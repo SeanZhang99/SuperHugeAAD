@@ -12,8 +12,6 @@ class TwoStagePearsonLoss(_Loss):
 
     def forward(
         self,
-        /,
-        *,
         y_pred: torch.Tensor,
         y_true: torch.Tensor,
         current_epoch: int = 0,

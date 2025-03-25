@@ -87,6 +87,8 @@ class EegRegressionBaseDataset(EegDataset):
                 ):
                     speech_segment = transform(speech_segment)
 
+        del meta["label"]
+
         return {
             "meta": meta,
             "exg": np.float32(exg),

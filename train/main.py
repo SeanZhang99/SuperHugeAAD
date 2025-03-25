@@ -36,7 +36,7 @@ torch.set_float32_matmul_precision("medium")
 if __name__ == "__main__":
     project_path = os.path.dirname(os.path.abspath(__file__))
     config_path = os.path.join(project_path, "configs")
-    model_config = pick_file(project_path)
+    model_config = pick_file(project_path, timeout=10)
     if not model_config:
         model_config = os.path.join(config_path, "models", "rebok_deformer.yaml")
     cli = MultiRunCLI(

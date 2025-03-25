@@ -26,6 +26,15 @@ class EegClassifyBaseDataset(EegDataset):
             if isinstance(label, str)
             else label
         )
+        assert isinstance(
+            label, int
+        ), f"EEG_CLASSIFY_BASE_DATASET:GETITEM:ASSERTION:VALUE_ERROR: label must be an integer, got {type(label)}"
+        meta["label"] = label
+
+        # Remove unnecessary fields
+        for field in ["env", "mel", "env_fs", "mel_fs", "wav", "wav_fs"]:
+            if field in meta:
+                del meta[field]
         return {"meta": meta, "exg": exg, "label": label}
 
     @classmethod

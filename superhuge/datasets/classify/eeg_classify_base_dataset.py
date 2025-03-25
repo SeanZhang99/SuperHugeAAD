@@ -30,11 +30,12 @@ class EegClassifyBaseDataset(EegDataset):
             label, int
         ), f"EEG_CLASSIFY_BASE_DATASET:GETITEM:ASSERTION:VALUE_ERROR: label must be an integer, got {type(label)}"
 
-        for transform in self.transform:
-            if transform.when == "before_returning" and (
-                transform.whom == "all" or "label" in transform.whom
-            ):
-                label = transform(label)
+        if self.transform:
+            for transform in self.transform:
+                if transform.when == "before_returning" and (
+                    transform.whom == "all" or "label" in transform.whom
+                ):
+                    label = transform(label)
 
         meta["label"] = label
 

@@ -44,7 +44,7 @@ class ClassifyInterface(MInterface):
 
     def training_closure(self, data):
         outputs: torch.Tensor = self.forward(data)
-        targets = data["label"]
+        targets = data["label"].to(torch.long)
 
         return outputs, targets
 

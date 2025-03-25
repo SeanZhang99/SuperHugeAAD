@@ -296,7 +296,6 @@ class EegDataset(Dataset):
         """
         加载样本数据，并返回元数据、信号段和标签。
         """
-        copied = False
         file_idx, segment_idx = self._map_idx_to_file_and_segment(idx)
         file_name = self.files[file_idx]
         file_path = os.path.join(self.exg_path, file_name + ".npy")
@@ -305,15 +304,12 @@ class EegDataset(Dataset):
             file_path, mmap_mode="r", allow_pickle=False
         )
         exg = exg.astype(np.float32)
->>>>>>> on_cuda_mapping
-
         if self.transform:
             for transform in self.transform:
                 if transform.when == "before_slicing" and (
                     "eeg" in transform.whom or "all" in transform.whom
                 ):
                     exg = transform(exg)
-                    copied = True
 
         # 加载信号和标签
 
@@ -321,9 +317,6 @@ class EegDataset(Dataset):
         stride = self.segment_length // self.overlap
         start_idx = segment_idx * stride
         exg = exg[start_idx : start_idx + self.segment_length]
-        # mostly, exg is a memory-mapped array, so we need to copy it to avoid modifying the original data. But if any transform has applied to the data before slicing, we don't need to copy it again (because transform should return a new copy of the data in the memory).
-        if not copied:
-            exg = exg.copy()
 
         # 应用变换
         if self.transform:
@@ -336,7 +329,8 @@ class EegDataset(Dataset):
         # 获取元数据
         meta = self.metadata[file_name].model_dump()
 
-        return {"meta": meta, "exg": exg}
+        # mostly, exg is a memory-mapped array, so we need to copy it to avoid modifying the original data.
+        return {"meta": meta, "exg": exg.copy()}
 
     def _map_idx_to_file_and_segment(self, idx: int):
         """

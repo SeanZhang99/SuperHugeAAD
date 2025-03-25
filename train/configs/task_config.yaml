@@ -15,7 +15,6 @@ directional_focus_decoding:
               "fs",
               "label",
               "channel_infos",
-              "entry",
             ]
           n_folds: 5
     model:
@@ -25,7 +24,7 @@ directional_focus_decoding:
           class_path: superhuge.models.loss.classify.cross_entropy_loss.CrossEntropyLoss
   tasks:
     binary_leftright:
-      enable: 0
+      enable: 9
       data:
         init_args:
           dataset_args:
@@ -92,16 +91,6 @@ speech_reconstruction:
       init_args:
         dataset_class: superhuge.datasets.regression.eeg_regression_base_dataset.EegRegressionBaseDataset
         dataset_args:
-          metadata_fields:
-            [
-              "dataset_id",
-              "subject_id",
-              "trial_id",
-              "signal_length",
-              "num_channel",
-              "fs",
-              "channel_infos",
-            ]
           n_folds: 5
 
     model:

@@ -146,7 +146,7 @@ class MInterface(pl2.LightningModule, ABC):
         batch_size = 0
         for data in batch.values():
             outputs, targets = self.training_closure(data)
-            loss += self.loss_fn(outputs, targets.to(torch.long)).sum()
+            loss += self.loss_fn(outputs, targets).sum()
             batch_size += outputs.shape[0]
             self.get_stats(
                 outputs,

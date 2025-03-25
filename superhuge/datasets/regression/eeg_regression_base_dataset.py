@@ -64,7 +64,7 @@ class EegRegressionBaseDataset(EegDataset):
             ),
             mmap_mode="r",
             allow_pickle=False,
-        )
+        ).astype(np.float32)
 
         if self.transform:
             for transform in self.transform:
@@ -100,8 +100,8 @@ class EegRegressionBaseDataset(EegDataset):
 
         return {
             "meta": meta,
-            "exg": np.float32(exg),
-            "audio": np.float32(speech_segment),
+            "exg": exg,
+            "audio": speech_segment.copy(),
         }
 
     @classmethod

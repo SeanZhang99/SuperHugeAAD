@@ -1,8 +1,6 @@
 __pycache__/
 *.pyc
-dataset/
 lightning_logs/
-MNIST/
 weights/
 /backup
 .vscode/
@@ -15,6 +13,12 @@ superhuge.egg-info/
 build/
 *.asv
 *egg-info/
+<<<<<<<
 superhuge/
 prepare_dataset/
 train/
+
+=======
+matlab-preprocessing-code/
+prepare_dataset/
+>>>>>>>

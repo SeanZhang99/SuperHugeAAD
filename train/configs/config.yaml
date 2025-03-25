@@ -4,7 +4,7 @@ data:
   init_args:
     dataloader_args:
       batch_size: 50
-      num_workers: 4
+      num_workers: 2
       persistent_workers: true
       prefetch_factor: 8
       pin_memory: true

@@ -24,7 +24,7 @@ directional_focus_decoding:
           class_path: superhuge.models.loss.classify.cross_entropy_loss.CrossEntropyLoss
   tasks:
     binary_leftright:
-      enable: 9
+      enable: 0
       data:
         init_args:
           dataset_args:

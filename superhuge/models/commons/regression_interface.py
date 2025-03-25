@@ -72,12 +72,13 @@ class RegressionInterface(MInterface):
 
         for k, v in stats.items():
             assert not torch.isnan(v.mean()), f"{k} is nan"
-
-        self.log_dict(
-            {k: v[~torch.isinf(v)].mean() for k, v in stats.items()},
-            prog_bar=True,
-            on_epoch=True,
-            on_step=False,
-        )
+            self.log(
+                k,
+                v.mean(),
+                prog_bar=True,
+                on_epoch=True,
+                on_step=False,
+                batch_size=v.shape[0],
+            )
 
         return stats

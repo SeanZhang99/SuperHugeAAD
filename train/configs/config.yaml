@@ -105,10 +105,10 @@ trainer:
   plugins: null
   precision: 32
   # profiler:
-  # class_path: PyTorchProfiler
-  # init_args:
-  #   dirpath: .
-  #   filename: profile
+  #   class_path: PyTorchProfiler
+  #   init_args:
+  #     dirpath: .
+  #     filename: profile
   reload_dataloaders_every_n_epochs: 0
   strategy: auto
   sync_batchnorm: false

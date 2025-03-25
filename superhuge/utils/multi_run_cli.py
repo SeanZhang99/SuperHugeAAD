@@ -36,6 +36,7 @@ class MultiRunCLI:
         return task_config_path, cli_argv
 
     def __run_cli(self):
+<<<<<<< HEAD
         def to_device(data, device):
             if isinstance(data, dict):
                 return {k: to_device(v, device) for k, v in data.items()}
@@ -45,6 +46,17 @@ class MultiRunCLI:
                 data, (torch.Tensor, lightning.pytorch.LightningDataModule)
             ):
                 return data.to(device)
+=======
+        def to_device(data, **kwargs):
+            if isinstance(data, dict):
+                return {k: to_device(v, **kwargs) for k, v in data.items()}
+            elif isinstance(data, (list, tuple)):
+                return [to_device(v, **kwargs) for v in data]
+            elif isinstance(
+                data, (torch.Tensor, lightning.pytorch.LightningDataModule)
+            ):
+                return data.to(**kwargs)
+>>>>>>> on_cuda_mapping
             return data
 
         for config_list in self.task_config_parser.generate_configs():
@@ -54,10 +66,17 @@ class MultiRunCLI:
                 run=False,
             )
             # batch = cli.datamodule.train_dataloader()._get_iterator().__next__()
+<<<<<<< HEAD
             # batch = to_device(batch, "cuda")
             # cli.model.to("cuda")
             # for i in tqdm.trange(100):
             #     cli.model.forward(batch)
+=======
+            # batch = to_device(batch, device="cuda", dtype=torch.float32)
+            # cli.model.to(device="cuda", dtype=torch.float32)
+            # for i in tqdm.trange(100):
+            #     cli.model.training_step(batch, i)
+>>>>>>> on_cuda_mapping
             cli.trainer.fit(
                 cli.model,
                 datamodule=cli.datamodule,

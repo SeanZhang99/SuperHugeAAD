@@ -4,7 +4,11 @@ data:
   init_args:
     dataloader_args:
       batch_size: 50
+<<<<<<< HEAD
       num_workers: 0
+=======
+      num_workers: 4
+>>>>>>> on_cuda_mapping
       persistent_workers: true
       prefetch_factor: 8
       pin_memory: true

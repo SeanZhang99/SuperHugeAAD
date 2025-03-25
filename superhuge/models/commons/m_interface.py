@@ -142,6 +142,7 @@ class MInterface(pl2.LightningModule, ABC):
 
     @final
     def training_step(self, batch: dict[str], batch_idx: int) -> torch.Tensor:
+<<<<<<< HEAD
         outputs, targets = self.training_closure(batch)
         loss = self.loss_fn(outputs, targets).sum()
         self.get_stats(
@@ -149,6 +150,19 @@ class MInterface(pl2.LightningModule, ABC):
             targets,
             batch["meta"],
         )
+=======
+        loss: torch.Tensor = torch.zeros(1, device=self.device)
+        batch_size = 0
+        for data in batch.values():
+            outputs, targets = self.training_closure(data)
+            loss += self.loss_fn(outputs, targets.to(torch.long)).sum()
+            batch_size += outputs.shape[0]
+            self.get_stats(
+                outputs,
+                targets,
+                data["meta"],
+            )
+>>>>>>> on_cuda_mapping
 
         self.log(
             f"{self.stage}/loss",

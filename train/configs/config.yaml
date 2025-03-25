@@ -3,10 +3,12 @@ data:
   class_path: superhuge.datasets.commons.data_interface.DInterface
   init_args:
     dataloader_args:
-      batch_size: 32
-      num_workers: 0
-      # persistent_workers: false
-      # prefetch_factor: 8
+      batch_size: 50
+      num_workers: 4
+      persistent_workers: true
+      prefetch_factor: 8
+      pin_memory: true
+      drop_last: false
     dataset_args:
       fs: 128
       metadata_fields:
@@ -34,17 +36,16 @@ lr_scheduler:
     patience: 5
     threshold: 0.0001
     threshold_mode: rel
-    verbose: false
 optimizer:
   class_path: Adam
   init_args:
     betas: [0.9, 0.999]
     eps: 1.e-8
-    lr: 1.e-5
+    lr: 1.e-3
     weight_decay: 1.e-4
 seed_everything: 42
 trainer:
-  accelerator: auto
+  accelerator: gpu
   accumulate_grad_batches: 1
   barebones: false
   benchmark: false
@@ -86,23 +87,23 @@ trainer:
   limit_val_batches: null
   log_every_n_steps: null
   logger: null
-  max_epochs: 5
+  max_epochs: 50
   max_steps: -1
   max_time: null
-  min_epochs: null
+  min_epochs: 20
   min_steps: null
   num_nodes: 1
   num_sanity_val_steps: null
   overfit_batches: 0
   plugins: null
-  precision: null
+  precision: 32
   profiler:
     class_path: PyTorchProfiler
-    # init_args:
-    #   dirpath: C:\Users\sean\Documents\Seafile\ZYMdeDocument\24-12-SuperHugeAAD\SuperHugeAAD
-    #   filename: profile
+    init_args:
+      dirpath: .
+      filename: profile
   reload_dataloaders_every_n_epochs: 0
   strategy: auto
   sync_batchnorm: false
   use_distributed_sampler: true
-  val_check_interval: 0.2
+  val_check_interval: 0.5

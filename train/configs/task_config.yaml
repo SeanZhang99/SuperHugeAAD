@@ -15,6 +15,7 @@ directional_focus_decoding:
               "fs",
               "label",
               "channel_infos",
+              "entry",
             ]
           n_folds: 5
     model:
@@ -24,7 +25,7 @@ directional_focus_decoding:
           class_path: superhuge.models.loss.classify.cross_entropy_loss.CrossEntropyLoss
   tasks:
     binary_leftright:
-      enable: 1
+      enable: 0
       data:
         init_args:
           dataset_args:
@@ -99,6 +100,7 @@ speech_reconstruction:
               "signal_length",
               "num_channel",
               "fs",
+              "channel_infos",
             ]
           n_folds: 5
 

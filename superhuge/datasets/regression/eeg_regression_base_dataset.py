@@ -61,12 +61,16 @@ class EegRegressionBaseDataset(EegDataset):
             os.path.join(
                 self.speech_feature_path,
                 f"{entry}_{self.speech_feature_type}.npy",
-            )
+            ),
+            mmap_mode="r",
+            allow_pickle=False,
         )
 
         if self.transform:
             for transform in self.transform:
-                if transform.apply_on == "before_slicing":
+                if transform.when == "before_slicing" and (
+                    "audio" in transform.whom or "all" in transform.whom
+                ):
                     speech_feature = transform(speech_feature)
 
         # 根据 segment_length 和 overlap 截取语音特征段
@@ -79,11 +83,20 @@ class EegRegressionBaseDataset(EegDataset):
 
         if self.transform:
             for transform in self.transform:
-                if (
-                    transform.apply_on == "before_returning"
-                    or transform.apply_on is None
+                if transform.when == "before_returning" and (
+                    "audio" in transform.whom or "all" in transform.whom
                 ):
                     speech_segment = transform(speech_segment)
+
+        if "label" in meta:
+            del meta["label"]
+
+        for field in ["env", "mel", "wav"]:
+            if field != self.speech_feature_type:
+                if field in meta:
+                    del meta[field]
+                if f"{field}_fs" in meta:
+                    del meta[f"{field}_fs"]
 
         return {
             "meta": meta,

@@ -13,16 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-""" This main entrance of the whole project.
+# This package is adopted based on Pytorch Lightning Template project.
+# Author: Yuanming Zhang
 
-    Most of the code should not be changed, please directly
-    add all the input arguments of your model's constructor
-    and the dataset file's constructor. The MInterface and 
-    DInterface can be seen as transparent to all your args.    
+"""This main entrance of the whole project.
+
+Most of the code should not be changed, please directly
+add all the input arguments of your model's constructor
+and the dataset file's constructor. The MInterface and
+DInterface can be seen as transparent to all your args.
 """
 import os
 
 os.environ["KERAS_BACKEND"] = "torch"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import torch
 import keras
 from superhuge.utils.multi_run_cli import MultiRunCLI
@@ -35,7 +39,7 @@ torch.set_float32_matmul_precision("medium")
 if __name__ == "__main__":
     project_path = os.path.dirname(os.path.abspath(__file__))
     config_path = os.path.join(project_path, "configs")
-    model_config = pick_file(project_path)
+    model_config = pick_file(project_path, timeout=10)
     if not model_config:
         model_config = os.path.join(config_path, "models", "rebok_deformer.yaml")
     cli = MultiRunCLI(

@@ -21,7 +21,7 @@ classifiers = [
 
 dependencies = [
     "scipy",
-    "torch",
+    "torch==2.5.1+cu121",
     "lightning[extra]",
     "pydantic",
     "numpy",
@@ -29,6 +29,8 @@ dependencies = [
     "einops",
     "rich",
     "keras",
+    "tensorflow-cpu<2.18.0",
+    "ipython",
 ]
 
 [project.scripts]

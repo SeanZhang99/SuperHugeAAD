@@ -1,8 +1,10 @@
 from collections import OrderedDict
+import os
 import pickle
 import numpy as np
 from typing import Any, Dict, List, Tuple
 import re
+from enum import Enum
 
 pattern = re.compile(r"([ACFINOPT][CFOpPT]?)([\dz]\d?)")
 
@@ -140,7 +142,7 @@ def infer_channel_positions(channels: List[str]) -> Dict[str, Tuple[int, int]]:
     return channel_to_position
 
 
-def map_channels_to_grid(metadata_path: str):
+def map_channels_to_grid(metadata_path: str, output_path: str = None):
     """
     读取元数据并映射 EEG 通道到二维排列
     """
@@ -168,8 +170,11 @@ def map_channels_to_grid(metadata_path: str):
     print("\n")
     print("num_electrodes = ", len(positions))
 
+    if output_path:
+        write_channel_results_to_file(channels, positions, output_path)
 
-def map_channel_to_vector(metadata_path: str):
+
+def map_channel_to_vector(metadata_path: str, output_path: str = None):
     channel_vector = get_channel_summary(metadata_path)
 
     print("\nPlease paste the following list into your code:\n")
@@ -180,8 +185,33 @@ def map_channel_to_vector(metadata_path: str):
     print("\n")
     print("num_electrodes = ", len(channel_vector))
 
+    if output_path:
+        write_channel_results_to_file(channel_vector, {}, output_path)
+
+
+def write_channel_results_to_file(
+    channel_vector: List[str],
+    grid_positions: Dict[str, Tuple[int, int]],
+    output_path: str,
+):
+    """
+    Write the channel vector and grid results into a .py file as Enum types.
+    """
+    with open(output_path, "w") as f:
+        f.write("from enum import Enum\n\n")
+        f.write("class CHANNEL1D_ENUM(Enum):\n")
+        for i, ch in enumerate(channel_vector):
+            f.write(f"    {ch} = {i}\n")
+        f.write("\n")
+        f.write("class CHANNEL2D_ENUM(Enum):\n")
+        for ch, pos in grid_positions.items():
+            f.write(f"    {ch} = {pos}\n")
+        f.write("\n")
+        f.write(f"num_electrodes = {len(channel_vector)}\n")
+
 
 if __name__ == "__main__":
     metadata_path = "E:\\derivatives\\SuperHuge\\meta\\metadata.pkl"
-    map_channel_to_vector(metadata_path)
-    map_channels_to_grid(metadata_path)
+    output_path = os.path.join(os.path.dirname(__file__), "channel_enum.py")
+    map_channel_to_vector(metadata_path, output_path)
+    map_channels_to_grid(metadata_path, output_path)

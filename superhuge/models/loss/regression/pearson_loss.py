@@ -6,7 +6,7 @@ import torch
 
 class PearsonLoss(_Loss):
     def forward(
-        self, /, *, y_pred: torch.Tensor, y_true: torch.Tensor, **kwargs
+        self, y_pred: torch.Tensor, y_true: torch.Tensor, **kwargs
     ) -> torch.Tensor:
         y_pred = einops.rearrange(y_pred, "b t f-> t b f")
         y_true = einops.rearrange(y_true, "b t f-> t b f")
@@ -15,7 +15,7 @@ class PearsonLoss(_Loss):
 
 class ContrastivePearsonLoss(_Loss):
     def forward(
-        self, /, *, y_pred: torch.Tensor, y_true: torch.Tensor, **kwargs
+        self, y_pred: torch.Tensor, y_true: torch.Tensor, **kwargs
     ) -> torch.Tensor:
         y_pred = einops.rearrange(y_pred, "b t f-> t b f")
         y_true = einops.rearrange(y_true, "b t f-> t b f")

@@ -4,14 +4,14 @@ import torch
 
 class AbsPearsonLoss(PearsonLoss):
     def forward(
-        self, /, *, y_pred: torch.Tensor, y_true: torch.Tensor, **kwargs
+        self, y_pred: torch.Tensor, y_true: torch.Tensor, **kwargs
     ) -> torch.Tensor:
         return -torch.abs(super().forward(y_pred=y_pred, y_true=y_true, **kwargs))
 
 
 class ContrastiveAbsPearsonLoss(AbsPearsonLoss):
     def forward(
-        self, /, *, y_pred: torch.Tensor, y_true: torch.Tensor, **kwargs
+        self, y_pred: torch.Tensor, y_true: torch.Tensor, **kwargs
     ) -> torch.Tensor:
         loss = super().forward(
             y_pred=y_pred[:, :, 0][:, :, torch.newaxis],

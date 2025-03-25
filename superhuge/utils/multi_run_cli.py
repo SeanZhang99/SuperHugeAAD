@@ -1,7 +1,3 @@
-import sys
-
-import lightning
-import lightning.pytorch
 import lightning.pytorch.callbacks
 from lightning.pytorch.cli import LightningCLI
 

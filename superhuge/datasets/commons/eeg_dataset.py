@@ -100,6 +100,9 @@ class EegDataset(Dataset):
             meta_group_func = getattr(import_module(module_name), func_name)
 
         if transform:
+            assert isinstance(
+                transform, list
+            ), f"transform must be a list, but got {type(transform)}"
             transforms: list[Transform] | None = [getattr(import_module(kv["class_path"].rsplit(".", 1)[0]), kv["class_path"].rsplit(".", 1)[1])(**kv["init_args"]) for kv in transform]  # type: ignore
         else:
             transforms = None
@@ -264,6 +267,7 @@ class EegDataset(Dataset):
         )  # 默认截取长度为1280
         self.overlap: int = kwargs.get("overlap", 1)  # 默认无重叠
         self.transform: Sequence[Transform] | None = kwargs.get("transform", None)
+        self.metadata_fields: list[MetaDataField] = kwargs["metadata_fields"]
 
         # Ensure files are a subset of metadata's keys
         assert set(self.files).issubset(
@@ -292,15 +296,24 @@ class EegDataset(Dataset):
         """
         加载样本数据，并返回元数据、信号段和标签。
         """
+        copied = False
         file_idx, segment_idx = self._map_idx_to_file_and_segment(idx)
         file_name = self.files[file_idx]
         file_path = os.path.join(self.exg_path, file_name + ".npy")
-        exg = np.load(file_path)
+
+        exg: np.ndarray | np.memmap = np.load(
+            file_path, mmap_mode="r", allow_pickle=False
+        )
+        exg = exg.astype(np.float32)
+>>>>>>> on_cuda_mapping
 
         if self.transform:
             for transform in self.transform:
-                if transform.apply_on == "before_slicing":
+                if transform.when == "before_slicing" and (
+                    "eeg" in transform.whom or "all" in transform.whom
+                ):
                     exg = transform(exg)
+                    copied = True
 
         # 加载信号和标签
 
@@ -308,13 +321,15 @@ class EegDataset(Dataset):
         stride = self.segment_length // self.overlap
         start_idx = segment_idx * stride
         exg = exg[start_idx : start_idx + self.segment_length]
+        # mostly, exg is a memory-mapped array, so we need to copy it to avoid modifying the original data. But if any transform has applied to the data before slicing, we don't need to copy it again (because transform should return a new copy of the data in the memory).
+        if not copied:
+            exg = exg.copy()
 
         # 应用变换
         if self.transform:
             for transform in self.transform:
-                if (
-                    transform.apply_on == "before_returning"
-                    or transform.apply_on is None
+                if transform.when == "before_returning" and (
+                    "eeg" in transform.whom or "all" in transform.whom
                 ):
                     exg = transform(exg)
 

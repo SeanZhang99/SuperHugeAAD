@@ -8,7 +8,7 @@ class TimeShift(Transform):
     def __init__(
         self, /, *, max_shift: int | float = 200, fs: int | None = None, **kwargs
     ) -> None:
-        kwargs.setdefault("apply_on", "before_slicing")
+        kwargs.setdefault("when", "before_slicing")
         super().__init__(**kwargs)
         if isinstance(max_shift, float) and fs is None:
             raise ValueError("Sampling frequency must be provided for float max_shift.")

@@ -1,5 +1,4 @@
 import inspect
-from turtle import onscreenclick
 
 import torch
 from torchmetrics import ConfusionMatrix
@@ -31,8 +30,6 @@ class ClassifyInterface(MInterface):
         )
 
         self.post_model = classify_post_model(self.input_size, num_class)
-
-        self.label_hash: dict[str, int] = {}
 
     sig = inspect.signature(MInterface.__init__)
     __init__.__signature__ = sig.replace(

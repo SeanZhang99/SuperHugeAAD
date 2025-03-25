@@ -1,6 +1,7 @@
 """Code to construct the VLAAI network."""
 
 import os
+import einops
 
 os.environ["KERAS_BACKEND"] = "torch"
 from typing import Annotated, Callable, Sequence
@@ -16,7 +17,6 @@ class ExtractorParams(BaseModel):
     num_kernels: Annotated[Sequence[int], Field(min_length=1)]
     kernel_sizes: Annotated[Sequence[int], Field(min_length=1)]
     num_layers: Annotated[int | None, Field(gt=0)] = None
-    input_channels: Annotated[int, Field(gt=0)] = 64
     normalization_fn: Callable | str | None = None
     activation_fn: Callable | str | None = None
     name: str = "extractor"
@@ -25,7 +25,6 @@ class ExtractorParams(BaseModel):
 class OutputContextParams(BaseModel):
     num_kernel: Annotated[int, Field(gt=0)] = 64
     kernel_size: Annotated[int, Field(gt=0)] = 32
-    input_channels: Annotated[int, Field(gt=0)] = 64
     normalization_fn: Callable | str | None = None
     activation_fn: Callable | str | None = None
     name: str = "output_context_model"
@@ -46,7 +45,8 @@ def extractor(
     num_kernels: Sequence[int] = (256, 256, 256, 128, 128),
     kernel_sizes: Sequence[int] = (8,) * 5,
     num_layers: int | None = None,
-    input_channels: int = 64,
+    input_shape: tuple[int] | None = None,
+    input_tensor: keras.KerasTensor | None = None,
     normalization_fn: Callable | str | None = None,
     activation_fn: Callable | str | None = None,
     name="extractor",
@@ -55,7 +55,6 @@ def extractor(
         num_kernels=num_kernels,
         kernel_sizes=kernel_sizes,
         num_layers=num_layers,
-        input_channels=input_channels,
         normalization_fn=normalization_fn,
         activation_fn=activation_fn,
         name=name,
@@ -82,9 +81,13 @@ def extractor(
     tf.keras.models.Model
         The extractor model.
     """
-    eeg = keras.layers.Input((None, input_channels))
+    if input_shape is not None:
+        eeg = keras.layers.Input(input_shape)
+    elif input_tensor is not None:
+        eeg = keras.layers.Input(input_tensor.shape[1:])
 
     x = eeg
+
     assert (
         len(num_kernels) == len(kernel_sizes)
         or len(num_kernels) == 1
@@ -128,7 +131,8 @@ def extractor(
 def output_context(
     num_kernel: int = 64,
     kernel_size: int = 32,
-    input_channels: int = 64,
+    input_shape: tuple[int] | None = None,
+    input_tensor: keras.KerasTensor | None = None,
     normalization_fn: Callable | str | None = None,
     activation_fn: Callable | str | None = None,
     name="output_context_model",
@@ -136,7 +140,6 @@ def output_context(
     params = OutputContextParams(
         num_kernel=num_kernel,
         kernel_size=kernel_size,
-        input_channels=input_channels,
         normalization_fn=normalization_fn,
         activation_fn=activation_fn,
         name=name,
@@ -163,7 +166,10 @@ def output_context(
     tf.keras.models.Model
         The output context model.
     """
-    inp = keras.layers.Input((None, input_channels))
+    if input_shape is not None:
+        inp = keras.layers.Input(input_shape)
+    elif input_tensor is not None:
+        inp = keras.layers.Input(input_tensor.shape[1:])
 
     if normalization_fn is None:
         normalization_fn = keras.layers.LayerNormalization
@@ -191,12 +197,14 @@ def output_context(
 
 def vlaai(
     nb_blocks: int = 4,
+    window_length: int = 10,
+    fs: int = 128,
     extractor_model: Callable[..., Model] | None = None,
     output_context_model: Callable[..., Model] | None = None,
     use_skip: bool = True,
     input_channels: int = 64,
-    extractor_args={},
-    output_context_args={},
+    extractor_args: dict = {},
+    output_context_args: dict = {},
     name="vlaai",
 ):
     params = VlaaiParams(
@@ -233,39 +241,52 @@ def vlaai(
     tf.keras.models.Model
         The VLAAI model.
     """
+
+    eeg = keras.layers.Input((window_length * fs, input_channels))
+
+    reshaped_eeg = keras.layers.Lambda(
+        einops.rearrange, arguments={"pattern": "b t c -> b c t"}
+    )(eeg)
+
     if isinstance(nb_blocks, str):
         nb_blocks = int(nb_blocks)
 
     if extractor_model is None:
         extractor_model = extractor
-    extractor_model = extractor_model(input_channels=input_channels, **extractor_args)
+    extractor_model = extractor_model(input_tensor=reshaped_eeg, **extractor_args)
 
     if output_context_model is None:
         output_context_model = output_context
     output_context_model = output_context_model(
-        input_channels=(
-            extractor_args["num_kernels"][-1]
-            if "num_kernels" in extractor_args
-            else 128
+        input_shape=(
+            (
+                extractor_args["num_kernels"][-1]
+                if "num_kernels" in extractor_args
+                else 128
+            ),
+            window_length * fs,
         ),
         **output_context_args,
     )
-
-    eeg = keras.layers.Input((None, input_channels))
-
-    x = eeg
 
     # Iterate over the blocks
     for i in range(nb_blocks):
         if use_skip:
             if i == 0:
-                x = extractor_model(x)
+                x = extractor_model(reshaped_eeg)
             else:
-                x = extractor_model(eeg + x)
+                x = extractor_model(reshaped_eeg + x)
         else:
             x = extractor_model(x)
         x = output_context_model(x)
+        x = keras.layers.Lambda(
+            einops.rearrange, arguments={"pattern": "b c t -> b t c"}
+        )(x)
         x = keras.layers.Dense(input_channels)(x)
+        if i < nb_blocks - 1:
+            x = keras.layers.Lambda(
+                einops.rearrange, arguments={"pattern": "b t c -> b c t"}
+            )(x)
 
     return keras.models.Model(inputs=eeg, outputs=x, name=name)
 

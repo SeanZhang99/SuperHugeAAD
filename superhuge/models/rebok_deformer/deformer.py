@@ -160,19 +160,19 @@ def transformer(
         dp_rate=dp_rate,
     )
     x = input
-    for i in range(depth):
-        x_cg = x
+    for _ in range(depth):
         x_cg = layers.MultiHeadAttention(
             num_heads=num_heads, key_dim=dim_heads, dropout=dp_rate
-        )(x_cg, x_cg)
+        )(x, x)
         x_cg = layers.LayerNormalization()(x_cg + x)
 
-        x_fg = fg_cnn(
+        # here x is fine-grain x.
+        x = fg_cnn(
             x, temporal_kernel_size=fg_cnn_temporal_kernel_size, dp_rate=dp_rate
         )(x)
 
         x = layers.LayerNormalization()(
-            feedforward(x_cg, hidden_dim=ff_hidden_dims, dp_rate=dp_rate)(x_cg) + x_fg
+            feedforward(x_cg, hidden_dim=ff_hidden_dims, dp_rate=dp_rate)(x_cg) + x
         )
 
     return Model(inputs=input, outputs=x)
@@ -288,9 +288,9 @@ def deformer(
     transformer_callable = validate_callable(transformer_callable, transformer)
 
     input = Input((window_length * fs, num_electrodes))
-    x = layers.Lambda(lambda x: rearrange(x, "b t c -> b 1 c t"))(input)
+    x = layers.Lambda(rearrange, arguments={"pattern": "b t c -> b 1 c t"})(input)
     x = preconv_callable(x, num_kernels, temporal_kernel_size)(x)
-    x = layers.Lambda(lambda x: rearrange(x, "b k c t -> b k (c t)"))(x)
+    x = layers.Lambda(rearrange, arguments={"pattern": "b k c t -> b k (c t)"})(x)
     x = pos_embedding()(x)
     x = transformer_callable(
         x,
@@ -302,7 +302,7 @@ def deformer(
         dp_rate,
     )(x)
 
-    x = layers.Lambda(lambda x: rearrange(x, "b k t -> b t k"))(x)
+    x = layers.Lambda(rearrange, arguments={"pattern": "b k t -> b t k"})(x)
 
     x = layers.Dense(units=num_electrodes)(x)
 

@@ -1,5 +1,7 @@
 from collections.abc import Callable
 
+from sympy import O
+
 from ..commons.eeg_dataset import EegDataset
 from ..metadata_processing.data import ClassifyMetaDataElement
 from ..metadata_processing.filters.classify_filter import (
@@ -26,6 +28,25 @@ class EegClassifyBaseDataset(EegDataset):
             if isinstance(label, str)
             else label
         )
+        assert isinstance(
+            label, int
+        ), f"EEG_CLASSIFY_BASE_DATASET:GETITEM:ASSERTION:VALUE_ERROR: label must be an integer, got {type(label)}"
+
+        for transform in self.transform:
+            if transform.when == "before_returning" and (
+                transform.whom == "all" or "label" in transform.whom
+            ):
+                label = transform(label)
+
+        meta["label"] = label
+
+        # Remove unnecessary fields
+        for field in ["env", "mel", "wav"]:
+            if field in meta:
+                del meta[field]
+            if f"{field}_fs" in meta:
+                del meta[f"{field}_fs"]
+
         return {"meta": meta, "exg": exg, "label": label}
 
     @classmethod

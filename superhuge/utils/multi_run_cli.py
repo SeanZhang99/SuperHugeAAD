@@ -4,6 +4,8 @@ import lightning
 import lightning.pytorch
 import lightning.pytorch.callbacks
 from lightning.pytorch.cli import LightningCLI
+import torch
+import tqdm
 
 from .task_config_parser import TaskConfigParser
 
@@ -34,20 +36,35 @@ class MultiRunCLI:
         return task_config_path, cli_argv
 
     def __run_cli(self):
+        def to_device(data, device):
+            if isinstance(data, dict):
+                return {k: to_device(v, device) for k, v in data.items()}
+            elif isinstance(data, (list, tuple)):
+                return [to_device(v, device) for v in data]
+            elif isinstance(
+                data, (torch.Tensor, lightning.pytorch.LightningDataModule)
+            ):
+                return data.to(device)
+            return data
+
         for config_list in self.task_config_parser.generate_configs():
             cli = LightningCLI(
                 # parser_kwargs={"parser_mode": "omegaconf"},
                 args=self.cli_argv + config_list,
                 run=False,
             )
+            # batch = cli.datamodule.train_dataloader()._get_iterator().__next__()
+            # batch = to_device(batch, "cuda")
+            # cli.model.to("cuda")
+            # for i in tqdm.trange(100):
+            #     cli.model.forward(batch)
             cli.trainer.fit(
                 cli.model,
-                cli.datamodule.train_dataloader(),
-                cli.datamodule.val_dataloader(),
+                datamodule=cli.datamodule,
             )
             cli.trainer.test(
                 cli.model,
-                cli.datamodule.val_dataloader(),
+                datamodule=cli.datamodule,
                 ckpt_path="best",
                 verbose=True,
             )

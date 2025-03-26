@@ -18,7 +18,7 @@ directional_focus_decoding:
           n_folds: 5
   tasks:
     binary_leftright:
-      enable: 9
+      enable: 0
       data:
         init_args:
           dataset_args:

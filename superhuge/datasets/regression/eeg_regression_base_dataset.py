@@ -28,11 +28,10 @@ class EegRegressionBaseDataset(EegDataset):
     def __init__(self, **kwargs):
         """
         Args:
-            speech_feature_path (str): 语音特征文件夹路径。
             speech_feature_key (str): 元数据中存储语音特征文件名的键。
         """
-        super().__init__(**kwargs)
         config = EEGDatasetWithSpeechFeatureCreationConfig(**kwargs)
+        super().__init__(**kwargs)
 
         # 处理支持的语音特征别名
         feature_type = config.speech_feature_key.lower()
@@ -48,6 +47,20 @@ class EegRegressionBaseDataset(EegDataset):
         self.speech_feature_path = os.path.join(
             self.exg_path.replace("exg", "stimuli"), self.speech_feature_type
         )
+        self.preload_wav_mmap()
+
+    def preload_wav_mmap(self):
+        self.preload_speech: list[np.memmap] = []
+        for file in self.files:
+            speech_feature: np.memmap = np.load(
+                os.path.join(
+                    self.speech_feature_path,
+                    f"{file}_{self.speech_feature_type}.npy",
+                ),
+                mmap_mode="r+",
+                allow_pickle=False,
+            )
+            self.preload_speech.append(speech_feature)
 
     def __getitem__(self, idx):
         """
@@ -57,7 +70,7 @@ class EegRegressionBaseDataset(EegDataset):
 
         entry = meta["entry"]
         # 加载语音特征
-        speech_feature = np.load(
+        speech_feature: np.ndarray = np.load(
             os.path.join(
                 self.speech_feature_path,
                 f"{entry}_{self.speech_feature_type}.npy",
@@ -65,6 +78,8 @@ class EegRegressionBaseDataset(EegDataset):
             mmap_mode="r",
             allow_pickle=False,
         ).astype(np.float32)
+
+        file_idx, segment_idx = self._map_idx_to_file_and_segment(idx)
 
         if self.transform:
             for transform in self.transform:
@@ -74,7 +89,6 @@ class EegRegressionBaseDataset(EegDataset):
                     speech_feature = transform(speech_feature)
 
         # 根据 segment_length 和 overlap 截取语音特征段
-        _, segment_idx = self._map_idx_to_file_and_segment(idx)
         stride = self.segment_length // self.overlap
         start_idx = segment_idx * stride
         speech_segment = speech_feature[start_idx : start_idx + self.segment_length]

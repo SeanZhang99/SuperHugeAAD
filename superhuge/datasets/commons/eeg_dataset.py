@@ -303,7 +303,6 @@ class EegDataset(Dataset):
         exg: np.ndarray | np.memmap = np.load(
             file_path, mmap_mode="r", allow_pickle=False
         )
-        exg = exg.astype(np.float32)
         if self.transform:
             for transform in self.transform:
                 if transform.when == "before_slicing" and (

@@ -1,5 +1,8 @@
 import lightning.pytorch.callbacks
 from lightning.pytorch.cli import LightningCLI
+import tqdm
+
+from ..models.rebok_deformer.deformer import deformer
 
 from .task_config_parser import TaskConfigParser
 
@@ -38,12 +41,11 @@ class MultiRunCLI:
             )
             cli.trainer.fit(
                 cli.model,
-                cli.datamodule.train_dataloader(),
-                cli.datamodule.val_dataloader(),
+                cli.datamodule,
             )
             cli.trainer.test(
                 cli.model,
-                cli.datamodule.val_dataloader(),
+                cli.datamodule,
                 ckpt_path="best",
                 verbose=True,
             )

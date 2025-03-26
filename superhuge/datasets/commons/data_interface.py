@@ -146,3 +146,7 @@ class DInterface(pl2.LightningDataModule):
             unique_table.add_row(entry)
 
         console.print(unique_table)
+
+    @property
+    def batch_size(self):
+        return self.config.dataloader_args["batch_size"]

@@ -276,18 +276,6 @@ class EegDataset(Dataset):
 
         # 计算总样本数目
         self.count_samples()
-        self.preload_exg_mmap()
-
-    def preload_exg_mmap(self):
-        """
-        预加载所有数据到内存映射数组。
-        """
-        self.preloaded_exg: list[np.memmap] = []
-        for file in self.files:
-            file_path = os.path.join(self.exg_path, f"{file}.npy")
-            exg: np.memmap = np.load(file_path, mmap_mode="r+", allow_pickle=False)
-            self.metadata[file].signal_length = exg.shape[0]
-            self.preloaded_exg.append(exg)
 
     def count_samples(self):
         self.total_samples = 0
@@ -309,13 +297,12 @@ class EegDataset(Dataset):
         加载样本数据，并返回元数据、信号段和标签。
         """
         file_idx, segment_idx = self._map_idx_to_file_and_segment(idx)
-        # file_name = self.files[file_idx]
-        # file_path = os.path.join(self.exg_path, file_name + ".npy")
+        file_name = self.files[file_idx]
+        file_path = os.path.join(self.exg_path, file_name + ".npy")
 
-        # exg: np.ndarray | np.memmap = np.load(
-        # file_path, mmap_mode="r", allow_pickle=False
-        # )
-        exg = self.preloaded_exg[file_idx].astype(np.float32)
+        exg: np.ndarray | np.memmap = np.load(
+            file_path, mmap_mode="r", allow_pickle=False
+        )
         if self.transform:
             for transform in self.transform:
                 if transform.when == "before_slicing" and (
@@ -339,7 +326,7 @@ class EegDataset(Dataset):
                     exg = transform(exg)
 
         # 获取元数据
-        meta = self.metadata[self.files[file_idx]].model_dump()
+        meta = self.metadata[file_name].model_dump()
 
         # mostly, exg is a memory-mapped array, so we need to copy it to avoid modifying the original data.
         return {"meta": meta, "exg": exg.copy()}

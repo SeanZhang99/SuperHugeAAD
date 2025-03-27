@@ -29,7 +29,6 @@ dependencies = [
     "einops",
     "rich",
     "keras",
-    "tensorflow-cpu<2.18.0",
     "ipython",
 ]
 
@@ -39,4 +38,4 @@ dependencies = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["superhuge"]
-exclude = ["train","lightning_logs","prepare_dataset"]
+exclude = ["train","lightning_logs","prepare_dataset", "matlab-preprocessing-code"]

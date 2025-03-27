@@ -329,7 +329,7 @@ class EegDataset(Dataset):
         meta = self.metadata[file_name].model_dump()
 
         # mostly, exg is a memory-mapped array, so we need to copy it to avoid modifying the original data.
-        return {"meta": meta, "exg": exg.copy()}
+        return {"meta": meta, "exg": exg.astype(np.float32)}
 
     def _map_idx_to_file_and_segment(self, idx: int):
         """

@@ -47,20 +47,6 @@ class EegRegressionBaseDataset(EegDataset):
         self.speech_feature_path = os.path.join(
             self.exg_path.replace("exg", "stimuli"), self.speech_feature_type
         )
-        self.preload_wav_mmap()
-
-    def preload_wav_mmap(self):
-        self.preload_speech: list[np.memmap] = []
-        for file in self.files:
-            speech_feature: np.memmap = np.load(
-                os.path.join(
-                    self.speech_feature_path,
-                    f"{file}_{self.speech_feature_type}.npy",
-                ),
-                mmap_mode="r+",
-                allow_pickle=False,
-            )
-            self.preload_speech.append(speech_feature)
 
     def __getitem__(self, idx):
         """
@@ -77,7 +63,7 @@ class EegRegressionBaseDataset(EegDataset):
             ),
             mmap_mode="r",
             allow_pickle=False,
-        ).astype(np.float32)
+        )
 
         file_idx, segment_idx = self._map_idx_to_file_and_segment(idx)
 
@@ -115,7 +101,7 @@ class EegRegressionBaseDataset(EegDataset):
         return {
             "meta": meta,
             "exg": exg,
-            "audio": speech_segment.copy(),
+            "audio": speech_segment.astype(np.float32),
         }
 
     @classmethod

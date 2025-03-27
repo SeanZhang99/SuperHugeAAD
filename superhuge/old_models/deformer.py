@@ -6,6 +6,8 @@ from einops.layers.torch import Rearrange
 from pydantic import BaseModel
 from torch import nn
 
+from ..models.commons.multi_head_attention import MultiHeadAttention
+
 from ..models.commons.residual_layer import ResidualLayer
 
 
@@ -30,10 +32,10 @@ class createDeformerInputConfig(BaseModel):
 # ===========================
 def feed_forward(in_features, hidden_dim, dropout=0.0):
     model = nn.Sequential(
-        nn.Linear(in_features=in_features, out_features=hidden_dim),
+        nn.Linear(in_features, hidden_dim),
         nn.GELU(),
         nn.Dropout(dropout),
-        nn.Linear(in_features=hidden_dim, out_features=in_features),
+        nn.Linear(hidden_dim, in_features),
         nn.Dropout(dropout),
     )
     return model
@@ -43,9 +45,9 @@ def fg_cnn(num_kernels, kernel_size, dropout):
     return nn.Sequential(
         nn.Dropout(dropout),
         nn.Conv1d(
-            in_channels=num_kernels,
-            out_channels=num_kernels,
-            kernel_size=kernel_size,
+            num_kernels,
+            num_kernels,
+            kernel_size,
             padding="same",
         ),
         nn.BatchNorm1d(num_kernels),
@@ -71,25 +73,25 @@ def transformer_encoder_layer(
     return nn.Sequential(
         ResidualLayer(
             fg_cnn(
-                num_kernel=fg_cnn_num_kernels,
-                kernel_size=fg_cnn_kernel_size,
-                dropout=dropout,
+                fg_cnn_num_kernels,
+                fg_cnn_kernel_size,
+                dropout,
             ),
             nn.Sequential(
                 ResidualLayer(
-                    nn.MultiheadAttention(
-                        embed_dim=mha_embed_dim,
-                        num_heads=mha_num_heads,
-                        dropout=dropout,
+                    MultiHeadAttention(
+                        mha_embed_dim,
+                        mha_num_heads,
+                        dropout,
                         batch_first=True,
                     ),
                     nn.Identity(),
                 ),
                 nn.LayerNorm(mha_embed_dim),
                 feed_forward(
-                    in_features=mha_embed_dim,
-                    hidden_dim=ff_hidden_dim,
-                    dropout=dropout,
+                    mha_embed_dim,
+                    ff_hidden_dim,
+                    dropout,
                 ),
             ),
         ),
@@ -101,6 +103,7 @@ def transformer(
     depth: int,
     fg_cnn_num_kernels: int,
     fg_cnn_kernel_size: int,
+    mha_embed_dim: int,
     mha_num_heads: int,
     ff_hidden_dim: int,
     dropout: float = 0.0,
@@ -124,16 +127,17 @@ def transformer(
         dropout: float, Optional, default 0.0
     """
     return nn.Sequential(
-        [
-            *transformer_encoder_layer(
+        *[
+            transformer_encoder_layer(
                 fg_cnn_num_kernels,
                 fg_cnn_kernel_size,
+                mha_embed_dim,
                 mha_num_heads,
                 ff_hidden_dim,
                 dropout,
             )
+            for _ in range(depth)
         ]
-        for _ in range(depth)
     )
 
 
@@ -184,7 +188,7 @@ def preconv(
             max_norm=2,
             padding="valid",
         ),
-        nn.LazyBatchNorm2d(),
+        nn.BatchNorm2d(out_chan),
         nn.ELU(),
     )
 
@@ -207,6 +211,7 @@ def deformer(
     num_electrodes: int,
     num_kernels: int,
     temporal_kernel_size: int,
+    mha_embed_dim: int,
     mha_depth: int,
     mha_num_heads: int,
     ff_hidden_dim: int,
@@ -225,21 +230,20 @@ def deformer(
     return nn.Sequential(
         Rearrange("b t c -> b 1 c t"),
         preconv(
-            num_electrodes=num_electrodes,
-            out_chan=num_kernels,
-            kernel_size=temporal_kernel_size,
+            num_electrodes,
+            num_kernels,
+            temporal_kernel_size,
         ),  # (b, num_kernels, 1, num_time)
         Rearrange("b k c t -> b k (c t)"),  # (b, num_kernels, num_time)
         transformer(
-            depth=mha_depth,
-            fg_cnn_num_kernel=num_kernels,
-            fg_cnn_kernel_size=temporal_kernel_size,
-            mha_num_heads=mha_num_heads,
-            ff_hidden_dim=ff_hidden_dim,
-            dropout=dropout,
+            mha_depth,
+            num_kernels,
+            temporal_kernel_size,
+            mha_embed_dim,
+            mha_num_heads,
+            ff_hidden_dim,
+            dropout,
         ),
         Rearrange("b k t -> b t k"),
-        output_mlp(
-            num_kernels, ff_hidden_dim=ff_hidden_dim, num_electrodes=num_electrodes
-        ),
+        output_mlp(num_kernels, ff_hidden_dim, num_electrodes),
     )

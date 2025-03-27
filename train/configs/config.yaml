@@ -96,7 +96,7 @@ trainer:
   num_sanity_val_steps: null
   overfit_batches: 0
   plugins: null
-  precision: 32
+  precision: null
   profiler:
     class_path: PyTorchProfiler
     init_args:

@@ -12,6 +12,7 @@ import torch
 from pydantic import BaseModel
 from torch.utils.data import Dataset
 
+
 from ..metadata_processing.filters.composer import MetaDataFilterComposer
 
 from ...utils.transforms.abc import Transform

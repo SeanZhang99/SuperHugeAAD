@@ -60,15 +60,19 @@ class CHANNEL1D_ENUM(Enum):
     PO10 = 56
     PO3 = 57
     PO4 = 58
-    PO7 = 59
-    PO8 = 60
-    PO9 = 61
-    POz = 62
-    Pz = 63
-    T7 = 64
-    T8 = 65
-    TP7 = 66
-    TP8 = 67
+    PO5 = 59
+    PO6 = 60
+    PO7 = 61
+    PO8 = 62
+    PO9 = 63
+    POz = 64
+    Pz = 65
+    T7 = 66
+    T8 = 67
+    TP10 = 68
+    TP7 = 69
+    TP8 = 70
+    TP9 = 71
 
 class CHANNEL2D_ENUM(Enum):
     AF3 = (1, 3)
@@ -130,6 +134,8 @@ class CHANNEL2D_ENUM(Enum):
     PO10 = (7, 10)
     PO3 = (7, 3)
     PO4 = (7, 7)
+    PO5 = (7, 2)
+    PO6 = (7, 8)
     PO7 = (7, 1)
     PO8 = (7, 9)
     PO9 = (7, 0)
@@ -137,7 +143,9 @@ class CHANNEL2D_ENUM(Enum):
     Pz = (6, 5)
     T7 = (4, 1)
     T8 = (4, 9)
+    TP10 = (5, 10)
     TP7 = (5, 1)
     TP8 = (5, 9)
+    TP9 = (5, 0)
 
-num_electrodes = 68
+num_electrodes = 72

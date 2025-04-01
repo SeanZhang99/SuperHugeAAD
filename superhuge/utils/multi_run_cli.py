@@ -40,11 +40,11 @@ class MultiRunCLI:
                 run=False,
             )
             cli.trainer.fit(
-                cli.model,
+                model=cli.model,
                 datamodule=cli.datamodule,
             )
             cli.trainer.test(
-                cli.model,
+                model=cli.model,
                 datamodule=cli.datamodule,
                 ckpt_path="best",
                 verbose=True,

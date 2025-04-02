@@ -13,6 +13,5 @@ superhuge/datasets/regression/__init__.py
 superhuge/datasets/regression/eeg_regression_base_dataset.py
 superhuge/models/__init__.py
 superhuge/utils/__init__.py
-superhuge/utils/eeg_type_parser.py
 superhuge/utils/multi_run_cli.py
 superhuge/utils/task_config_parser.py

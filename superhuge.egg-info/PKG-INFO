@@ -7,16 +7,17 @@ License: MIT
 Classifier: Programming Language :: Python :: 3
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Operating System :: OS Independent
-Requires-Python: >=3.11
+Requires-Python: >=3.12
 Description-Content-Type: text/markdown
 Requires-Dist: scipy
-Requires-Dist: torch==2.5.1+cu121
+Requires-Dist: torch==2.5.1
 Requires-Dist: lightning[extra]
 Requires-Dist: pydantic
 Requires-Dist: numpy
 Requires-Dist: pyyaml
 Requires-Dist: einops
 Requires-Dist: rich
-Requires-Dist: keras
-Requires-Dist: tensorflow-cpu<2.18.0
 Requires-Dist: ipython
+Requires-Dist: keras
+Requires-Dist: nvitop
+Requires-Dist: torchinfo

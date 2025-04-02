@@ -69,6 +69,7 @@ class RegressionInterface(MInterface):
             on_epoch=True,
             on_step=False,
             batch_size=x_pred.shape[1],
+            sync_dist=True,
         )
 
         return stats

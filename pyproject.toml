@@ -21,7 +21,7 @@ classifiers = [
 
 dependencies = [
     "scipy",
-    "torch==2.5.1+cu121",
+    "torch==2.5.1",
     "lightning[extra]",
     "pydantic",
     "numpy",
@@ -29,6 +29,9 @@ dependencies = [
     "einops",
     "rich",
     "ipython",
+    "keras",
+    "nvitop",
+    "torchinfo",
 ]
 
 [project.scripts]

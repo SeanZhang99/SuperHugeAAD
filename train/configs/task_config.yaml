@@ -24,7 +24,7 @@ directional_focus_decoding:
           class_path: superhuge.models.loss.classify.cross_entropy_loss.CrossEntropyLoss
   tasks:
     binary_leftright:
-      enable: 0
+      enable: 1
       data:
         init_args:
           dataset_args:
@@ -100,7 +100,7 @@ speech_reconstruction:
           class_path: superhuge.models.loss.regression.mse_loss.MSELoss
   tasks:
     envelope_reconstruction:
-      enable: 1
+      enable: 0
       data:
         init_args:
           dataset_args:

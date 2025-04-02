@@ -82,6 +82,7 @@ class ClassifyInterface(MInterface):
             batch_size=pred.shape[0],
             on_epoch=True,
             on_step=False,
+            sync_dist=True,
         )
 
 

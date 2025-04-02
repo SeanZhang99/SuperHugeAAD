@@ -10,7 +10,7 @@ init_args:
     mha_num_heads: 32
     mha_dim_heads: 128
     ff_hidden_dim: 256
-    num_electrodes: 68
+    num_electrodes: 70
     dp_rate: .5
     preconv_callable: superhuge.models.rebok_deformer.deformer.preconv
     transformer_callable: superhuge.models.rebok_deformer.rebok_deformer.rebok_transformer

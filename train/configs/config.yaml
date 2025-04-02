@@ -21,7 +21,7 @@ data:
         - channel_infos
       n_folds: 5
       overlap: 1
-      root_path: E:/derivatives/SuperHuge
+      root_path: /data/nvme/ssd2/zhangyuanming/EEG/derivatives/SuperHuge
       transform: null
       window_length: 10
 lr_scheduler:
@@ -77,7 +77,7 @@ trainer:
   enable_checkpointing: null
   enable_model_summary: null
   enable_progress_bar: null
-  fast_dev_run: 100
+  fast_dev_run: false
   gradient_clip_algorithm: null
   gradient_clip_val: null
   inference_mode: true
@@ -97,11 +97,7 @@ trainer:
   overfit_batches: 0
   plugins: null
   precision: null
-  profiler:
-    class_path: PyTorchProfiler
-    init_args:
-      dirpath: .
-      filename: profile
+  profiler: null
   reload_dataloaders_every_n_epochs: 0
   strategy: auto
   sync_batchnorm: false

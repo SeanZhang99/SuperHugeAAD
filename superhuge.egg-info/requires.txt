@@ -1,11 +1,12 @@
 scipy
-torch==2.5.1+cu121
+torch==2.5.1
 lightning[extra]
 pydantic
 numpy
 pyyaml
 einops
 rich
-keras
-tensorflow-cpu<2.18.0
 ipython
+keras
+nvitop
+torchinfo

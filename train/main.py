@@ -27,7 +27,9 @@ import os
 
 os.environ["KERAS_BACKEND"] = "torch"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "5,6"
 import torch
+
 import keras
 from superhuge.utils.multi_run_cli import MultiRunCLI
 from superhuge.utils.pick_model_config import pick_file
@@ -39,9 +41,10 @@ torch.set_float32_matmul_precision("medium")
 if __name__ == "__main__":
     project_path = os.path.dirname(os.path.abspath(__file__))
     config_path = os.path.join(project_path, "configs")
-    model_config = pick_file(project_path, timeout=10)
-    if not model_config:
-        model_config = os.path.join(config_path, "models", "rebok_deformer.yaml")
+    # model_config = pick_file(project_path, timeout=10)
+    # if not model_config:
+    # model_config = os.path.join(config_path, "models", "rebok_deformer.yaml")
+    model_config = os.path.join(project_path, "configs", "models", "deformer.yaml")
     cli = MultiRunCLI(
         "--task_config",
         os.path.join(config_path, "task_config.yaml"),

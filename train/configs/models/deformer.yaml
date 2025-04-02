@@ -7,7 +7,7 @@ init_args:
     mha_depth: 4
     mha_embed_dim: 1280
     mha_num_heads: 8
-    num_electrodes: 68
+    num_electrodes: 70
     num_kernels: 32
     temporal_kernel_size: 17
-  model_class: superhuge.old_models.deformer.deformer
+  model_class: superhuge.torch_models.deformer.deformer

@@ -59,7 +59,6 @@ class MInterface(pl2.LightningModule, ABC):
                 self.model.summary()
             # else:
             #     torchinfo.summary(self.model, input_size=self.input_size)
-        
 
         self.pre_model: torch.nn.Module = lambda_layer.LambdaLayer(lambda x: x["exg"])
         self.post_model: torch.nn.Module = torch.nn.Identity()
@@ -166,6 +165,7 @@ class MInterface(pl2.LightningModule, ABC):
             prog_bar=True,
             on_step=False,
             on_epoch=True,
+            sync_dist=True,
         )
 
         return loss

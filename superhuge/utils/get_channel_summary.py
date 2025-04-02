@@ -211,7 +211,9 @@ def write_channel_results_to_file(
 
 
 if __name__ == "__main__":
-    metadata_path = "E:\\derivatives\\SuperHuge\\meta\\metadata.pkl"
+    metadata_path = (
+        "/data/ssd1/public/EEG/derivatives/SuperHuge/SuperHuge/meta/metadata.pkl"
+    )
     output_path = os.path.join(os.path.dirname(__file__), "channel_enum.py")
     map_channel_to_vector(metadata_path, output_path)
     map_channels_to_grid(metadata_path, output_path)

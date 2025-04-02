@@ -2,9 +2,11 @@
 # Imports
 # ===========================
 import torch
-from einops.layers.torch import Rearrange
+from einops.layers.torch import Rearrange, EinMix
 from pydantic import BaseModel
 from torch import nn
+
+from ..models.commons.lazy_layernorm import LazyLayerNorm
 
 from ..models.commons.multi_head_attention import MultiHeadAttention
 
@@ -79,23 +81,41 @@ def transformer_encoder_layer(
             ),
             nn.Sequential(
                 ResidualLayer(
-                    MultiHeadAttention(
-                        mha_embed_dim,
-                        mha_num_heads,
-                        dropout,
-                        batch_first=True,
+                    nn.Sequential(
+                        EinMix(
+                            "b k t -> b d_k t",
+                            weight_shape="k d_k",
+                            k=fg_cnn_num_kernels,
+                            d_k=mha_embed_dim * mha_num_heads,
+                        ),
+                        Rearrange("b d_k t -> b t d_k"),
+                        MultiHeadAttention(
+                            mha_embed_dim * mha_num_heads,
+                            mha_num_heads,
+                            dropout,
+                            batch_first=True,
+                        ),
+                        Rearrange("b t d_k -> b d_k t"),
+                        EinMix(
+                            "b d_k t -> b k t",
+                            weight_shape="d_k k",
+                            d_k=mha_embed_dim * mha_num_heads,
+                            k=fg_cnn_num_kernels,
+                        ),
                     ),
                     nn.Identity(),
                 ),
-                nn.LayerNorm(mha_embed_dim),
+                LazyLayerNorm(1),
+                Rearrange("b k t -> b t k"),
                 feed_forward(
-                    mha_embed_dim,
+                    fg_cnn_num_kernels,
                     ff_hidden_dim,
                     dropout,
                 ),
+                Rearrange("b t k -> b k t"),
             ),
         ),
-        nn.LayerNorm(mha_embed_dim),
+        LazyLayerNorm(1),
     )
 
 

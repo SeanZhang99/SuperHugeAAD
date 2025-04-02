@@ -3,7 +3,7 @@ data:
   class_path: superhuge.datasets.commons.data_interface.DInterface
   init_args:
     dataloader_args:
-      batch_size: 50
+      batch_size: 4
       num_workers: 2
       persistent_workers: true
       prefetch_factor: 8

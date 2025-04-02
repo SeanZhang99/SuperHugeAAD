@@ -1,0 +1,23 @@
+from typing import Sequence
+import torch
+from torch.nn import Module, LayerNorm
+
+
+class LazyLayerNorm(Module):
+    layer: LayerNorm
+
+    def __init__(
+        self, start_dim: int | None = None, stop_dim: int | None = None, *args, **kwargs
+    ):
+        super().__init__()
+        self.args = args
+        self.kwargs = kwargs
+        assert start_dim or stop_dim, "Either start_dim or stop_dim must be provided"
+        self.dims = slice(start_dim, stop_dim)
+
+    def forward(self: Module, x: torch.Tensor):
+        if not hasattr(self, "layer"):
+            self.layer = LayerNorm(
+                normalized_shape=x.shape[self.dims], *self.args, **self.kwargs
+            ).to(x.device, x.dtype)
+        return self.layer(x)

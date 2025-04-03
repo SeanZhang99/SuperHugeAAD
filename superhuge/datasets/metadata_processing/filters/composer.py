@@ -9,6 +9,8 @@ class MetaDataFilterComposer:
         *filters: Callable[[MetaDataElement | None], MetaDataElement | None],
         **kwargs,
     ) -> None:
+        for filter in filters:
+            assert callable(filter), f"Filter {filter} is not callable."
         self.filters = list(filters)
 
     def __call__(

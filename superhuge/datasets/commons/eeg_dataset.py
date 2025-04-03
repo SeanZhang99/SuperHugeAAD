@@ -12,6 +12,8 @@ import torch
 from pydantic import BaseModel
 from torch.utils.data import Dataset
 
+from ..metadata_processing.filters.abc import MetadataFilter
+
 
 from ..metadata_processing.filters.composer import MetaDataFilterComposer
 
@@ -92,9 +94,20 @@ class EegDataset(Dataset):
         Returns:
             tuple: 包含 train, val, test 数据集的元组。
         """
-        # if isinstance(meta_filter_func, str):
-        #     module_name, func_name = meta_filter_func.rsplit(".", 1)
-        #     meta_filter_func = getattr(import_module(module_name), func_name)
+        if isinstance(meta_filter_func, dict):
+            module_name, func_name = meta_filter_func["class_path"].rsplit(".", 1)
+            meta_filter_class = getattr(import_module(module_name), func_name)
+            filters = []
+            for filter_args in meta_filter_func["init_args"]:
+                filter = getattr(
+                    import_module(name=filter_args["class_path"].rsplit(".", 1)[0]),
+                    filter_args["class_path"].rsplit(".", 1)[1],
+                )
+                if inspect.isclass(filter):
+                    filters.append(filter(**filter_args["init_args"]))
+                else:
+                    filters.append(filter)
+            meta_filter_func = meta_filter_class(*filters)
 
         if isinstance(meta_group_func, str):
             module_name, func_name = meta_group_func.rsplit(".", 1)

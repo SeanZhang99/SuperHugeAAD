@@ -24,6 +24,17 @@ data:
       root_path: /data/nvme/ssd2/zhangyuanming/EEG/derivatives/SuperHuge
       transform: null
       window_length: 10
+      meta_filter_func:
+        class_path: superhuge.datasets.metadata_processing.filters.composer.MetaDataFilterComposer
+        init_args:
+          - class_path: superhuge.datasets.metadata_processing.filters.MetadataValueSelector
+            init_args:
+              attribute_name: dataset_id
+              attribute_value:
+                - 1
+                # - 3
+                # - 5
+          - class_path: superhuge.datasets.metadata_processing.filters.classify_filter.binary_leftright_filter
 lr_scheduler:
   class_path: lightning.pytorch.cli.ReduceLROnPlateau
   init_args:

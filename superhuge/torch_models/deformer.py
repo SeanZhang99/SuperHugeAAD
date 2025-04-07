@@ -84,24 +84,12 @@ def transformer_encoder_layer(
                 ResidualLayer(
                     nn.Sequential(
                         # 有点反直觉，EEG-Deformer原文就是将一个(1,t)的vector视为一个kernel的embedding，计算在kernel上的attention score
-                        EinMix(
-                            "b k t -> b k d_emb",
-                            weight_shape="t d_emb",
-                            t=time_dim,
-                            d_emb=mha_embed_dim * mha_num_heads,
-                        ),
                         MultiHeadAttention(
-                            mha_embed_dim * mha_num_heads,
+                            time_dim,
                             mha_num_heads,
+                            mha_embed_dim,
                             dropout,
-                            batch_first=True,
-                        ),
-                        EinMix(
-                            "b k d_emb -> b k t",
-                            weight_shape="d_emb t",
-                            d_emb=mha_embed_dim * mha_num_heads,
-                            t=time_dim,
-                        ),
+                        )
                     ),
                     nn.Identity(),
                 ),
@@ -249,9 +237,10 @@ def deformer(
     dropout: float, Optional, default 0.0
     """
     return nn.Sequential(
-        Rearrange("b t c -> b 1 c t"),
+        # Rearrange("b t c -> b 1 c t"),
+        EinMix("b t c -> b 1 k t", weight_shape="c k", c=num_electrodes, k=num_kernels),
         preconv(
-            num_electrodes,
+            num_kernels,
             num_kernels,
             temporal_kernel_size,
         ),  # (b, num_kernels, 1, num_time)

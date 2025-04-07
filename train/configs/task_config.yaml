@@ -19,7 +19,10 @@ directional_focus_decoding:
           n_folds: 5
     model:
       class_path: superhuge.models.commons.classify_interface.Channel1DClassifyInterface
+      # class_path: superhuge.models.commons.classify_interface.ClassifyInterface
       init_args:
+        num_electrodes: 70
+        num_mix_channels: 64
         loss:
           class_path: superhuge.models.loss.classify.cross_entropy_loss.CrossEntropyLoss
   tasks:

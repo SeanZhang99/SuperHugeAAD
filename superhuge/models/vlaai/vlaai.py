@@ -32,8 +32,6 @@ class OutputContextParams(BaseModel):
 
 class VlaaiParams(BaseModel):
     nb_blocks: Annotated[int, Field(gt=0)] = 4
-    extractor_model: Callable[..., Model] | None = None
-    output_context_model: Callable[..., Model] | None = None
     use_skip: bool = True
     input_channels: Annotated[int, Field(gt=0)] = 64
     extractor_args: dict = {}
@@ -199,8 +197,6 @@ def vlaai(
     nb_blocks: int = 4,
     window_length: int = 10,
     fs: int = 128,
-    extractor_model: Callable[..., Model] | None = None,
-    output_context_model: Callable[..., Model] | None = None,
     use_skip: bool = True,
     input_channels: int = 64,
     extractor_args: dict = {},
@@ -209,8 +205,6 @@ def vlaai(
 ):
     params = VlaaiParams(
         nb_blocks=nb_blocks,
-        extractor_model=extractor_model,
-        output_context_model=output_context_model,
         use_skip=use_skip,
         input_channels=input_channels,
         extractor_args=extractor_args,
@@ -251,34 +245,24 @@ def vlaai(
     if isinstance(nb_blocks, str):
         nb_blocks = int(nb_blocks)
 
-    if extractor_model is None:
-        extractor_model = extractor
-    extractor_model = extractor_model(input_tensor=reshaped_eeg, **extractor_args)
-
-    if output_context_model is None:
-        output_context_model = output_context
-    output_context_model = output_context_model(
-        input_shape=(
-            (
-                extractor_args["num_kernels"][-1]
-                if "num_kernels" in extractor_args
-                else 128
-            ),
-            window_length * fs,
-        ),
-        **output_context_args,
-    )
+    x = reshaped_eeg
 
     # Iterate over the blocks
     for i in range(nb_blocks):
         if use_skip:
             if i == 0:
-                x = extractor_model(reshaped_eeg)
+                x = extractor(input_tensor=x, **extractor_args, name=f"extractor_{i}")(
+                    x
+                )
             else:
-                x = extractor_model(reshaped_eeg + x)
+                x = extractor(input_tensor=x, **extractor_args, name=f"extractor_{i}")(
+                    reshaped_eeg + x
+                )
         else:
-            x = extractor_model(x)
-        x = output_context_model(x)
+            x = extractor(input_tensor=x, **extractor_args, name=f"extractor_{i}")(x)
+        x = output_context(
+            input_tensor=x, **output_context_args, name=f"output_context_{i}"
+        )(x)
         x = keras.layers.Lambda(
             einops.rearrange, arguments={"pattern": "b c t -> b t c"}
         )(x)

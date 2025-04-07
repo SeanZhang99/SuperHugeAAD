@@ -342,7 +342,7 @@ class EegDataset(Dataset):
         # 获取元数据
         meta = self.metadata[file_name].model_dump()
 
-        # mostly, exg is a memory-mapped array, so we need to copy it to avoid modifying the original data.
+        # mostly, exg is a memory-mapped array, so we need to copy it
         return {"meta": meta, "exg": exg.astype(np.float32)}
 
     def _map_idx_to_file_and_segment(self, idx: int):
@@ -371,8 +371,6 @@ class EegDataset(Dataset):
         raise IndexError(
             "EEG_DATASET:MAP_IDX_TO_FILE_AND_SEGMENT:INDEX_ERROR: After consuming all files, a valid file_idx and segment_idx pair was not found."
         )
-
-        ticmethod
 
     def _validate_kwargs(self, kwargs: Iterable, required_keys: Iterable):
         """

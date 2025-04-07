@@ -1,14 +1,21 @@
 import torch
 import einops
+from einops.layers.torch import EinMix
 
 from ...datasets.metadata_processing.data import MetaData, MetaDataElement
 from ...utils.channel_enum import CHANNEL1D_ENUM, CHANNEL2D_ENUM
 
 
-
 class Channel1D(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, num_electrodes: int, num_mix_channels: int):
         super().__init__()
+        self.channel_mixer = EinMix(
+            "b t c -> b t m",
+            m=num_mix_channels,
+            c=num_electrodes,
+            weight_shape="c m",
+            bias_shape="m",
+        )
 
     def forward(self, data: dict) -> torch.Tensor:
         """
@@ -27,18 +34,20 @@ class Channel1D(torch.nn.Module):
             *x.shape[:-1], len(CHANNEL1D_ENUM), device=x.device, dtype=x.dtype
         )
         # z-score normalization over batch
-        x_mean = x.mean(dim=(1, 2), keepdim=True)
-        x_std = x.std(dim=(1, 2), keepdim=True)
-        x = (x - x_mean) / (x_std + 1e-6)
+        # x_mean = x.mean(dim=(1, 2), keepdim=True)
+        # x_std = x.std(dim=(1, 2), keepdim=True)
+        # x = (x - x_mean) / (x_std + 1e-6)
         original_ch_idx = []
         target_ch_idx = []
 
         for c in metadata["channel_infos"].keys():
             chan_name = metadata["channel_infos"][c]["name"][0]
-            if chan_name in CHANNEL1D_ENUM:
+            if chan_name in CHANNEL1D_ENUM.__members__.keys():
                 original_ch_idx.append(c - 1)
                 target_ch_idx.append(CHANNEL1D_ENUM[chan_name].value)
         y[:, :, target_ch_idx] = x[:, :, original_ch_idx]
+
+        y = self.channel_mixer(y)
         return y
 
 
@@ -49,7 +58,6 @@ class Channel2D(torch.nn.Module):
 
     def __init__(self):
         super().__init__()
-
 
     def forward(self, data: dict) -> torch.Tensor:
         x: torch.Tensor = data["exg"]

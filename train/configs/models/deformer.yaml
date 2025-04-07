@@ -2,13 +2,13 @@
 class_path: superhuge.models.commons.m_interface.MInterface
 init_args:
   model_args:
-    dropout: 0
-    ff_hidden_dim: 512
-    mha_depth: 5
+    dropout: 0.3
+    ff_hidden_dim: 128
+    mha_depth: 4
     time_dim: 1280
     mha_embed_dim: 256
     mha_num_heads: 8
     num_electrodes: 70
-    num_kernels: 64
-    temporal_kernel_size: 17
+    num_kernels: 32
+    temporal_kernel_size: 13
   model_class: superhuge.torch_models.deformer.deformer

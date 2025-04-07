@@ -1,5 +1,3 @@
-import inspect
-
 import torch
 from torchmetrics import ConfusionMatrix
 
@@ -13,34 +11,13 @@ from .post_model import classify_post_model
 
 class ClassifyInterface(MInterface):
 
-    def __init__(self, /, *, num_class=2, **kwargs):
-        # Get the signature of the parent __init__ method
-        parent_signature = inspect.signature(super().__init__)
-
-        # Validate the arguments against the parent's signature
-        bound_arguments = parent_signature.bind(**kwargs)
-        bound_arguments.apply_defaults()  # Ensure default values are included
-
-        # Forward the validated arguments to the parent
-        super().__init__(**bound_arguments.kwargs)
-
+    def __init__(self, /, *, num_class: int, **kwargs):
+        super().__init__(**kwargs)
         self.confusion_matrix = ConfusionMatrix(
             task="multiclass",
             num_classes=num_class,
         )
-
         self.post_model = classify_post_model(self.input_size, num_class)
-
-    sig = inspect.signature(MInterface.__init__)
-    __init__.__signature__ = sig.replace(
-        parameters=list(sig.parameters.values())
-        + [
-            inspect.Parameter(
-                "num_class", inspect.Parameter.KEYWORD_ONLY, default=2, annotation=int
-            )
-        ]
-    )
-    del sig
 
     def training_closure(self, data):
         outputs: torch.Tensor = self.forward(data)
@@ -80,14 +57,16 @@ class ClassifyInterface(MInterface):
             },
             prog_bar=True,
             batch_size=pred.shape[0],
+            on_step=True,
             on_epoch=True,
-            on_step=False,
             sync_dist=True,
+            enable_graph=False,
         )
 
 
 class Channel1DClassifyInterface(ClassifyInterface, ChannelMapping1DInterface):
-    pass
+    def __init__(self, /, **kwargs):
+        super().__init__(**kwargs)
 
 
 class Channel2DClassifyInterface(ClassifyInterface, ChannelMapping2DInterface):

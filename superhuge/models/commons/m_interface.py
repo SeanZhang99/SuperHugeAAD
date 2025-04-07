@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
-from typing import final
+from typing import Any, final
 from warnings import warn
 
 import keras
@@ -27,8 +27,9 @@ class MInterface(pl2.LightningModule, ABC):
         loss_hparams: Sequence[float] | None = None,
         ckpt_path: str | None = None,
         summary: bool = True,
+        **kwargs: Any,
     ):
-        super().__init__()
+        super().__init__(**kwargs)
         if isinstance(loss, Sequence):
             assert loss_hparams is None or (
                 isinstance(loss_hparams, Sequence) and len(loss) == len(loss_hparams)
@@ -163,9 +164,10 @@ class MInterface(pl2.LightningModule, ABC):
             loss,
             batch_size=batch_size,
             prog_bar=True,
-            on_step=False,
+            on_step=True,
             on_epoch=True,
             sync_dist=True,
+            enable_graph=False,
         )
 
         return loss

@@ -3,11 +3,11 @@ class_path: superhuge.models.commons.m_interface.MInterface
 init_args:
   model_args:
     extractor_args:
-      kernel_sizes: [9]
-      num_kernels: [16]
-      num_layers: 3
-    input_channels: 70
-    nb_blocks: 2
+      kernel_sizes: [17]
+      num_kernels: [64]
+      num_layers: 5
+    input_channels: 64
+    nb_blocks: 4
     output_context_args:
       kernel_size: 9
       num_kernel: 64

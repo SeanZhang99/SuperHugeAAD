@@ -3,14 +3,26 @@ data:
   class_path: superhuge.datasets.commons.data_interface.DInterface
   init_args:
     dataloader_args:
-      batch_size: 4
+      batch_size: 64
+      drop_last: false
       num_workers: 2
       persistent_workers: true
-      prefetch_factor: 8
       pin_memory: true
-      drop_last: false
+      prefetch_factor: 8
     dataset_args:
       fs: 128
+      meta_filter_func:
+        class_path: superhuge.datasets.metadata_processing.filters.composer.MetaDataFilterComposer
+        init_args:
+          - class_path: superhuge.datasets.metadata_processing.filters.MetadataValueSelector
+            init_args:
+              attribute_name: dataset_id
+              attribute_value:
+                - 1
+                # - 3
+                # - 4
+                # - 5
+          - class_path: superhuge.datasets.metadata_processing.filters.classify_filter.binary_leftright_filter
       metadata_fields:
         - dataset_id
         - subject_id
@@ -24,17 +36,6 @@ data:
       root_path: /data/nvme/ssd2/zhangyuanming/EEG/derivatives/SuperHuge
       transform: null
       window_length: 10
-      meta_filter_func:
-        class_path: superhuge.datasets.metadata_processing.filters.composer.MetaDataFilterComposer
-        init_args:
-          - class_path: superhuge.datasets.metadata_processing.filters.MetadataValueSelector
-            init_args:
-              attribute_name: dataset_id
-              attribute_value:
-                - 1
-                # - 3
-                # - 5
-          - class_path: superhuge.datasets.metadata_processing.filters.classify_filter.binary_leftright_filter
 lr_scheduler:
   class_path: lightning.pytorch.cli.ReduceLROnPlateau
   init_args:
@@ -43,9 +44,9 @@ lr_scheduler:
     factor: 0.5
     min_lr: 1.e-8
     mode: min
-    monitor: val/loss
+    monitor: val/loss_epoch
     patience: 5
-    threshold: 0.0001
+    threshold: 1.e-4
     threshold_mode: rel
 optimizer:
   class_path: Adam
@@ -53,7 +54,7 @@ optimizer:
     betas: [0.9, 0.999]
     eps: 1.e-8
     lr: 1.e-3
-    weight_decay: 1.e-4
+    weight_decay: 0
 seed_everything: 42
 trainer:
   accelerator: gpu
@@ -96,7 +97,7 @@ trainer:
   limit_test_batches: null
   limit_train_batches: null
   limit_val_batches: null
-  log_every_n_steps: null
+  log_every_n_steps: 10
   logger: null
   max_epochs: 50
   max_steps: -1
@@ -113,4 +114,4 @@ trainer:
   strategy: auto
   sync_batchnorm: false
   use_distributed_sampler: true
-  val_check_interval: 0.5
+  val_check_interval: null

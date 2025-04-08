@@ -47,7 +47,7 @@ class Channel1D(torch.nn.Module):
             if chan_name in CHANNEL1D_ENUM.__members__.keys():
                 original_ch_idx.append(c - 1)
                 target_ch_idx.append(CHANNEL1D_ENUM[chan_name].value)
-        y[:, :, target_ch_idx] = x[:, :, original_ch_idx]
+        y[..., target_ch_idx] = x[..., original_ch_idx]
 
         if hasattr(self, "channel_mixer"):
             y = self.channel_mixer(y)
@@ -77,5 +77,5 @@ class Channel2D(torch.nn.Module):
             if chan_name in CHANNEL2D_ENUM:
                 rearrange_idx.append(CHANNEL2D_ENUM[chan_name].value)
                 original_idx.append(c - 1)
-        y[:, :, rearrange_idx] = x[:, :, original_idx]
+        y[..., rearrange_idx] = x[..., original_idx]
         return y

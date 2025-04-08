@@ -14,7 +14,7 @@ class Channel1D(torch.nn.Module):
             m=num_mix_channels,
             c=num_electrodes,
             weight_shape="c m",
-            bias_shape="m",
+            # bias_shape="m",
         )
 
     def forward(self, data: dict) -> torch.Tensor:

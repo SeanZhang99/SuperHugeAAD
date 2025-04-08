@@ -20,7 +20,7 @@ data:
               attribute_value:
                 - 1
                 - 3
-                - 4
+                # - 4
                 # - 5
           - class_path: superhuge.datasets.metadata_processing.filters.classify_filter.binary_leftright_filter
       metadata_fields:
@@ -45,16 +45,15 @@ lr_scheduler:
     min_lr: 1.e-8
     mode: min
     monitor: val/loss_epoch
-    patience: 5
+    patience: 10
     threshold: 1.e-4
     threshold_mode: rel
 optimizer:
-  class_path: Adam
+  class_path: superhuge.optimizers.optimizer_interface.AutoDetachBiasDecay
   init_args:
-    betas: [0.9, 0.999]
-    eps: 1.e-8
-    lr: 1.e-3
-    weight_decay: 0
+    optimizer_class: torch.optim.AdamW
+    lr: 5.e-5
+    weight_decay: 1.e-2
 seed_everything: 42
 trainer:
   accelerator: gpu
@@ -69,8 +68,8 @@ trainer:
       init_args:
         min_delta: 0.01
         mode: min
-        monitor: val/loss
-        patience: 10
+        monitor: val/loss_epoch
+        patience: 15
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
         mode: min
@@ -91,7 +90,7 @@ trainer:
   enable_progress_bar: null
   fast_dev_run: false
   gradient_clip_algorithm: null
-  gradient_clip_val: null
+  gradient_clip_val: 0.5
   inference_mode: true
   limit_predict_batches: null
   limit_test_batches: null

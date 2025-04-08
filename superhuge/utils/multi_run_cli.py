@@ -1,3 +1,4 @@
+import torch
 import lightning.pytorch.callbacks
 from lightning.pytorch.cli import LightningCLI
 import tqdm
@@ -34,7 +35,7 @@ class MultiRunCLI:
 
     def __run_cli(self):
         for config_list in self.task_config_parser.generate_configs():
-            cli = LightningCLI(
+            cli = NamedParamsCLI(
                 parser_kwargs={"parser_mode": "omegaconf"},
                 args=self.cli_argv + config_list,
                 run=False,
@@ -50,4 +51,10 @@ class MultiRunCLI:
                 ckpt_path="best",
                 verbose=True,
             )
-            break
+
+
+class NamedParamsCLI(LightningCLI):
+    model: torch.nn.Module
+
+    def _get_parameters(self):
+        return self.model.named_parameters()

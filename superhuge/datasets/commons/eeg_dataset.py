@@ -292,6 +292,7 @@ class EegDataset(Dataset):
         self.count_samples()
 
     def count_samples(self):
+
         self.total_samples = 0
         for file in self.files:
             trial_length = self.metadata[file].signal_length
@@ -355,6 +356,7 @@ class EegDataset(Dataset):
         Returns:
             tuple: 文件索引和信号段索引。
         """
+
         cumulative: int = 0
         for file_idx, file in enumerate(self.files):
             file_meta = self.metadata[file]

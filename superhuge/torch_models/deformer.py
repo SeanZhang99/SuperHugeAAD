@@ -82,14 +82,12 @@ def transformer_encoder_layer(
             ),
             nn.Sequential(
                 ResidualLayer(
-                    nn.Sequential(
-                        # 有点反直觉，EEG-Deformer原文就是将一个(1,t)的vector视为一个kernel的embedding，计算在kernel上的attention score
-                        MultiHeadAttention(
-                            time_dim,
-                            mha_num_heads,
-                            mha_embed_dim,
-                            dropout,
-                        )
+                    # 有点反直觉，EEG-Deformer原文就是将一个(1,t)的vector视为一个kernel的embedding，计算在kernel上的attention score
+                    MultiHeadAttention(
+                        time_dim,
+                        mha_num_heads,
+                        mha_embed_dim,
+                        dropout,
                     ),
                     nn.Identity(),
                 ),

@@ -9,13 +9,15 @@ from ...utils.channel_enum import CHANNEL1D_ENUM, CHANNEL2D_ENUM
 class Channel1D(torch.nn.Module):
     def __init__(self, num_electrodes: int, num_mix_channels: int):
         super().__init__()
-        self.channel_mixer = EinMix(
-            "b t c -> b t m",
-            m=num_mix_channels,
-            c=num_electrodes,
-            weight_shape="c m",
-            # bias_shape="m",
-        )
+        # self.channel_mixer = torch.nn.Sequential(
+        #     EinMix(
+        #         "b t c -> b t m",
+        #         m=num_mix_channels,
+        #         c=num_electrodes,
+        #         weight_shape="c m",
+        #         bias_shape="m",
+        #     ),
+        # )
 
     def forward(self, data: dict) -> torch.Tensor:
         """
@@ -47,7 +49,8 @@ class Channel1D(torch.nn.Module):
                 target_ch_idx.append(CHANNEL1D_ENUM[chan_name].value)
         y[:, :, target_ch_idx] = x[:, :, original_ch_idx]
 
-        y = self.channel_mixer(y)
+        if hasattr(self, "channel_mixer"):
+            y = self.channel_mixer(y)
         return y
 
 

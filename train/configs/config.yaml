@@ -18,9 +18,9 @@ data:
             init_args:
               attribute_name: dataset_id
               attribute_value:
-                # - 1
+                - 1
                 - 3
-                # - 4
+                - 4
                 # - 5
           - class_path: superhuge.datasets.metadata_processing.filters.classify_filter.binary_leftright_filter
       metadata_fields:

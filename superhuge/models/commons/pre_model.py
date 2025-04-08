@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 import torch
 import einops
 from einops.layers.torch import EinMix
@@ -31,6 +32,7 @@ class Channel1D(torch.nn.Module):
                 In our implementation, the multidataset collect fn `collect_multidataset.collect_multidataset` handles data from different datasets,grouping them into different keys. And the date_interface will handle this grouped data, pass each group (correspond to samples coming from one specific dataset) into the forward path. Therefore, in this object, x is expected to be from the same dataset, thus with the same channel arrangement, making it possible to perform batch-wise channel rearrangement.
         """
         x: torch.Tensor = data["exg"]
+        x = torch.from_numpy(x)
         metadata: dict = data["meta"]
         y = torch.zeros(
             *x.shape[:-1], len(CHANNEL1D_ENUM), device=x.device, dtype=x.dtype
@@ -43,7 +45,9 @@ class Channel1D(torch.nn.Module):
         target_ch_idx = []
 
         for c in metadata["channel_infos"].keys():
-            chan_name = metadata["channel_infos"][c]["name"][0]
+            chan_name = metadata["channel_infos"][c]["name"]
+            if isinstance(chan_name, list):
+                chan_name = chan_name[0]
             if chan_name in CHANNEL1D_ENUM.__members__.keys():
                 original_ch_idx.append(c - 1)
                 target_ch_idx.append(CHANNEL1D_ENUM[chan_name].value)

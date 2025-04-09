@@ -1,0 +1,13 @@
+---
+class_path: superhuge.models.commons.m_interface.MInterface
+init_args:
+  model_args:
+    num_chan: 32
+    lsm_chan_dim: 8
+    cnn_num_layers: 3
+    cnn_temporal_kernel_size: 13
+    cnn_channel_kernel_size: 3
+    cnn_num_kernels: 32
+    fc_hidden_dim: 256
+    dropout: 0.3
+  model_class: superhuge.torch_models.lsm_cnn.lsm_cnn

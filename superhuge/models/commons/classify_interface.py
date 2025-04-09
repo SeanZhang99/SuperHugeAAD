@@ -11,13 +11,13 @@ from .post_model import classify_post_model
 
 class ClassifyInterface(MInterface):
 
-    def __init__(self, /, *, num_class: int, **kwargs):
+    def __init__(self, /, *, num_class: int, hidden_dim: int, **kwargs):
         super().__init__(**kwargs)
         self.confusion_matrix = ConfusionMatrix(
             task="multiclass",
             num_classes=num_class,
         )
-        self.post_model = classify_post_model(self.input_size, num_class)
+        self.post_model = classify_post_model(self.input_size, num_class, hidden_dim)
 
     def training_closure(self, data):
         outputs: torch.Tensor = self.forward(data)

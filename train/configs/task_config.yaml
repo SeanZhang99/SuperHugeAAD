@@ -18,11 +18,12 @@ directional_focus_decoding:
             ]
           n_folds: 5
     model:
-      class_path: superhuge.models.commons.classify_interface.Channel1DClassifyInterface
-      # class_path: superhuge.models.commons.classify_interface.ClassifyInterface
+      # class_path: superhuge.models.commons.classify_interface.Channel1DClassifyInterface
+      class_path: superhuge.models.commons.classify_interface.ClassifyInterface
       init_args:
-        num_electrodes: 78
-        num_mix_channels: 64
+        hidden_dim: 256
+        # num_electrodes: 78
+        # num_mix_channels: 64
         loss:
           class_path: superhuge.models.loss.classify.cross_entropy_loss.CrossEntropyLoss
   tasks:
@@ -69,13 +70,13 @@ directional_focus_decoding:
 
   cross_validation:
     leave_one_trial_out:
-      enable: 1
+      enable: 0
       data:
         init_args:
           dataset_args:
             meta_group_func: superhuge.datasets.metadata_processing.group.loto
     leave_one_subject_out:
-      enable: 0
+      enable: 1
       data:
         init_args:
           dataset_args:

@@ -3,7 +3,7 @@ data:
   class_path: superhuge.datasets.commons.data_interface.DInterface
   init_args:
     dataloader_args:
-      batch_size: 64
+      batch_size: 128
       drop_last: false
       num_workers: 2
       persistent_workers: true
@@ -18,10 +18,15 @@ data:
             init_args:
               attribute_name: dataset_id
               attribute_value:
-                - 1
-                - 3
-                # - 4
-                # - 5
+                # - 1 # AHU
+                - 2 # DTU
+                # - 3 # Estart
+                - 4 # KUL
+                - 5 # KUL-AV-GC
+                # - 6 # NJU
+                # - 7 # NUS
+                # - 8 # PKU
+                # - 9 # sparKULee
           - class_path: superhuge.datasets.metadata_processing.filters.classify_filter.binary_leftright_filter
       metadata_fields:
         - dataset_id
@@ -39,13 +44,13 @@ data:
 lr_scheduler:
   class_path: lightning.pytorch.cli.ReduceLROnPlateau
   init_args:
-    cooldown: 5
+    cooldown: 3
     eps: 1.e-8
     factor: 0.5
     min_lr: 1.e-8
     mode: min
     monitor: val/loss_epoch
-    patience: 10
+    patience: 5
     threshold: 1.e-4
     threshold_mode: rel
 optimizer:
@@ -64,12 +69,12 @@ trainer:
     - class_path: lightning.pytorch.callbacks.LearningRateMonitor
       init_args:
         logging_interval: epoch
-    - class_path: lightning.pytorch.callbacks.EarlyStopping
-      init_args:
-        min_delta: 0.01
-        mode: min
-        monitor: val/loss_epoch
-        patience: 15
+    # - class_path: lightning.pytorch.callbacks.EarlyStopping
+    #   init_args:
+    #     min_delta: 0.01
+    #     mode: min
+    #     monitor: val/loss_epoch
+    #     patience: 15
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
         mode: min
@@ -90,7 +95,7 @@ trainer:
   enable_progress_bar: null
   fast_dev_run: false
   gradient_clip_algorithm: null
-  gradient_clip_val: 0.5
+  gradient_clip_val: null
   inference_mode: true
   limit_predict_batches: null
   limit_test_batches: null

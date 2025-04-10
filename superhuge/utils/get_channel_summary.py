@@ -37,7 +37,7 @@ def create_channel_row_mapping(channels: List[str]) -> Dict[str, int]:
             "AF": None,
             "F": None,
             ("FC", "FT"): None,
-            ("C", "T"): None,
+            ("A", "C", "T"): None,
             ("CP", "TP"): None,
             "P": None,
             "PO": None,
@@ -169,6 +169,20 @@ def map_channels_to_grid(metadata_path: str, output_path: str = None):
     print("}")
     print("\n")
     print("num_electrodes = ", len(positions))
+
+    # find out potential duplicated grid positions
+    duplicate_positions = {}
+    for ch, pos in positions.items():
+        if pos in duplicate_positions:
+            duplicate_positions[pos].append(ch)
+        else:
+            duplicate_positions[pos] = [ch]
+    print("\nPotential duplicated grid positions:")
+    for pos, chs in duplicate_positions.items():
+        if len(chs) > 1:
+            print(f"Position {pos} has channels: {', '.join(chs)}")
+    print("\n")
+    print("Please check the above duplicated positions and fix them manually.\n")
 
     if output_path:
         write_channel_results_to_file(channels, positions, output_path)

@@ -6,6 +6,7 @@ from warnings import warn
 import keras
 import lightning as pl2
 import torch
+import torchinfo
 
 from superhuge.models.commons import post_model, pre_model
 
@@ -58,8 +59,8 @@ class MInterface(pl2.LightningModule, ABC):
         if summary:
             if hasattr(self.model, "summary"):
                 self.model.summary()
-            # else:
-            #     torchinfo.summary(self.model, input_size=self.input_size)
+            else:
+                torchinfo.summary(self.model, input_size=(1, *self.input_size))
 
         self.pre_model: torch.nn.Module = lambda_layer.LambdaLayer(lambda x: x["exg"])
         self.post_model: torch.nn.Module = torch.nn.Identity()
@@ -72,19 +73,22 @@ class MInterface(pl2.LightningModule, ABC):
             input_length = kwargs["window_length"] * kwargs["fs"]
         else:
             warn(
-                f"SUPERHUGE:MODELS:MODEL_INTERFACE:__INIT__: Cannot interfere the input length from {kwargs}, Using None as input_length"
+                f"SUPERHUGE:MODELS:MODEL_INTERFACE:__INIT__: Cannot interfere the input length from {kwargs}, Using 1280 as input_length"
             )
-            input_length = None
+            input_length = 1280
         if "num_channel" in kwargs:
             num_channel = kwargs["num_channel"]
         elif "num_electrodes" in kwargs:
             num_channel = kwargs["num_electrodes"]
         elif "input_channels" in kwargs:
             num_channel = kwargs["input_channels"]
+        elif "num_chan" in kwargs:
+            num_channel = kwargs["num_chan"]
         else:
-            raise ValueError(
-                f"SUPERHUGE:MODELS:MODEL_INTERFACE:__INIT__: Cannot interfere the number of channels from {kwargs}"
+            warn(
+                f"SUPERHUGE:MODELS:MODEL_INTERFACE:__INIT__: Cannot interfere the number of channels from {kwargs}. Using 64 as num_channel"
             )
+            num_channel = 64
         self.input_size = (input_length, num_channel)
 
         return self.input_size

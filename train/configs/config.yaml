@@ -18,10 +18,15 @@ data:
             init_args:
               attribute_name: dataset_id
               attribute_value:
-                - 1
-                - 3
-                - 4
-                # - 5
+                # - 1 # AHU
+                # - 2 # DTU
+                # - 3 # Estart
+                - 4 # KUL
+                - 5 # KUL-AV-GC
+                # - 6 # NJU
+                # - 7 # NUS
+                # - 8 # PKU
+                # - 9 # sparKULee
           - class_path: superhuge.datasets.metadata_processing.filters.classify_filter.binary_leftright_filter
       metadata_fields:
         - dataset_id
@@ -31,30 +36,28 @@ data:
         - num_channel
         - fs
         - channel_infos
-      n_folds: 5
-      overlap: 1
+      overlap: 2
       root_path: /data/nvme/ssd2/zhangyuanming/EEG/derivatives/SuperHuge
       transform: null
       window_length: 10
 lr_scheduler:
   class_path: lightning.pytorch.cli.ReduceLROnPlateau
   init_args:
-    cooldown: 5
+    cooldown: 3
     eps: 1.e-8
     factor: 0.5
     min_lr: 1.e-8
-    mode: min
-    monitor: val/loss_epoch
+    mode: max
+    monitor: val/acc_epoch
     patience: 5
     threshold: 1.e-4
     threshold_mode: rel
 optimizer:
-  class_path: Adam
+  class_path: superhuge.optimizers.optimizer_interface.AutoDetachBiasDecay
   init_args:
-    betas: [0.9, 0.999]
-    eps: 1.e-8
+    optimizer_class: torch.optim.AdamW
     lr: 1.e-3
-    weight_decay: 0
+    weight_decay: 1.e-2
 seed_everything: 42
 trainer:
   accelerator: gpu
@@ -68,13 +71,13 @@ trainer:
     - class_path: lightning.pytorch.callbacks.EarlyStopping
       init_args:
         min_delta: 0.01
-        mode: min
-        monitor: val/loss
-        patience: 10
+        mode: max
+        monitor: val/acc_epoch
+        patience: 15
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
-        mode: min
-        monitor: val/loss
+        mode: max
+        monitor: val/acc_epoch
         save_last: true
         save_top_k: 2
         save_weights_only: true
@@ -84,7 +87,7 @@ trainer:
   check_val_every_n_epoch: 1
   default_root_dir: null
   detect_anomaly: false
-  deterministic: true
+  deterministic: null
   devices: auto
   enable_checkpointing: null
   enable_model_summary: null

@@ -3,14 +3,14 @@ class_path: superhuge.models.commons.m_interface.MInterface
 init_args:
   model_args:
     extractor_args:
-      kernel_sizes: [3, 11, 17]
-      num_kernels: [32]
+      kernel_sizes: [3, 7, 11, 15]
+      num_kernels: [64]
       num_layers: 3
-    input_channels: 64
+    input_channels: 70
     nb_blocks: 4
     output_context_args:
-      kernel_size: 15
-      num_kernel: 32
+      kernel_size: 17
+      num_kernel: 64
     window_length: 10
     fs: 128
-  model_class: superhuge.models.vlaai.vlaai.vlaai
+  model_class: superhuge.models.vlaai.rebok_vlaai.vlaai

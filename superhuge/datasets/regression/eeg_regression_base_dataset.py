@@ -1,5 +1,6 @@
 import os
 from collections.abc import Callable
+import pickle
 
 from jinja2 import Template
 from pydantic import BaseModel
@@ -56,16 +57,24 @@ class EegRegressionBaseDataset(EegDataset):
 
         entry = meta["entry"]
         # 加载语音特征
-        speech_feature: np.ndarray = np.load(
+        # speech_feature: np.ndarray = np.load(
+        #     os.path.join(
+        #         self.speech_feature_path,
+        #         f"{entry}_{self.speech_feature_type}.npy",
+        #     ),
+        #     mmap_mode="r",
+        #     allow_pickle=False,
+        # )
+        with open(
             os.path.join(
                 self.speech_feature_path,
-                f"{entry}_{self.speech_feature_type}.npy",
+                f"{entry}_{self.speech_feature_type}.pkl",
             ),
-            mmap_mode="r",
-            allow_pickle=False,
-        )
+            "rb",
+        ) as f:
+            speech_feature: np.ndarray = pickle.load(f)
 
-        file_idx, segment_idx = self._map_idx_to_file_and_segment(idx)
+        _, segment_idx = self._map_idx_to_file_and_segment(idx)
 
         if self.transform:
             for transform in self.transform:
@@ -98,11 +107,7 @@ class EegRegressionBaseDataset(EegDataset):
                 if f"{field}_fs" in meta:
                     del meta[f"{field}_fs"]
 
-        return {
-            "meta": meta,
-            "exg": exg,
-            "audio": speech_segment.astype(np.float32),
-        }
+        return {"meta": meta, "exg": exg, "audio": speech_segment}
 
     @classmethod
     def meta_filter_func_parser(

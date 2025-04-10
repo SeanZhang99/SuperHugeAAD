@@ -24,7 +24,7 @@ def angle_wrapper(label: int) -> int:
 
 
 def binary_leftright_filter(
-    metadata_element: ClassifyMetaDataElement,
+    metadata_element: ClassifyMetaDataElement | None,
 ) -> ClassifyMetaDataElement | None:
     """
     This function filters the metadata elements based on the label value.
@@ -34,6 +34,8 @@ def binary_leftright_filter(
     If the label value is in the range of 180 to 360, the label value is set to "left".
     If the label value is not in the specified ranges, the function returns None.
     """
+    if metadata_element is None:
+        return None
     result = None
     label = metadata_element.label
     if isinstance(label, str):

@@ -1,21 +1,19 @@
-from collections import namedtuple
 import inspect
 import os
 import pickle
+import gc
+from collections import namedtuple
 from collections.abc import Callable, Iterable
 from importlib import import_module
-import time
 from typing import Any, Sequence
 
 import numpy as np
 import torch
+import tqdm
 from pydantic import BaseModel
 from torch.utils.data import Dataset
 
-from ..metadata_processing.filters.abc import MetadataFilter
-
-
-from ..metadata_processing.filters.composer import MetaDataFilterComposer
+torch.serialization.add_safe_globals([np.ndarray])
 
 from ...utils.transforms.abc import Transform
 from ..metadata_processing.data import (
@@ -27,6 +25,7 @@ from ..metadata_processing.data import (
     MetaDataField,
     RegressionMetaDataElement,
 )
+from ..metadata_processing.filters.composer import MetaDataFilterComposer
 from ..metadata_processing.group import loto
 
 
@@ -325,15 +324,11 @@ class EegDataset(Dataset):
         """
         file_idx, segment_idx = self._map_idx_to_file_and_segment(idx)
         file_name = self.files[file_idx]
-        file_path = os.path.join(self.exg_path, file_name + ".npy")
+        file_path = os.path.join(self.exg_path, file_name + ".pkl")
 
-        # exg: np.ndarray | np.memmap = np.load(
-        #     file_path, mmap_mode="r", allow_pickle=False
-        # )
-        # Use pickle for faster loading
-        with open(file_path, "rb") as f:
-            exg: np.ndarray = pickle.load(f)
-
+        exg: np.ndarray | np.memmap = np.load(
+            file_path, mmap_mode="r", allow_pickle=False
+        )
         if self.transform:
             for transform in self.transform:
                 if transform.when == "before_slicing" and (
@@ -346,7 +341,7 @@ class EegDataset(Dataset):
         # 根据 segment_length 和 overlap 截取信号段
         stride = self.segment_length // self.overlap
         start_idx = segment_idx * stride
-        exg = exg[start_idx : start_idx + self.segment_length]
+        exg_seg = exg[start_idx : start_idx + self.segment_length]
 
         # 应用变换
         if self.transform:
@@ -354,13 +349,12 @@ class EegDataset(Dataset):
                 if transform.when == "before_returning" and (
                     "eeg" in transform.whom or "all" in transform.whom
                 ):
-                    exg = transform(exg)
+                    exg_seg = transform(exg_seg)
 
         # 获取元数据
         meta = self.metadata[file_name].model_dump()
 
-        # mostly, exg is a memory-mapped array, so we need to copy it
-        return {"meta": meta, "exg": exg}
+        return {"meta": meta, "exg": exg_seg}
 
     def _map_idx_to_file_and_segment(self, idx: int):
         """
@@ -402,9 +396,7 @@ class EegDataset(Dataset):
 
 
 if __name__ == "__main__":
-    root_path = r"E:\SuperHuge\derivatives"
+    root_path = r"E:/derivatives/SuperHuge"
     datasets = EegDataset().create_datasets(root_path=root_path)
-    data = datasets[0][0]
-    meta = data["meta"]
-    exg = data["exg"]
+    (x for x in tqdm.tqdm(datasets))
     pass

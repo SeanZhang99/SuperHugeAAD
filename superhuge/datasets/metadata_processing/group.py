@@ -95,7 +95,7 @@ def loto(
             for i in range(n_folds):
                 start_idx = i * trials_per_fold
                 end_idx = (i + 1) * trials_per_fold if i != n_folds - 1 else len(trials)
-                all_folds[i].extend(trials[start_idx:end_idx][0])
+                all_folds[i].extend(item[0] for item in trials[start_idx:end_idx])
 
     train_set, val_set, test_set = divide_sets(
         all_folds, n_folds, test_fold_idx, val_fold_idx
@@ -131,7 +131,7 @@ def loso(
             start_idx = i * subjects_per_fold
             end_idx = (i + 1) * subjects_per_fold if i != n_folds - 1 else len(subjects)
             for subject_id in list(subjects.keys())[start_idx:end_idx]:
-                all_folds[i].extend(subjects[subject_id][0])
+                all_folds[i].extend(item[0] for item in subjects[subject_id])
 
     train_set, val_set, test_set = divide_sets(
         all_folds, n_folds, test_fold_idx, val_fold_idx

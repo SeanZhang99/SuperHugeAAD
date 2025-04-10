@@ -57,7 +57,8 @@ class GroupingFunction(Protocol):
         # 定义期望的参数和类型
         expected_params = {
             "metadata": MetaData,
-            "fold_index": int,
+            "val_fold_idx": int,
+            "test_fold_idx": int,
             "n_folds": int,
             "seed": int,
         }
@@ -85,13 +86,15 @@ class GroupingFunction(Protocol):
             # 验证类型是否匹配
 
         test_metadata = generate_test_metadata()
-        test_fold_index = 0
-        test_n_folds = 5
+        test_fold_idx = 0
+        val_fold_idx = 1
+        n_folds = 6
         test_random_seed = None
         result = value(
             metadata=test_metadata,
-            fold_index=test_fold_index,
-            n_folds=test_n_folds,
+            val_fold_idx=val_fold_idx,
+            test_fold_idx=test_fold_idx,
+            n_folds=n_folds,
             random_seed=test_random_seed,
         )
         validate_is_dict = isinstance(result, dict)
@@ -124,7 +127,7 @@ class GroupingFunction(Protocol):
 def generate_test_metadata(
     num_datasets=10,
     num_subjects_per_dataset=10,
-    min_trials_per_subject=1,
+    min_trials_per_subject=10,
     max_trials_per_subject=20,
 ) -> MetaData:
     metadata = {}

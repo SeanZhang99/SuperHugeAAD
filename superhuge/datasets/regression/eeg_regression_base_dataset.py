@@ -57,23 +57,14 @@ class EegRegressionBaseDataset(EegDataset):
 
         entry = meta["entry"]
         # 加载语音特征
-        # speech_feature: np.ndarray = np.load(
-        #     os.path.join(
-        #         self.speech_feature_path,
-        #         f"{entry}_{self.speech_feature_type}.npy",
-        #     ),
-        #     mmap_mode="r",
-        #     allow_pickle=False,
-        # )
-        with open(
+        speech_feature: np.ndarray = np.load(
             os.path.join(
                 self.speech_feature_path,
-                f"{entry}_{self.speech_feature_type}.pkl",
+                f"{entry}_{self.speech_feature_type}.npy",
             ),
-            "rb",
-        ) as f:
-            speech_feature: np.ndarray = pickle.load(f)
-
+            mmap_mode="r",
+            allow_pickle=False,
+        )
         _, segment_idx = self._map_idx_to_file_and_segment(idx)
 
         if self.transform:

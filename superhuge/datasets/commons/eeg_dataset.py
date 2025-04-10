@@ -315,9 +315,13 @@ class EegDataset(Dataset):
         file_name = self.files[file_idx]
         file_path = os.path.join(self.exg_path, file_name + ".npy")
 
-        exg: np.ndarray | np.memmap = np.load(
-            file_path, mmap_mode="r", allow_pickle=False
-        )
+        # exg: np.ndarray | np.memmap = np.load(
+        #     file_path, mmap_mode="r", allow_pickle=False
+        # )
+        # Use pickle for faster loading
+        with open(file_path, "rb") as f:
+            exg: np.ndarray = pickle.load(f)
+
         if self.transform:
             for transform in self.transform:
                 if transform.when == "before_slicing" and (
@@ -344,7 +348,7 @@ class EegDataset(Dataset):
         meta = self.metadata[file_name].model_dump()
 
         # mostly, exg is a memory-mapped array, so we need to copy it
-        return {"meta": meta, "exg": exg.astype(np.float32)}
+        return {"meta": meta, "exg": exg}
 
     def _map_idx_to_file_and_segment(self, idx: int):
         """

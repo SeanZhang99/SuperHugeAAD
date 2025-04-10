@@ -39,7 +39,8 @@ class CreateDatasetsInputConfig(BaseModel):
         | None
     )
     meta_group_func: GroupingFunction
-    fold_idx: int
+    test_fold_idx: int
+    val_fold_idx: int
     n_folds: int
     window_length: int
     fs: int
@@ -59,7 +60,8 @@ class EegDataset(Dataset):
         meta_filter_func: MetaDataFilterComposer | None = None,
         meta_filter_func_args: list = [],
         meta_group_func: GroupingFunction | None = None,
-        fold_idx: int = 0,
+        test_fold_idx: int = 0,
+        val_fold_idx: int = 1,
         n_folds: int = 5,
         window_length: int = 10,
         fs: int = 128,
@@ -127,8 +129,16 @@ class EegDataset(Dataset):
         )
 
         assert (
-            0 <= int(fold_idx) < int(n_folds)
-        ), f"EEG_DATASET:CREATE_DATASETS:FOLD_IDX_ERROR: fold_idx must be in the range [0, {n_folds}), but got {fold_idx}"
+            0 <= int(test_fold_idx) < int(n_folds)
+        ), f"EEG_DATASET:CREATE_DATASETS:FOLD_IDX_ERROR: fold_idx must be in the range [0, {n_folds}), but got {test_fold_idx}"
+
+        assert (
+            0 <= int(val_fold_idx) < int(n_folds)
+        ), f"EEG_DATASET:CREATE_DATASETS:FOLD_IDX_ERROR: fold_idx must be in the range [0, {n_folds}), but got {val_fold_idx}"
+
+        assert (
+            val_fold_idx != test_fold_idx
+        ), f"EEG_DATASET:CREATE_DATASETS:FOLD_IDX_ERROR: val_fold_idx and test_fold_idx must be different, but got {val_fold_idx} and {test_fold_idx}"
 
         config = CreateDatasetsInputConfig(
             meta_path=os.path.join(root_path, "meta", "metadata.pkl"),
@@ -137,7 +147,8 @@ class EegDataset(Dataset):
                 meta_filter_func, *meta_filter_func_args
             ),
             meta_group_func=meta_group_func,
-            fold_idx=fold_idx,
+            test_fold_idx=test_fold_idx,
+            val_fold_idx=val_fold_idx,
             n_folds=n_folds,
             window_length=window_length,
             fs=fs,
@@ -156,7 +167,8 @@ class EegDataset(Dataset):
 
         splits = config.meta_group_func(
             metadata=metadata,
-            fold_index=config.fold_idx,
+            val_fold_idx=config.val_fold_idx,
+            test_fold_idx=config.test_fold_idx,
             n_folds=config.n_folds,
         )
 
@@ -169,8 +181,8 @@ class EegDataset(Dataset):
                 metadata=metadata,
                 fs=config.fs,
                 window_length=config.window_length,
-                overlap=config.overlap,
-                transform=config.transform,
+                overlap=config.overlap if mode == "train" else 1,
+                transform=config.transform if mode == "train" else None,
                 metadata_fields=config.metadata_fields,
                 **kwargs,
             )

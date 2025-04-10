@@ -1,79 +1,33 @@
 from typing import Any, cast
 import random
-from .data import GroupingFunction, MetaData, CrossValidationEntry
+from .data import (
+    DatasetSubjectTrialEntry,
+    GroupingFunction,
+    MetaData,
+    CrossValidationEntry,
+)
 
 
 def leave_one_out_input_decorator(func) -> GroupingFunction:
     def wrapper(
         metadata: MetaData,
-        fold_index: int,
+        test_fold_idx: int,
+        val_fold_idx: int,
         n_folds: int,
         seed: int = 42,
         **kwargs: Any,
     ) -> CrossValidationEntry:
-        return func(metadata, fold_index, n_folds, seed, **kwargs)
+        return func(metadata, test_fold_idx, val_fold_idx, n_folds, seed, **kwargs)
 
     return cast(GroupingFunction, wrapper)
 
 
-@leave_one_out_input_decorator
-def loto(
-    metadata: MetaData, fold_index: int, n_folds: int, seed: int = 42, **kwargs: Any
-) -> CrossValidationEntry:
-    assert 0 <= fold_index < n_folds, f"fold_index must be in the range [0, {n_folds})"
-    random.seed(seed)
-
-    dataset_subject_trials = {0: {0: []}}
-
-    # Organize trials by dataset and subject
-    for trial_entry, trial_metadata in metadata.items():
-        dataset_id = trial_metadata.dataset_id
-        subject_id = trial_metadata.subject_id
-        assert dataset_id is not None, "Dataset ID cannot be None"
-        assert subject_id is not None, "Subject ID cannot be None"
-        dataset_subject_trials.setdefault(dataset_id, {}).setdefault(
-            subject_id, []
-        ).append(trial_entry)
-
-    # Distribute trials evenly across folds
-    all_folds = {i: [] for i in range(n_folds)}
-
-    for dataset_id, subjects in dataset_subject_trials.items():
-        for subject_id, trials in subjects.items():
-            random.shuffle(trials)
-            trials_per_fold = len(trials) // n_folds
-
-            for i in range(n_folds):
-                start_idx = i * trials_per_fold
-                end_idx = (i + 1) * trials_per_fold if i != n_folds - 1 else len(trials)
-                all_folds[i].extend(trials[start_idx:end_idx])
-
-    test_set = set(all_folds[fold_index])
-    val_trials = set(all_folds[(fold_index + 1) % n_folds])
-    train_trials = (
-        set(trial for fold in all_folds.values() for trial in fold)
-        - test_set
-        - val_trials
-    )
-    train_trials = list(train_trials)
-    train_trials.sort()
-    val_trials = list(val_trials)
-    val_trials.sort()
-    test_set = list(test_set)
-    test_set.sort()
-
-    return {"train": train_trials, "val": val_trials, "test": test_set}
-
-
-@leave_one_out_input_decorator
-def loso(
-    metadata: MetaData, fold_index: int, n_folds: int, seed: int = 42, **kwargs: Any
-) -> CrossValidationEntry:
-    random.seed(seed)
-
-    dataset_subject_trials = {0: {0: []}}
-
-    # Organize trials by dataset and subject
+def collect_dataset_subject_trials(
+    metadata: MetaData,
+):
+    dataset_subject_trials: dict[
+        int, dict[int, list[tuple[DatasetSubjectTrialEntry, MetaData]]]
+    ] = {}
     for trial_id, trial_metadata in metadata.items():
         dataset_id = trial_metadata.dataset_id
         subject_id = trial_metadata.subject_id
@@ -81,7 +35,87 @@ def loso(
         assert subject_id is not None, "Subject ID cannot be None"
         dataset_subject_trials.setdefault(dataset_id, {}).setdefault(
             subject_id, []
-        ).append(trial_id)
+        ).append((trial_id, trial_metadata))
+    return dataset_subject_trials
+
+
+def divide_sets(
+    all_folds: dict[int, list[DatasetSubjectTrialEntry]],
+    n_folds: int,
+    test_fold_idx: int,
+    val_fold_idx: int,
+):
+    test_set = set(all_folds[test_fold_idx])
+    val_set = set(all_folds[val_fold_idx])
+    train_set = list(
+        set(
+            item
+            for i in range(n_folds)
+            if i != test_fold_idx and i != val_fold_idx
+            for item in all_folds[i]
+        )
+    )
+    train_set.sort()
+    val_set = list(val_set)
+    val_set.sort()
+    test_set = list(test_set)
+    test_set.sort()
+
+    return train_set, val_set, test_set
+
+
+@leave_one_out_input_decorator
+def loto(
+    metadata: MetaData,
+    test_fold_idx: int,
+    val_fold_idx: int,
+    n_folds: int,
+    seed: int = 42,
+    **kwargs: Any,
+) -> CrossValidationEntry:
+    assert (
+        0 <= test_fold_idx < n_folds
+    ), f"test_fold_idx must be in the range [0, {n_folds})"
+    assert (
+        0 <= val_fold_idx < n_folds
+    ), f"val_fold_idx must be in the range [0, {n_folds})"
+    random.seed(seed)
+
+    dataset_subject_trials = collect_dataset_subject_trials(metadata)
+
+    # Distribute trials evenly across folds
+    all_folds = {i: [] for i in range(n_folds)}
+
+    for dataset_id, subjects in dataset_subject_trials.items():
+        for subject_id, trials in subjects.items():
+            trials: list[tuple[DatasetSubjectTrialEntry, MetaData]]
+            random.shuffle(trials)
+            trials_per_fold = len(trials) // n_folds
+
+            for i in range(n_folds):
+                start_idx = i * trials_per_fold
+                end_idx = (i + 1) * trials_per_fold if i != n_folds - 1 else len(trials)
+                all_folds[i].extend(trials[start_idx:end_idx][0])
+
+    train_set, val_set, test_set = divide_sets(
+        all_folds, n_folds, test_fold_idx, val_fold_idx
+    )
+
+    return {"train": train_set, "val": val_set, "test": test_set}
+
+
+@leave_one_out_input_decorator
+def loso(
+    metadata: MetaData,
+    test_fold_idx: int,
+    val_fold_idx: int,
+    n_folds: int,
+    seed: int = 42,
+    **kwargs: Any,
+) -> CrossValidationEntry:
+    random.seed(seed)
+
+    dataset_subject_trials = collect_dataset_subject_trials(metadata)
 
     # Get all subjects for cross-validation
     all_folds = {i: [] for i in range(n_folds)}
@@ -97,38 +131,27 @@ def loso(
             start_idx = i * subjects_per_fold
             end_idx = (i + 1) * subjects_per_fold if i != n_folds - 1 else len(subjects)
             for subject_id in list(subjects.keys())[start_idx:end_idx]:
-                all_folds[i].extend(subjects[subject_id])
+                all_folds[i].extend(subjects[subject_id][0])
 
-    test_set = set(all_folds[fold_index])
-    val_set = set(all_folds[(fold_index + 1) % n_folds])
-    train_set = set(
-        trial_id
-        for subjects in dataset_subject_trials.values()
-        for trials in subjects.values()
-        for trial_id in trials
+    train_set, val_set, test_set = divide_sets(
+        all_folds, n_folds, test_fold_idx, val_fold_idx
     )
-    train_set -= test_set | val_set
 
-    return {"train": list(train_set), "val": list(val_set), "test": list(test_set)}
+    return {"train": train_set, "val": val_set, "test": test_set}
 
 
 @leave_one_out_input_decorator
 def lodo(
-    metadata: MetaData, fold_index: int, n_folds: int, seed: int = 42, **kwargs: Any
+    metadata: MetaData,
+    test_fold_idx: int,
+    val_fold_idx: int,
+    n_folds: int,
+    seed: int = 42,
+    **kwargs: Any,
 ) -> CrossValidationEntry:
     random.seed(seed)
 
-    dataset_subject_trials = {0: {0: []}}
-
-    # Organize trials by dataset and subject
-    for trial_id, trial_metadata in metadata.items():
-        dataset_id = trial_metadata.dataset_id
-        subject_id = trial_metadata.subject_id
-        assert dataset_id is not None, "Dataset ID cannot be None"
-        assert subject_id is not None, "Subject ID cannot be None"
-        dataset_subject_trials.setdefault(dataset_id, {}).setdefault(
-            subject_id, []
-        ).append(trial_id)
+    dataset_subject_trials = collect_dataset_subject_trials(metadata)
 
     # Get all subjects for cross-validation
     all_folds = {i: [] for i in range(n_folds)}
@@ -141,16 +164,9 @@ def lodo(
         end_idx = (i + 1) * dataset_per_fold if i != n_folds - 1 else len(datasets)
         for dataset_id in datasets[start_idx:end_idx]:
             for trial_entry in dataset_subject_trials[dataset_id].values():
-                all_folds[i].extend(trial_entry)
+                all_folds[i].extend(trial_entry[0])
 
-    test_set = set(all_folds[fold_index])
-    val_set = set(all_folds[(fold_index + 1) % n_folds])
-    train_set = set(
-        trial_id
-        for subjects in dataset_subject_trials.values()
-        for trials in subjects.values()
-        for trial_id in trials
+    train_set, val_set, test_set = divide_sets(
+        all_folds, n_folds, test_fold_idx, val_fold_idx
     )
-    train_set -= test_set | val_set
-
-    return {"train": list(train_set), "val": list(val_set), "test": list(test_set)}
+    return {"train": train_set, "val": val_set, "test": test_set}

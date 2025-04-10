@@ -16,14 +16,14 @@ directional_focus_decoding:
               "label",
               "channel_infos",
             ]
-          n_folds: 5
+          n_folds: 6
     model:
-      # class_path: superhuge.models.commons.classify_interface.Channel1DClassifyInterface
-      class_path: superhuge.models.commons.classify_interface.ClassifyInterface
+      class_path: superhuge.models.commons.classify_interface.Channel1DClassifyInterface
+      # class_path: superhuge.models.commons.classify_interface.ClassifyInterface
       init_args:
-        hidden_dim: 256
-        # num_electrodes: 78
-        # num_mix_channels: 64
+        hidden_dim: 5
+        num_electrodes: 74
+        num_mix_channels: 64
         loss:
           class_path: superhuge.models.loss.classify.cross_entropy_loss.CrossEntropyLoss
   tasks:
@@ -70,13 +70,13 @@ directional_focus_decoding:
 
   cross_validation:
     leave_one_trial_out:
-      enable: 0
+      enable: 1
       data:
         init_args:
           dataset_args:
             meta_group_func: superhuge.datasets.metadata_processing.group.loto
     leave_one_subject_out:
-      enable: 1
+      enable: 0
       data:
         init_args:
           dataset_args:
@@ -94,8 +94,7 @@ speech_reconstruction:
     data:
       init_args:
         dataset_class: superhuge.datasets.regression.eeg_regression_base_dataset.EegRegressionBaseDataset
-        dataset_args:
-          n_folds: 5
+        n_folds: 6
 
     model:
       class_path: superhuge.models.commons.regression_interface.Channel1DRegressionInterface

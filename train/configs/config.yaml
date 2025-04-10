@@ -21,9 +21,9 @@ data:
                 # - 1 # AHU
                 # - 2 # DTU
                 # - 3 # Estart
-                # - 4 # KUL
-                # - 5 # KUL-AV-GC
-                - 6 # NJU
+                - 4 # KUL
+                - 5 # KUL-AV-GC
+                # - 6 # NJU
                 # - 7 # NUS
                 # - 8 # PKU
                 # - 9 # sparKULee
@@ -36,7 +36,6 @@ data:
         - num_channel
         - fs
         - channel_infos
-      n_folds: 5
       overlap: 2
       root_path: /data/nvme/ssd2/zhangyuanming/EEG/derivatives/SuperHuge
       transform: null
@@ -56,9 +55,9 @@ lr_scheduler:
 optimizer:
   class_path: superhuge.optimizers.optimizer_interface.AutoDetachBiasDecay
   init_args:
-    optimizer_class: torch.optim.Adam
+    optimizer_class: torch.optim.AdamW
     lr: 1.e-3
-    weight_decay: 1.e-4
+    weight_decay: 1.e-2
 seed_everything: 42
 trainer:
   accelerator: gpu

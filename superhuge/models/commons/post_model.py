@@ -19,7 +19,6 @@ def classify_post_model(
         # dense the last dimension
         nn.LazyLinear(
             hidden_dim,
-            bias=True,
         ),
         nn.Sigmoid(),
         layers.EinMix(

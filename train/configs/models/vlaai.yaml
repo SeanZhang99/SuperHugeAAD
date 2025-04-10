@@ -6,7 +6,7 @@ init_args:
       kernel_sizes: [3, 11, 17]
       num_kernels: [32]
       num_layers: 3
-    input_channels: 32
+    input_channels: 64
     nb_blocks: 4
     output_context_args:
       kernel_size: 15

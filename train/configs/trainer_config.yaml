@@ -6,12 +6,12 @@ callbacks:
   - class_path: lightning.pytorch.callbacks.LearningRateMonitor
     init_args:
       logging_interval: epoch
-  # - class_path: lightning.pytorch.callbacks.EarlyStopping
-  #   init_args:
-  #     min_delta: 0.01
-  #     mode: max
-  #     monitor: val/acc_epoch
-  #     patience: 15
+  - class_path: lightning.pytorch.callbacks.EarlyStopping
+    init_args:
+      min_delta: 0.01
+      mode: max
+      monitor: val/acc_epoch
+      patience: 15
   - class_path: lightning.pytorch.callbacks.ModelCheckpoint
     init_args:
       mode: max
@@ -42,10 +42,10 @@ log_every_n_steps: 10
 logger:
   - class_path: TensorBoardLogger
     init_args:
-      save_dir: ./tb_logs
+      save_dir: ./logs/tb_logs
   - class_path: CSVLogger
     init_args:
-      save_dir: ./csv_logs
+      save_dir: ./logs/csv_logs
 max_epochs: 100
 max_steps: -1
 max_time: null

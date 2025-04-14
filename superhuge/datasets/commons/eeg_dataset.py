@@ -144,8 +144,8 @@ class EegDataset(Dataset):
             preproc_stage = "preprocessed"
 
         config = CreateDatasetsInputConfig(
-            meta_path=os.path.join(root_path, "meta", f"metadata_{preproc_stage}.pkl"),
-            exg_path=os.path.join(root_path, "exg", preproc_stage),
+            meta_path=os.path.join(root_path, preproc_stage, "meta", "metadata.pkl"),
+            exg_path=os.path.join(root_path, preproc_stage, "exg"),
             meta_filter_func=cls.meta_filter_func_parser(
                 meta_filter_func, *meta_filter_func_args
             ),

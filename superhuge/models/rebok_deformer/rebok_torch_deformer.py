@@ -1,13 +1,17 @@
+from typing import Annotated, Callable
+
 import torch
 import torch.nn as nn
 from einops import rearrange
+from einops.layers.torch import EinMix, Rearrange
 from pydantic import BaseModel, Field
-from typing import Callable, Annotated
-from einops.layers.torch import Rearrange, EinMix
-#from .torch_deformer import *
-from ...torch_models.deformer import transformer_encoder_layer,preconv, output_mlp
+
 from ...models.commons.multi_head_attention import MultiHeadAttention
 from ...models.commons.residual_layer import ResidualLayer
+#from .torch_deformer import *
+from ...torch_models.deformer import (output_mlp, preconv,
+                                      transformer_encoder_layer)
+
 
 # ===========================
 # Configuration Classes
@@ -36,9 +40,6 @@ class RebokDeformerParams(BaseModel):
     preconv_callable: Callable[..., nn.Module] | None = None
     transformer_callable: Callable[..., nn.Module] | None = None
 
-
-import torch
-import torch.nn as nn
 
 class PositionalEmbedding2D(nn.Module):
     """

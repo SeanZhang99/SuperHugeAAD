@@ -180,7 +180,8 @@ class EegDataset(Dataset):
                 metadata=metadata,
                 fs=config.fs,
                 window_length=config.window_length,
-                overlap=config.overlap if mode == "train" else 1,
+                # overlap=config.overlap if mode == "train" else 1,
+                overlap=config.overlap,
                 transform=config.transform if mode == "train" else None,
                 metadata_fields=config.metadata_fields,
                 **kwargs,
@@ -302,6 +303,15 @@ class EegDataset(Dataset):
         # 计算总样本数目
         self.count_samples()
 
+        self._copy_before_slicing = self.copy_before_slicing()
+
+    def copy_before_slicing(self):
+        if self.transform:
+            for transform in self.transform:
+                if transform.when == "before_slicing":
+                    return True
+        return False
+
     def count_samples(self):
 
         self.total_samples = 0
@@ -318,13 +328,17 @@ class EegDataset(Dataset):
     def __len__(self):
         return self.total_samples
 
+    @property
+    def len(self):
+        return len(self)
+
     def __getitem__(self, idx):
         """
         加载样本数据，并返回元数据、信号段和标签。
         """
         file_idx, segment_idx = self._map_idx_to_file_and_segment(idx)
         file_name = self.files[file_idx]
-        file_path = os.path.join(self.exg_path, file_name + ".pkl")
+        file_path = os.path.join(self.exg_path, file_name + ".npy")
 
         exg: np.ndarray | np.memmap = np.load(
             file_path, mmap_mode="r", allow_pickle=False
@@ -334,7 +348,7 @@ class EegDataset(Dataset):
                 if transform.when == "before_slicing" and (
                     "eeg" in transform.whom or "all" in transform.whom
                 ):
-                    exg = transform(exg)
+                    exg = transform(exg.astype(np.float32))
 
         # 加载信号和标签
 
@@ -342,6 +356,9 @@ class EegDataset(Dataset):
         stride = self.segment_length // self.overlap
         start_idx = segment_idx * stride
         exg_seg = exg[start_idx : start_idx + self.segment_length]
+
+        if not self._copy_before_slicing:
+            exg_seg = exg_seg.astype(np.float32)
 
         # 应用变换
         if self.transform:

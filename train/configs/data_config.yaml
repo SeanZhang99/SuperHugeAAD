@@ -1,0 +1,94 @@
+class_path: superhuge.datasets.commons.data_interface.DInterface
+init_args:
+  dataloader_args:
+    batch_size: 64
+    drop_last: false
+    num_workers: 2
+    persistent_workers: true
+    pin_memory: true
+    prefetch_factor: 8
+  dataset_args:
+    fs: 128
+    meta_filter_func:
+      class_path: superhuge.datasets.metadata_processing.filters.MetaDataFilterComposer
+      init_args:
+        - class_path: superhuge.datasets.metadata_processing.filters.MetadataValueSelector
+          init_args:
+            attribute_name: dataset_id
+            attribute_value:
+              # - 1 # AHU
+              - 2 # DTU
+              # - 3 # Estart
+              - 4 # KUL
+              # - 5 # KUL-AV-GC
+              - 6 # NJU
+              # - 7 # NUS
+              # - 8 # PKU
+              # - 9 # sparKULee
+        # - class_path: superhuge.datasets.metadata_processing.filters.MetadataValueSelector
+        #   init_args:
+        #     attribute_name: trial_id
+        #     attribute_value: [1, 2, 3, 4, 5, 6, 7, 8]
+        - class_path: superhuge.datasets.metadata_processing.filters.classify_filter.binary_leftright_filter
+    metadata_fields:
+      - dataset_id
+      - subject_id
+      - trial_id
+      - signal_length
+      - num_channel
+      - fs
+      - channel_infos
+    overlap: 2
+    root_path: /data/nvme/ssd2/zhangyuanming/EEG/derivatives/SuperHuge
+    transform:
+      null
+      # - class_path: superhuge.utils.transforms.ChannelMask
+      #   init_args:
+      #     p_mask: 0.1
+      #     apply_prob: 0.5
+      #     when: "before_returning"
+      #     whom: "eeg"
+      # - class_path: superhuge.utils.transforms.Filter
+      #   init_args:
+      #     apply_prob: 0.2
+      #     when: "before_returning"
+      #     whom: "eeg"
+      #     Wn: [1., 4.]
+      #     fs: ${init_args.dataset_args.fs}
+      #     btype: bandstop
+      #     order: 5
+      # - class_path: superhuge.utils.transforms.Filter
+      #   init_args:
+      #     apply_prob: 0.2
+      #     when: "before_returning"
+      #     whom: "eeg"
+      #     Wn: [4., 8.]
+      #     fs: ${init_args.dataset_args.fs}
+      #     btype: bandstop
+      #     order: 5
+      # - class_path: superhuge.utils.transforms.Filter
+      #   init_args:
+      #     apply_prob: 0.2
+      #     when: "before_returning"
+      #     whom: "eeg"
+      #     Wn: [8., 16.]
+      #     fs: ${init_args.dataset_args.fs}
+      #     btype: bandstop
+      #     order: 5
+      # - class_path: superhuge.utils.transforms.Filter
+      #   init_args:
+      #     apply_prob: 0.2
+      #     when: "before_returning"
+      #     whom: "eeg"
+      #     Wn: [16., 32.]
+      #     fs: ${init_args.dataset_args.fs}
+      #     btype: bandstop
+      #     order: 5
+      # - class_path: superhuge.utils.transforms.TimeShift
+      #   init_args:
+      #     apply_prob: 0.5
+      #     when: "before_slicing"
+      #     whom: "eeg"
+      #     max_shift: 5
+      #     fs: ${init_args.dataset_args.fs}
+    window_length: 10

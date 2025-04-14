@@ -1,5 +1,6 @@
 from collections.abc import Generator
 from copy import deepcopy
+from itertools import product
 from typing import Any
 
 import yaml
@@ -61,7 +62,11 @@ class TaskConfigParser:
                     n_folds: int = self.config[task_type]["general"]["data"][
                         "init_args"
                     ]["dataset_args"].get("n_folds", 5)
-                    for fold_idx in range(n_folds):
+                    for test_fold_idx, val_fold_idx in product(
+                        range(n_folds), range(n_folds)
+                    ):
+                        if test_fold_idx == val_fold_idx:
+                            continue
                         general_data: dict = self.config[task_type]["general"]["data"]
                         task_data: dict = task_detail.get("data", {})
                         cv_data: dict = cv_details.get("data", {})
@@ -80,7 +85,12 @@ class TaskConfigParser:
                         )
                         merged_model = self._deep_merge_dicts(merged_model, cv_model)
 
-                        merged_data["init_args"]["dataset_args"]["fold_idx"] = fold_idx
+                        merged_data["init_args"]["dataset_args"][
+                            "test_fold_idx"
+                        ] = test_fold_idx
+                        merged_data["init_args"]["dataset_args"][
+                            "val_fold_idx"
+                        ] = val_fold_idx
 
                         config_copy: dict = {
                             "data": merged_data,

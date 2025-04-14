@@ -6,8 +6,30 @@ from collections.abc import Sequence
 
 
 class TransformConfig(BaseModel):
+    seed: int = 42
+    apply_prob: float = 0.5
     when: str = "before_returning"
     whom: str | Sequence[str] = "eeg"
+
+    @field_validator("seed")
+    def validate_seed(cls, value):
+        """Validate the seed value.
+        It should be a positive integer.
+        """
+        assert isinstance(value, int), "seed must be an integer."
+        if value < 0:
+            raise ValueError("seed must be a positive integer.")
+        return value
+
+    @field_validator("apply_prob")
+    def validate_apply_prob(cls, value):
+        """Validate the apply_prob value.
+        It should be between 0 and 1.
+        """
+        assert isinstance(value, (float, int)), "apply_prob must be a float or int."
+        if not (0 <= value <= 1):
+            raise ValueError("apply_prob must be between 0 and 1.")
+        return value
 
     @field_validator("when")
     def validate_when(cls, value):
@@ -45,6 +67,8 @@ class Transform(ABC):
         self,
         /,
         *,
+        seed: int = 42,
+        apply_prob: float = 0.5,
         when: str = "before_returning",
         whom: str | Sequence[str] = "eeg",
         **kwargs,
@@ -67,10 +91,42 @@ class Transform(ABC):
 
             **kwargs: Additional parameters for subclasses.
         """
-        config = TransformConfig(when=when, whom=whom)
-        self.when = config.when
-        self.whom = config.whom
+        self.cfg = TransformConfig(when=when, whom=whom, apply_prob=apply_prob)
+        self.dice = np.random.Generator(np.random.PCG64(seed))
         super().__init__()
+
+    @property
+    def apply_prob(self) -> float:
+        """Probability of applying this transform."""
+        return self.cfg.apply_prob
+
+    @property
+    def when(self) -> str:
+        """When to apply this transform."""
+        return self.cfg.when
+
+    @property
+    def whom(self) -> str | Sequence[str]:
+        """Whom this transform is applied to."""
+        return self.cfg.whom
+
+    @apply_prob.setter
+    def apply_prob(self, value: float) -> None:
+        """Set the probability of applying this transform."""
+        self.cfg.validate_apply_prob(value)
+        self.cfg.apply_prob = value
+
+    @when.setter
+    def when(self, value: str) -> None:
+        """Set when to apply this transform."""
+        self.cfg.validate_when(value)
+        self.cfg.when = value
+
+    @whom.setter
+    def whom(self, value: str | Sequence[str]) -> None:
+        """Set whom this transform is applied to."""
+        self.cfg.validate_whom(value)
+        self.cfg.whom = value
 
     @abstractmethod
     def __call__(self, x: np.ndarray) -> np.ndarray:
@@ -86,6 +142,10 @@ class Transform(ABC):
         assert (
             x.shape[1] < x.shape[0]
         ), f"Input must be time first, but seems to be channel first: {x.shape}."
+        return x
+
+    def roll(self) -> bool:
+        return self.dice.random() < self.apply_prob
 
     def __repr__(self):
         """Generic representation for all subclasses."""

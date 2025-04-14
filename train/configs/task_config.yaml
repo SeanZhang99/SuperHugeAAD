@@ -16,7 +16,7 @@ directional_focus_decoding:
               "label",
               "channel_infos",
             ]
-          n_folds: 6
+          n_folds: 5
     model:
       class_path: superhuge.models.commons.classify_interface.Channel1DClassifyInterface
       # class_path: superhuge.models.commons.classify_interface.ClassifyInterface
@@ -70,17 +70,19 @@ directional_focus_decoding:
 
   cross_validation:
     leave_one_trial_out:
-      enable: 1
-      data:
-        init_args:
-          dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.group.loto
-    leave_one_subject_out:
       enable: 0
       data:
         init_args:
           dataset_args:
+            meta_group_func: superhuge.datasets.metadata_processing.group.loto
+            n_folds: 4
+    leave_one_subject_out:
+      enable: 1
+      data:
+        init_args:
+          dataset_args:
             meta_group_func: superhuge.datasets.metadata_processing.group.loso
+            n_folds: 16
     leave_one_dataset_out:
       enable: 0
       data:

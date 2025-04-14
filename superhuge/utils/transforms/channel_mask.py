@@ -13,5 +13,6 @@ class ChannelMask(Transform):
 
     def __call__(self, x: np.ndarray) -> np.ndarray:
         super().__call__(x)
-        mask = np.random.rand(x.shape[1]) > self.p_mask
-        return x * mask
+        if self.roll():
+            x *= self.dice.random(x.shape[-1]) > self.p_mask
+        return x

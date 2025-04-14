@@ -1,4 +1,5 @@
 from typing import Sequence
+from warnings import warn
 import numpy as np
 from .abc import Transform
 from ..channel_enum import CHANNEL1D_ENUM
@@ -23,6 +24,9 @@ class ChannelRearrangeTransform(Transform):
                 Defaults to `before_returning`.
             **kwargs: Additional parameters for subclasses.
         """
+        warn(
+            "Deprecated: inherit your model interface from Channel1DInterface or Channel2DInterface instead."
+        )
         super().__init__(when=when, whom=whom, **kwargs)
 
     def __call__(self, x: np.ndarray) -> np.ndarray:

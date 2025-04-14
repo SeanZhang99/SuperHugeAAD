@@ -30,10 +30,10 @@ class ClassifyInterface(MInterface):
         for sample_idx in range(pred.shape[0]):
             self.log_dict(
                 {
-                    #         # # accuracy accumulated and reduced on each trial
-                    #         f'detail/{self.stage}/{meta["entry"][sample_idx]}_acc': torch.Tensor(
-                    #             pred[sample_idx] == label[sample_idx]
-                    #         ).float(),
+                    # accuracy accumulated and reduced on each trial
+                    f'detail/{self.stage}/{meta["entry"][sample_idx]}_acc': torch.Tensor(
+                        pred[sample_idx] == label[sample_idx]
+                    ).float(),
                     #         # accuracy accumulated and reduced on each subject
                     #         f'detail/{self.stage}/dataset-{meta["dataset_id"][sample_idx]:03d}-subject-{meta["subject_id"][sample_idx]:03d}_acc': torch.Tensor(
                     #             pred[sample_idx] == label[sample_idx]
@@ -42,11 +42,11 @@ class ClassifyInterface(MInterface):
                     f'detail/{self.stage}/dataset-{meta["dataset_id"][sample_idx]:03d}_acc': torch.Tensor(
                         pred[sample_idx] == label[sample_idx]
                     ).float(),
-                    #         # confusion matrix
+                    # confusion matrix
                     # accuracy accumulated and reduced on each class
-                    # f"{self.stage}/{int(label[sample_idx])}_acc": torch.Tensor(
-                    #     pred[sample_idx] == label[sample_idx]
-                    # ).float(),
+                    f"{self.stage}/{int(label[sample_idx])}_acc": torch.Tensor(
+                        pred[sample_idx] == label[sample_idx]
+                    ).float(),
                 },
                 batch_size=1,
                 prog_bar=False,

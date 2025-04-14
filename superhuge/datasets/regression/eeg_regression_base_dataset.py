@@ -98,7 +98,7 @@ class EegRegressionBaseDataset(EegDataset):
                 if f"{field}_fs" in meta:
                     del meta[f"{field}_fs"]
 
-        return {"meta": meta, "exg": exg, "audio": speech_segment}
+        return {"meta": meta, "exg": exg, "audio": speech_segment.astype(np.float32)}
 
     @classmethod
     def meta_filter_func_parser(

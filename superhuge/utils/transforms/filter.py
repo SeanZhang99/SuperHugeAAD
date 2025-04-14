@@ -33,5 +33,6 @@ class Filter(Transform):
 
     def __call__(self, x: np.ndarray) -> np.ndarray:
         super().__call__(x)
-
-        return filtfilt(self.b, self.a, x, axis=0)
+        if self.roll():
+            x = filtfilt(self.b, self.a, x, axis=0).copy()
+        return x

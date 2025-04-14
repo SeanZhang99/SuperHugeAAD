@@ -44,12 +44,20 @@ if __name__ == "__main__":
     # model_config = pick_file(project_path, timeout=10)
     # if not model_config:
     # model_config = os.path.join(config_path, "models", "deformer.yaml")
-    model_config = os.path.join(project_path, "configs", "models", "lsm_cnn.yaml")
+    model_config = os.path.join(project_path, "configs", "models", "vlaai.yaml")
     cli = MultiRunCLI(
         "--task_config",
         os.path.join(config_path, "task_config.yaml"),
-        "--config",
-        os.path.join(config_path, "config.yaml"),
+        "--trainer",
+        os.path.join(config_path, "trainer_config.yaml"),
+        "--data",
+        os.path.join(config_path, "data_config.yaml"),
+        "--optimizer",
+        os.path.join(config_path, "optimizer_config.yaml"),
+        "--lr_scheduler",
+        os.path.join(config_path, "lr_scheduler_config.yaml"),
         "--model",
         model_config,
+        "--seed_everything",
+        "42",
     )

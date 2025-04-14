@@ -13,4 +13,4 @@ init_args:
       num_kernel: 32
     window_length: 10
     fs: 128
-  model_class: superhuge.models.vlaai.vlaai.vlaai
+  model_class: superhuge.models.vlaai.torch_vlaai.VLAAI.create_model

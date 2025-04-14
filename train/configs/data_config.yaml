@@ -21,7 +21,7 @@ init_args:
               # - 3 # Estart
               - 4 # KUL
               # - 5 # KUL-AV-GC
-              - 6 # NJU
+              # - 6 # NJU
               # - 7 # NUS
               # - 8 # PKU
               # - 9 # sparKULee
@@ -40,6 +40,7 @@ init_args:
       - channel_infos
     overlap: 2
     root_path: /data/nvme/ssd2/zhangyuanming/EEG/derivatives/SuperHuge
+    preproc_stage: preprocessed
     transform:
       null
       # - class_path: superhuge.utils.transforms.ChannelMask

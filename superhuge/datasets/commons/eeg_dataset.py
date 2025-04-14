@@ -74,6 +74,7 @@ class EegDataset(Dataset):
             "fs",
         ],
         transform: Sequence[dict[str, str | dict[str, float]]] | None = None,
+        preproc_stage: str | None = None,
         **kwargs,
     ):
         """
@@ -139,9 +140,12 @@ class EegDataset(Dataset):
             val_fold_idx != test_fold_idx
         ), f"EEG_DATASET:CREATE_DATASETS:FOLD_IDX_ERROR: val_fold_idx and test_fold_idx must be different, but got {val_fold_idx} and {test_fold_idx}"
 
+        if preproc_stage is None:
+            preproc_stage = "preprocessed"
+
         config = CreateDatasetsInputConfig(
-            meta_path=os.path.join(root_path, "meta", "metadata.pkl"),
-            exg_path=os.path.join(root_path, "exg"),
+            meta_path=os.path.join(root_path, "meta", f"metadata_{preproc_stage}.pkl"),
+            exg_path=os.path.join(root_path, "exg", preproc_stage),
             meta_filter_func=cls.meta_filter_func_parser(
                 meta_filter_func, *meta_filter_func_args
             ),
@@ -343,6 +347,15 @@ class EegDataset(Dataset):
         exg: np.ndarray | np.memmap = np.load(
             file_path, mmap_mode="r", allow_pickle=False
         )
+
+        assert (
+            exg.shape[0] == self.metadata[file_name].signal_length
+        ), f"EEG_DATASET:GETITEM:SHAPE_ERROR: The shape of the loaded data {exg.shape} does not match the expected shape {self.metadata[file_name].signal_length}. Problem given with metadata {self.metadata[file_name].model_dump()}"
+        assert (
+            exg.ndim == 2
+        ), f"EEG_DATASET:GETITEM:SHAPE_ERROR: The loaded data is not 2D, but {exg.ndim}D. Problem given with metadata {self.metadata[file_name].model_dump()}"
+        assert exg.shape[1] == self.metadata[file_name].channel_infos.__len__(),f"EEG_DATASET:GETITEM:SHAPE_ERROR: The number of channels in the loaded data {exg.shape[1]} does not match the expected number {self.metadata[file_name].channel_infos.__len__()}. Problem given with metadata {self.metadata[file_name].model_dump()}"
+
         if self.transform:
             for transform in self.transform:
                 if transform.when == "before_slicing" and (

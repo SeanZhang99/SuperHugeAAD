@@ -39,7 +39,13 @@ limit_test_batches: null
 limit_train_batches: null
 limit_val_batches: null
 log_every_n_steps: 10
-logger: null
+logger:
+  - class_path: TensorBoardLogger
+    init_args:
+      save_dir: ./tb_logs
+  - class_path: CSVLogger
+    init_args:
+      save_dir: ./csv_logs
 max_epochs: 100
 max_steps: -1
 max_time: null

@@ -65,6 +65,8 @@ class TaskConfigParser:
                     for test_fold_idx, val_fold_idx in product(
                         range(n_folds), range(n_folds)
                     ):
+                        # Validation fold index changes fast.
+                        # E.g. (test_fold_idx, val_fold_idx): (0,1), (0,2), (0,3), (0,4), (1,0), (1,2),...
                         if test_fold_idx == val_fold_idx:
                             continue
                         general_data: dict = self.config[task_type]["general"]["data"]

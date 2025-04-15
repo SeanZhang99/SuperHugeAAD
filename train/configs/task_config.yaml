@@ -75,14 +75,14 @@ directional_focus_decoding:
         init_args:
           dataset_args:
             meta_group_func: superhuge.datasets.metadata_processing.group.loto
-            n_folds: 4
+            n_folds: 5
     leave_one_subject_out:
       enable: 1
       data:
         init_args:
           dataset_args:
             meta_group_func: superhuge.datasets.metadata_processing.group.loso
-            n_folds: 16
+            n_folds: 5
     leave_one_dataset_out:
       enable: 0
       data:

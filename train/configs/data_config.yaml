@@ -25,10 +25,6 @@ init_args:
               # - 7 # NUS
               # - 8 # PKU
               # - 9 # sparKULee
-        # - class_path: superhuge.datasets.metadata_processing.filters.MetadataValueSelector
-        #   init_args:
-        #     attribute_name: trial_id
-        #     attribute_value: [1, 2, 3, 4, 5, 6, 7, 8]
         - class_path: superhuge.datasets.metadata_processing.filters.classify_filter.binary_leftright_filter
     metadata_fields:
       - dataset_id

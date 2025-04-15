@@ -1,15 +1,15 @@
-# class_path: lightning.pytorch.cli.ReduceLROnPlateau
-# init_args:
-#   cooldown: 3
-#   eps: 1.e-8
-#   factor: 0.5
-#   min_lr: 1.e-8
-#   mode: max
-#   monitor: val/acc_epoch
-#   patience: 5
-#   threshold: 1.e-4
-#   threshold_mode: rel
-class_path: torch.optim.lr_scheduler.MultiStepLR
+class_path: lightning.pytorch.cli.ReduceLROnPlateau
 init_args:
-  milestones: [10, 35]
-  gamma: 0.5
+  cooldown: 3
+  eps: 1.e-8
+  factor: 0.5
+  min_lr: 1.e-8
+  mode: max
+  monitor: val/acc_epoch
+  patience: 5
+  threshold: 1.e-4
+  threshold_mode: rel
+# class_path: torch.optim.lr_scheduler.MultiStepLR
+# init_args:
+#   milestones: [10, 35]
+#   gamma: 0.5

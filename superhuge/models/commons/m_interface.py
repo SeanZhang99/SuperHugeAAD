@@ -233,3 +233,16 @@ class MInterface(pl2.LightningModule, ABC):
             loss_fn.__repr__ = f"{self.loss.__repr__().split('(')[0]}"
 
         self.loss_fn = loss_fn
+
+    def on_after_backward(self):
+        for name, param in self.named_parameters():
+            if param.grad is not None:
+                grad_norm = param.grad.detach().data.norm(2).item()
+                self.log(
+                    f"grad_norm/{name}",
+                    grad_norm,
+                    on_epoch=False,
+                    batch_size=1,
+                    enable_graph=False,
+                )
+        return super().on_after_backward()

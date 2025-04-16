@@ -8,6 +8,13 @@ class TimeShift(Transform):
     def __init__(
         self, /, *, max_shift: int | float = 200, fs: int | None = None, **kwargs
     ) -> None:
+        """
+        Args:
+            max_shift (int | float): Maximum shift in samples or seconds.
+                If float, `fs` must be provided.
+            fs (int | None): Sampling frequency. Required if `max_shift` is a float.
+            kwargs: Additional arguments for the Transform class.
+        """
         kwargs.setdefault("when", "before_slicing")
         super().__init__(**kwargs)
         if isinstance(max_shift, float) and fs is None:
@@ -19,8 +26,10 @@ class TimeShift(Transform):
         )
 
     def __call__(self, x: np.ndarray) -> np.ndarray:
-        shift = np.random.randint(-self.max_shift, self.max_shift)
-        if shift >= 0:
-            return np.pad(x[shift:], ((0, shift), (0, 0)))
-        else:
-            return np.pad(x[:shift], ((-shift, 0), (0, 0)))
+        if self.roll():
+            shift = np.random.randint(-self.max_shift, self.max_shift)
+            if shift >= 0:
+                return np.pad(x[shift:], ((0, shift), (0, 0))).copy()
+            else:
+                return np.pad(x[:shift], ((-shift, 0), (0, 0))).copy()
+        return x

@@ -12,7 +12,7 @@ data:
     dataset_args:
       fs: 128
       meta_filter_func:
-        class_path: superhuge.datasets.metadata_processing.filters.composer.MetaDataFilterComposer
+        class_path: superhuge.datasets.metadata_processing.filters.MetaDataFilterComposer
         init_args:
           - class_path: superhuge.datasets.metadata_processing.filters.MetadataValueSelector
             init_args:
@@ -22,11 +22,15 @@ data:
                 # - 2 # DTU
                 # - 3 # Estart
                 - 4 # KUL
-                - 5 # KUL-AV-GC
+                # - 5 # KUL-AV-GC
                 # - 6 # NJU
                 # - 7 # NUS
                 # - 8 # PKU
                 # - 9 # sparKULee
+          - class_path: superhuge.datasets.metadata_processing.filters.MetadataValueSelector
+            init_args:
+              attribute_name: trial_id
+              attribute_value: [1, 2, 3, 4, 5, 6, 7, 8]
           - class_path: superhuge.datasets.metadata_processing.filters.classify_filter.binary_leftright_filter
       metadata_fields:
         - dataset_id
@@ -38,26 +42,80 @@ data:
         - channel_infos
       overlap: 2
       root_path: /data/nvme/ssd2/zhangyuanming/EEG/derivatives/SuperHuge
-      transform: null
+      transform:
+        null
+        # - class_path: superhuge.utils.transforms.ChannelMask
+        #   init_args:
+        #     p_mask: 0.1
+        #     apply_prob: 0.5
+        #     when: "before_returning"
+        #     whom: "eeg"
+        # - class_path: superhuge.utils.transforms.Filter
+        #   init_args:
+        #     apply_prob: 0.2
+        #     when: "before_returning"
+        #     whom: "eeg"
+        #     Wn: [1., 4.]
+        #     fs: 128
+        #     btype: bandstop
+        #     order: 5
+        # - class_path: superhuge.utils.transforms.Filter
+        #   init_args:
+        #     apply_prob: 0.2
+        #     when: "before_returning"
+        #     whom: "eeg"
+        #     Wn: [4., 8.]
+        #     fs: 128
+        #     btype: bandstop
+        #     order: 5
+        # - class_path: superhuge.utils.transforms.Filter
+        #   init_args:
+        #     apply_prob: 0.2
+        #     when: "before_returning"
+        #     whom: "eeg"
+        #     Wn: [8., 16.]
+        #     fs: 128
+        #     btype: bandstop
+        #     order: 5
+        # - class_path: superhuge.utils.transforms.Filter
+        #   init_args:
+        #     apply_prob: 0.2
+        #     when: "before_returning"
+        #     whom: "eeg"
+        #     Wn: [16., 32.]
+        #     fs: 128
+        #     btype: bandstop
+        #     order: 5
+        # - class_path: superhuge.utils.transforms.TimeShift
+        #   init_args:
+        #     apply_prob: 0.5
+        #     when: "before_slicing"
+        #     whom: "eeg"
+        #     max_shift: 5
+        #     fs: 128
       window_length: 10
 lr_scheduler:
-  class_path: lightning.pytorch.cli.ReduceLROnPlateau
+  # class_path: lightning.pytorch.cli.ReduceLROnPlateau
+  # init_args:
+  #   cooldown: 3
+  #   eps: 1.e-8
+  #   factor: 0.5
+  #   min_lr: 1.e-8
+  #   mode: max
+  #   monitor: val/acc_epoch
+  #   patience: 5
+  #   threshold: 1.e-4
+  #   threshold_mode: rel
+  class_path: torch.optim.lr_scheduler.MultiStepLR
   init_args:
-    cooldown: 3
-    eps: 1.e-8
-    factor: 0.5
-    min_lr: 1.e-8
-    mode: max
-    monitor: val/acc_epoch
-    patience: 5
-    threshold: 1.e-4
-    threshold_mode: rel
+    milestones: [10, 35]
+    gamma: 0.5
 optimizer:
   class_path: superhuge.optimizers.optimizer_interface.AutoDetachBiasDecay
   init_args:
-    optimizer_class: torch.optim.AdamW
-    lr: 1.e-3
-    weight_decay: 1.e-2
+    optimizer_class: torch.optim.SGD
+    lr: 9.e-2
+    weight_decay: 5.e-4
 seed_everything: 42
 trainer:
   accelerator: gpu
@@ -68,12 +126,12 @@ trainer:
     - class_path: lightning.pytorch.callbacks.LearningRateMonitor
       init_args:
         logging_interval: epoch
-    - class_path: lightning.pytorch.callbacks.EarlyStopping
-      init_args:
-        min_delta: 0.01
-        mode: max
-        monitor: val/acc_epoch
-        patience: 15
+    # - class_path: lightning.pytorch.callbacks.EarlyStopping
+    #   init_args:
+    #     min_delta: 0.01
+    #     mode: max
+    #     monitor: val/acc_epoch
+    #     patience: 15
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
         mode: max
@@ -90,7 +148,7 @@ trainer:
   deterministic: null
   devices: auto
   enable_checkpointing: null
-  enable_model_summary: null
+  enable_model_summary: false
   enable_progress_bar: null
   fast_dev_run: false
   gradient_clip_algorithm: null
@@ -102,7 +160,7 @@ trainer:
   limit_val_batches: null
   log_every_n_steps: 10
   logger: null
-  max_epochs: 50
+  max_epochs: 100
   max_steps: -1
   max_time: null
   min_epochs: 20

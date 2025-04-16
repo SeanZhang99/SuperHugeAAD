@@ -18,6 +18,10 @@ class LazyLayerNorm(Module):
     def forward(self: Module, x: torch.Tensor):
         if not hasattr(self, "layer"):
             self.layer = LayerNorm(
-                normalized_shape=x.shape[self.dims], *self.args, **self.kwargs
-            ).to(x.device, x.dtype)
+                normalized_shape=x.shape[self.dims],
+                *self.args,
+                **self.kwargs,
+                device=x.device,
+                dtype=x.dtype,
+            )
         return self.layer(x)

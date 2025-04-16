@@ -121,7 +121,7 @@ def extractor(
         # since EEG back to stimuli is non-casual, the padding is set to (0, kernel_size - 1)
         x = keras.layers.ZeroPadding1D((0, kernel_size - 1))(x)
         x = keras.layers.Conv1D(num_kernel, kernel_size, padding="valid")(x)
-        x = normalization_fn()(x)
+        x = normalization_fn(axis=[1, 2])(x)
         x = activation_fn()(x)
 
     return keras.models.Model(inputs=eeg, outputs=x, name=name)
@@ -190,7 +190,7 @@ def output_context(
     # only use a casual convolution to allow model look backward
     x = keras.layers.ZeroPadding1D((kernel_size - 1, 0))(inp)  # type: ignore
     x = keras.layers.Conv1D(num_kernel, kernel_size)(x)
-    x = normalization_fn()(x)
+    x = normalization_fn(axis=[1, 2])(x)
     x = activation_fn()(x)
     return keras.models.Model(inputs=inp, outputs=x, name=name)
 

@@ -26,4 +26,7 @@ class Clip(Transform):
             self.upper_bound = upper_bound
 
     def __call__(self, x: np.ndarray) -> np.ndarray:
-        return np.clip(x, self.lower_bound, self.upper_bound)
+        super().__call__(x)
+        if self.roll():
+            x = np.clip(x, self.lower_bound, self.upper_bound)
+        return x

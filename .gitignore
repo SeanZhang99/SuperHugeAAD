@@ -1,6 +1,6 @@
 __pycache__/
 *.pyc
-lightning_logs/
+*logs/
 weights/
 /backup
 .vscode/

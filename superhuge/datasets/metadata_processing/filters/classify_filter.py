@@ -32,6 +32,7 @@ def binary_leftright_filter(
     If the label value is an integer, it should be between 0 and 180 or between 180 and 360.
     If the label value is in the range of 0 to 180, the label value is set to "right".
     If the label value is in the range of 180 to 360, the label value is set to "left".
+    For `left`, convert to `0`, for `right`, convert to `1`.
     If the label value is not in the specified ranges, the function returns None.
     """
     if metadata_element is None:
@@ -56,11 +57,13 @@ def binary_leftright_filter(
         elif 0 < label < 180:
             metadata_element.label = "right"
         result = metadata_element
+    if result is not None:
+        result.label = 0 if result.label == "left" else 1
     return result
 
 
 def binary_frontrear_filter(
-    metadata_element: ClassifyMetaDataElement,
+    metadata_element: ClassifyMetaDataElement | None,
 ) -> ClassifyMetaDataElement | None:
     """
     This function filters the metadata elements based on the label value.
@@ -69,7 +72,10 @@ def binary_frontrear_filter(
     If the label value is in the range of 0 to 180, the label value is set to "front".
     If the label value is in the range of 180 to 360, the label value is set to "rear".
     If the label value is not in the specified ranges, the function returns None.
+    Labels will be converted to int: `front`->`0`, `rear`->`1`
     """
+    if metadata_element is None:
+        return None
     result = None
     label = metadata_element.label
     if isinstance(label, str):
@@ -90,11 +96,13 @@ def binary_frontrear_filter(
         elif 0 < label < 180:
             metadata_element.label = "front"
         result = metadata_element
+    if result is not None:
+        result.label = 0 if result.label == "front" else 1
     return result
 
 
 def four_class_filter(
-    metadata_element: ClassifyMetaDataElement,
+    metadata_element: ClassifyMetaDataElement | None,
 ) -> ClassifyMetaDataElement | None:
     """
     This function filters the metadata elements into four classes based on the label value.
@@ -102,7 +110,10 @@ def four_class_filter(
     If the label value is an integer, it should be between 0 and 360.
     The label value is set to one of the four classes based on its range.
     If the label value is not in the specified ranges, the function returns None.
+    Labels will be converted to int. `fr`->0,`fl`->1, `rl`->2, `rr`->3
     """
+    if metadata_element is None:
+        return None
     result = None
     label = metadata_element.label
     if isinstance(label, int):
@@ -123,11 +134,25 @@ def four_class_filter(
             result = four_class_filter(metadata_element)
         except ValueError:
             pass
+
+    if result is not None:
+        if result.label == "Front-Right":
+            result.label = 0
+        elif result.label == "Front-Left":
+            result.label = 1
+        elif result.label == "Rear-Left":
+            result.label = 2
+        elif result.label == "Rear-Right":
+            result.label = 3
+        else:
+            raise ValueError(
+                f"CLASSIFIER_FILTER:FOUR_CLASS_FILTER:VALUE_ERROR: Invalid label value. The label value can only be 'Front-Right', 'Front-Left', 'Rear-Left', or 'Rear-Right'."
+            )
     return result
 
 
 def eight_class_filter(
-    metadata_element: ClassifyMetaDataElement,
+    metadata_element: ClassifyMetaDataElement | None,
 ) -> ClassifyMetaDataElement | None:
     """
     This function filters the metadata elements into eight classes based on the label value.
@@ -137,6 +162,8 @@ def eight_class_filter(
     The label value is set to one of the eight classes based on its range.
     If the label value is not in the specified ranges, the function returns None.
     """
+    if metadata_element is None:
+        return None
     result = None
     label = metadata_element.label
     if isinstance(label, int):
@@ -165,6 +192,28 @@ def eight_class_filter(
             result = four_class_filter(metadata_element)
         except ValueError:
             pass
+
+    if result is not None:
+        if result.label == "North":
+            result.label = 0
+        elif result.label == "North-East":
+            result.label = 1
+        elif result.label == "East":
+            result.label = 2
+        elif result.label == "South-East":
+            result.label = 3
+        elif result.label == "South":
+            result.label = 4
+        elif result.label == "South-West":
+            result.label = 5
+        elif result.label == "West":
+            result.label = 6
+        elif result.label == "North-West":
+            result.label = 7
+        else:
+            raise ValueError(
+                f"CLASSIFIER_FILTER:EIGHT_CLASS_FILTER:VALUE_ERROR: Invalid label value. The label value can only be 'North', 'North-East', 'East', 'South-East', 'South', 'South-West', 'West', or 'North-West'."
+            )
     return result
 
 

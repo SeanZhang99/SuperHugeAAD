@@ -4,21 +4,15 @@ import einops
 from einops.layers.torch import EinMix
 
 from ...datasets.metadata_processing.data import MetaData, MetaDataElement
-from ...utils.channel_enum import CHANNEL1D_ENUM, CHANNEL2D_ENUM
+from ...utils.channel_enum import CHANNEL1D_ENUM, CHANNEL2D_ENUM, NUM_ELECTRODES
 
 
 class Channel1D(torch.nn.Module):
-    def __init__(self, num_electrodes: int, num_mix_channels: int):
+    NUM_ELECTRODES = NUM_ELECTRODES
+
+    def __init__(self, /, **kwargs):
         super().__init__()
-        # self.channel_mixer = torch.nn.Sequential(
-        #     EinMix(
-        #         "b t c -> b t m",
-        #         m=num_mix_channels,
-        #         c=num_electrodes,
-        #         weight_shape="c m",
-        #         bias_shape="m",
-        #     ),
-        # )
+        self.num_channels = self.NUM_ELECTRODES
 
     def forward(self, data: dict) -> torch.Tensor:
         """
@@ -36,10 +30,6 @@ class Channel1D(torch.nn.Module):
         y = torch.zeros(
             *x.shape[:-1], len(CHANNEL1D_ENUM), device=x.device, dtype=x.dtype
         )
-        # z-score normalization over batch
-        # x_mean = x.mean(dim=(1, 2), keepdim=True)
-        # x_std = x.std(dim=(1, 2), keepdim=True)
-        # x = (x - x_mean) / (x_std + 1e-6)
         original_ch_idx = []
         target_ch_idx = []
 
@@ -52,9 +42,36 @@ class Channel1D(torch.nn.Module):
                 target_ch_idx.append(CHANNEL1D_ENUM[chan_name].value)
         y[..., target_ch_idx] = x[..., original_ch_idx]
 
-        if hasattr(self, "channel_mixer"):
-            y = self.channel_mixer(y)
         return y
+
+
+class Channel1DMixer(Channel1D):
+    def __init__(self, /, num_channels, **kwargs):
+        super().__init__(**kwargs)
+        self.channel_mixer = torch.nn.Sequential(
+            EinMix(
+                "b t c -> b t m",
+                m=num_channels,
+                c=self.NUM_ELECTRODES,
+                weight_shape="c m",
+                bias_shape="m",
+            ),
+        )
+        self.num_channels = num_channels
+
+    def forward(self, x):
+        """
+        Perform a 1D channel rearrangement of the input tensor x, based on the given metadata.
+
+        Args:
+            x (torch.Tensor): The input tensor. expected shape: batch * time * channel
+            metadata (dict): The metadata. expected key: channel_infos
+                channel_infos should have this structure:
+                metadata["channel_infos"] = {1: {"name": [`channel_name_sample1`,`channel_name_sample2`]}}
+                In our implementation, the multidataset collect fn `collect_multidataset.collect_multidataset` handles data from different datasets,grouping them into different keys. And the date_interface will handle this grouped data, pass each group (correspond to samples coming from one specific dataset) into the forward path. Therefore, in this object, x is expected to be from the same dataset, thus with the same channel arrangement, making it possible to perform batch-wise channel rearrangement.
+        """
+        x = super().forward(x)
+        return self.channel_mixer(x)
 
 
 class Channel2D(torch.nn.Module):

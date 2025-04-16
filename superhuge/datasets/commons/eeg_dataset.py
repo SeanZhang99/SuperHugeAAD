@@ -74,6 +74,7 @@ class EegDataset(Dataset):
             "fs",
         ],
         transform: Sequence[dict[str, str | dict[str, float]]] | None = None,
+        preproc_stage: str | None = None,
         **kwargs,
     ):
         """
@@ -139,9 +140,12 @@ class EegDataset(Dataset):
             val_fold_idx != test_fold_idx
         ), f"EEG_DATASET:CREATE_DATASETS:FOLD_IDX_ERROR: val_fold_idx and test_fold_idx must be different, but got {val_fold_idx} and {test_fold_idx}"
 
+        if preproc_stage is None:
+            preproc_stage = "preprocessed"
+
         config = CreateDatasetsInputConfig(
-            meta_path=os.path.join(root_path, "meta", "metadata.pkl"),
-            exg_path=os.path.join(root_path, "exg"),
+            meta_path=os.path.join(root_path, preproc_stage, "meta", "metadata.pkl"),
+            exg_path=os.path.join(root_path, preproc_stage, "exg"),
             meta_filter_func=cls.meta_filter_func_parser(
                 meta_filter_func, *meta_filter_func_args
             ),
@@ -180,7 +184,8 @@ class EegDataset(Dataset):
                 metadata=metadata,
                 fs=config.fs,
                 window_length=config.window_length,
-                overlap=config.overlap if mode == "train" else 1,
+                # overlap=config.overlap if mode == "train" else 1,
+                overlap=config.overlap,
                 transform=config.transform if mode == "train" else None,
                 metadata_fields=config.metadata_fields,
                 **kwargs,
@@ -302,6 +307,15 @@ class EegDataset(Dataset):
         # 计算总样本数目
         self.count_samples()
 
+        self._copy_before_slicing = self.copy_before_slicing()
+
+    def copy_before_slicing(self):
+        if self.transform:
+            for transform in self.transform:
+                if transform.when == "before_slicing":
+                    return True
+        return False
+
     def count_samples(self):
 
         self.total_samples = 0
@@ -318,17 +332,32 @@ class EegDataset(Dataset):
     def __len__(self):
         return self.total_samples
 
+    @property
+    def len(self):
+        return len(self)
+
     def __getitem__(self, idx):
         """
         加载样本数据，并返回元数据、信号段和标签。
         """
         file_idx, segment_idx = self._map_idx_to_file_and_segment(idx)
         file_name = self.files[file_idx]
-        file_path = os.path.join(self.exg_path, file_name + ".pkl")
+        file_path = os.path.join(self.exg_path, file_name + ".npy")
 
         exg: np.ndarray | np.memmap = np.load(
             file_path, mmap_mode="r", allow_pickle=False
         )
+
+        assert (
+            exg.shape[0] == self.metadata[file_name].signal_length
+        ), f"EEG_DATASET:GETITEM:SHAPE_ERROR: The shape of the loaded data {exg.shape} does not match the expected shape {self.metadata[file_name].signal_length}. Problem given with metadata {self.metadata[file_name].model_dump()}"
+        assert (
+            exg.ndim == 2
+        ), f"EEG_DATASET:GETITEM:SHAPE_ERROR: The loaded data is not 2D, but {exg.ndim}D. Problem given with metadata {self.metadata[file_name].model_dump()}"
+        assert (
+            exg.shape[1] == self.metadata[file_name].channel_infos.__len__()
+        ), f"EEG_DATASET:GETITEM:SHAPE_ERROR: The number of channels in the loaded data {exg.shape[1]} does not match the expected number {self.metadata[file_name].channel_infos.__len__()}. Problem given with metadata {self.metadata[file_name].model_dump()}"
+
         if self.transform:
             for transform in self.transform:
                 if transform.when == "before_slicing" and (
@@ -354,7 +383,7 @@ class EegDataset(Dataset):
         # 获取元数据
         meta = self.metadata[file_name].model_dump()
 
-        return {"meta": meta, "exg": exg_seg}
+        return {"meta": meta, "exg": exg_seg.astype(np.float32)}
 
     def _map_idx_to_file_and_segment(self, idx: int):
         """

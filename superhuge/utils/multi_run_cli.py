@@ -46,8 +46,8 @@ class MultiRunCLI:
             )
             cli.trainer.test(
                 model=cli.model,
-                # datamodule=cli.datamodule,
-                dataloaders=cli.datamodule.val_dataloader(),
+                datamodule=cli.datamodule,
+                # dataloaders=cli.datamodule.val_dataloader(),
                 ckpt_path="best",
                 verbose=True,
             )
@@ -58,3 +58,19 @@ class NamedParamsCLI(LightningCLI):
 
     def _get_parameters(self):
         return self.model.named_parameters()
+
+    def add_arguments_to_parser(self, parser):
+        parser.link_arguments(
+            "data.init_args.fs", "model.init_args.model_args.fs", apply_on="instantiate"
+        )
+        parser.link_arguments(
+            "data.init_args.window_length",
+            "model.init_args.model_args.window_length",
+            apply_on="instantiate",
+        )
+        # parser.link_arguments(
+        #     "data.init_args.fs",
+        #     "data.init_args.dataset_args.meta_filter_func.init_args.init_args.fs",
+        # )
+
+        return super().add_arguments_to_parser(parser)

@@ -6,6 +6,8 @@ def simple_cnn(
     temporal_kernel_size: int,
     num_kernels: int,
     num_chan: int,
+    window_legnth: int,
+    fs: int,
 ):
     return nn.Sequential(
         Rearrange("batch time channel -> batch 1 time channel"),

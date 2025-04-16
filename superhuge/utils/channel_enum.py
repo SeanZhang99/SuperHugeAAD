@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class CHANNEL1D_ENUM(Enum):
     A1 = 0
     A2 = 1
@@ -75,6 +76,7 @@ class CHANNEL1D_ENUM(Enum):
     TP7 = 71
     TP8 = 72
     TP9 = 73
+
 
 class CHANNEL2D_ENUM(Enum):
     A11 = (4, 0)
@@ -152,4 +154,5 @@ class CHANNEL2D_ENUM(Enum):
     TP8 = (5, 10)
     TP9 = (5, 1)
 
-num_electrodes = 74
+
+NUM_ELECTRODES = len(CHANNEL1D_ENUM)

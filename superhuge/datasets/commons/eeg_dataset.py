@@ -354,14 +354,16 @@ class EegDataset(Dataset):
         assert (
             exg.ndim == 2
         ), f"EEG_DATASET:GETITEM:SHAPE_ERROR: The loaded data is not 2D, but {exg.ndim}D. Problem given with metadata {self.metadata[file_name].model_dump()}"
-        assert exg.shape[1] == self.metadata[file_name].channel_infos.__len__(),f"EEG_DATASET:GETITEM:SHAPE_ERROR: The number of channels in the loaded data {exg.shape[1]} does not match the expected number {self.metadata[file_name].channel_infos.__len__()}. Problem given with metadata {self.metadata[file_name].model_dump()}"
+        assert (
+            exg.shape[1] == self.metadata[file_name].channel_infos.__len__()
+        ), f"EEG_DATASET:GETITEM:SHAPE_ERROR: The number of channels in the loaded data {exg.shape[1]} does not match the expected number {self.metadata[file_name].channel_infos.__len__()}. Problem given with metadata {self.metadata[file_name].model_dump()}"
 
         if self.transform:
             for transform in self.transform:
                 if transform.when == "before_slicing" and (
                     "eeg" in transform.whom or "all" in transform.whom
                 ):
-                    exg = transform(exg.astype(np.float32))
+                    exg = transform(exg)
 
         # 加载信号和标签
 
@@ -369,9 +371,6 @@ class EegDataset(Dataset):
         stride = self.segment_length // self.overlap
         start_idx = segment_idx * stride
         exg_seg = exg[start_idx : start_idx + self.segment_length]
-
-        if not self._copy_before_slicing:
-            exg_seg = exg_seg.astype(np.float32)
 
         # 应用变换
         if self.transform:
@@ -384,7 +383,7 @@ class EegDataset(Dataset):
         # 获取元数据
         meta = self.metadata[file_name].model_dump()
 
-        return {"meta": meta, "exg": exg_seg}
+        return {"meta": meta, "exg": exg_seg.astype(np.float32)}
 
     def _map_idx_to_file_and_segment(self, idx: int):
         """

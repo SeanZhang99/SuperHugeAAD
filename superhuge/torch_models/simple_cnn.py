@@ -15,6 +15,7 @@ def simple_cnn(
             out_channels=num_kernels,
             kernel_size=(temporal_kernel_size, num_chan),
         ),
+        nn.BatchNorm2d(num_kernels),
         nn.ReLU(),
         Reduce("batch num_kernels time channel -> batch time num_kernels", "mean"),
     )

@@ -10,17 +10,14 @@ from .lambda_layer import LambdaLayer
 def classify_post_model(
     input_size: Sequence[int | None], num_class: int, hidden_dim: int
 ):
-    # input = Input(shape=input_size)
-    # x = layers.Flatten()(input)
-    # x = layers.Dense(num_class)(x)
-    # return Model(inputs=input, outputs=x)
     return nn.Sequential(
-        layers.Reduce("b t c -> b c", reduction="mean"),
+        layers.Reduce("b t c -> b c", "mean"),
         # dense the last dimension
         nn.LazyLinear(
             hidden_dim,
         ),
-        nn.Sigmoid(),
+        nn.LayerNorm(hidden_dim),
+        nn.GELU(),
         layers.EinMix(
             "b hidden_dim -> b num_class",
             weight_shape="hidden_dim num_class",

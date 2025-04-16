@@ -3,7 +3,7 @@ init_args:
   dataloader_args:
     batch_size: 64
     drop_last: false
-    num_workers: 2
+    num_workers: 1
     persistent_workers: true
     pin_memory: true
     prefetch_factor: 8
@@ -38,22 +38,22 @@ init_args:
     root_path: /data/nvme/ssd2/zhangyuanming/EEG/derivatives/SuperHuge
     preproc_stage: preprocessed
     transform:
-      null
+      # null
       # - class_path: superhuge.utils.transforms.ChannelMask
       #   init_args:
       #     p_mask: 0.1
       #     apply_prob: 0.5
       #     when: "before_returning"
       #     whom: "eeg"
-      # - class_path: superhuge.utils.transforms.Filter
-      #   init_args:
-      #     apply_prob: 0.2
-      #     when: "before_returning"
-      #     whom: "eeg"
-      #     Wn: [1., 4.]
-      #     fs: ${init_args.dataset_args.fs}
-      #     btype: bandstop
-      #     order: 5
+      - class_path: superhuge.utils.transforms.Filter
+        init_args:
+          apply_prob: 1
+          when: "before_returning"
+          whom: "eeg"
+          Wn: [1., 32.]
+          fs: ${init_args.dataset_args.fs}
+          btype: bandpass
+          order: 5
       # - class_path: superhuge.utils.transforms.Filter
       #   init_args:
       #     apply_prob: 0.2

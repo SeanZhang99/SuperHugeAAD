@@ -36,10 +36,6 @@ class Channel1D(torch.nn.Module):
         y = torch.zeros(
             *x.shape[:-1], len(CHANNEL1D_ENUM), device=x.device, dtype=x.dtype
         )
-        # z-score normalization over batch
-        # x_mean = x.mean(dim=(1, 2), keepdim=True)
-        # x_std = x.std(dim=(1, 2), keepdim=True)
-        # x = (x - x_mean) / (x_std + 1e-6)
         original_ch_idx = []
         target_ch_idx = []
 

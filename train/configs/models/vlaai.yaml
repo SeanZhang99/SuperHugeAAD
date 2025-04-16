@@ -3,9 +3,9 @@ class_path: superhuge.models.commons.m_interface.MInterface
 init_args:
   model_args:
     extractor_args:
-      kernel_sizes: [3, 11, 17]
-      num_kernels: [32]
-      num_layers: 3
+      kernel_sizes: [3, 11, 17, 5, 13]
+      num_kernels: [64, 64, 64, 32, 32]
+      num_layers: 5
     input_channels: 74
     nb_blocks: 1
     output_context_args:
@@ -13,4 +13,5 @@ init_args:
       num_kernel: 32
     window_length: 10
     fs: 128
-  model_class: superhuge.models.vlaai.torch_vlaai.VLAAI.create_model
+  model_class: superhuge.torch_models.vlaai.VLAAI.create_model
+  # model_class: superhuge.models.vlaai.vlaai.vlaai

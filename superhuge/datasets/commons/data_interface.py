@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import inspect
-from re import I
 from typing import Any
 
 import lightning as pl2

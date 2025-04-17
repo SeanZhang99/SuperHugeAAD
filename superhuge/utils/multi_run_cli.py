@@ -7,8 +7,6 @@ from ..datasets.commons.data_interface import DInterface
 
 from ..models.commons.m_interface import MInterface
 
-from ..models.rebok_deformer.deformer import deformer
-
 from .task_config_parser import TaskConfigParser
 
 

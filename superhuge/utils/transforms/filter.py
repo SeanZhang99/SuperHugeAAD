@@ -31,7 +31,7 @@ class Filter(Transform):
             raise ValueError("Butter function did not return expected coefficients.")
         self.b, self.a = result
 
-    def __call__(self, x: np.ndarray) -> np.ndarray:
+    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> np.ndarray:
         super().__call__(x)
         if self.roll():
             x = filtfilt(self.b, self.a, x, axis=0).copy()

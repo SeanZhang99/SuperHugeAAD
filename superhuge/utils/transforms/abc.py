@@ -129,7 +129,7 @@ class Transform(ABC):
         self.cfg.whom = value
 
     @abstractmethod
-    def __call__(self, x: np.ndarray) -> np.ndarray:
+    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> np.ndarray:
         """Apply transformation to EEG data.
 
         Args:

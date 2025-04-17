@@ -22,15 +22,14 @@ class MInterface(pl2.LightningModule, ABC):
         self,
         /,
         *,
-        model_class: Callable[..., keras.Model | torch.nn.Module],
-        model_args: dict,
+        # Must declare using ModelTemplate to get the linked arguments. e.g., fs and window_length in our case. Otherwise, jsonargparse will ignore this argument. If you want other arguments to be linked, please declare them in the ModelTemplate class.
+        module: ModelTemplate,
         loss: torch.nn.modules.loss._Loss | Sequence[torch.nn.modules.loss._Loss],
         loss_hparams: Sequence[float] | None = None,
         ckpt_path: str | None = None,
         summary: bool = True,
-        **kwargs: Any,
     ):
-        super().__init__(**kwargs)
+        super().__init__()
         if isinstance(loss, Sequence):
             assert loss_hparams is None or (
                 isinstance(loss_hparams, Sequence) and len(loss) == len(loss_hparams)
@@ -39,10 +38,7 @@ class MInterface(pl2.LightningModule, ABC):
             assert (
                 loss_hparams is None
             ), f"When specifying a single loss, you should not specify the loss weights, but got {loss} and {loss_hparams}"
-        assert callable(
-            model_class
-        ), f"model_class should be a callable, but got {model_class}"
-        self.model = model_class(**model_args)
+        self.model = module
 
         if ckpt_path is not None:
             if isinstance(self.model, keras.Model):
@@ -54,7 +50,7 @@ class MInterface(pl2.LightningModule, ABC):
         self.configure_loss()
         self.stage = "train"
 
-        self.get_input_size(**model_args)
+        self.get_input_size(**self.model.__dict__)
 
         if summary:
             if hasattr(self.model, "summary"):

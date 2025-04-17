@@ -3,6 +3,10 @@ import lightning.pytorch.callbacks
 from lightning.pytorch.cli import LightningCLI
 import tqdm
 
+from ..datasets.commons.data_interface import DInterface
+
+from ..models.commons.m_interface import MInterface
+
 from ..models.rebok_deformer.deformer import deformer
 
 from .task_config_parser import TaskConfigParser
@@ -39,6 +43,10 @@ class MultiRunCLI:
                 parser_kwargs={"parser_mode": "omegaconf"},
                 args=self.cli_argv + config_list,
                 run=False,
+                model_class=MInterface,
+                datamodule_class=DInterface,
+                subclass_mode_data=True,
+                subclass_mode_model=True,
             )
             cli.trainer.fit(
                 model=cli.model,
@@ -60,17 +68,19 @@ class NamedParamsCLI(LightningCLI):
         return self.model.named_parameters()
 
     def add_arguments_to_parser(self, parser):
+        # When linking arguments, make sure the target argument is declared by the target class.
         parser.link_arguments(
-            "data.init_args.fs", "model.init_args.model_args.fs", apply_on="instantiate"
-        )
-        parser.link_arguments(
-            "data.init_args.window_length",
-            "model.init_args.model_args.window_length",
+            "data.fs",
+            "model.init_args.module.init_args.fs",
             apply_on="instantiate",
         )
-        # parser.link_arguments(
-        #     "data.init_args.fs",
-        #     "data.init_args.dataset_args.meta_filter_func.init_args.init_args.fs",
-        # )
+        parser.link_arguments(
+            "data.window_length",
+            "model.init_args.module.init_args.window_length",
+            apply_on="instantiate",
+        )
 
-        return super().add_arguments_to_parser(parser)
+    # parser.link_arguments(
+    #     "data.init_args.fs",
+    #     "data.init_args.dataset_args.meta_filter_func.init_args.init_args.fs",
+    # )

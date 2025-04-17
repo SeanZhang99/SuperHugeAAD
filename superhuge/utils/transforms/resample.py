@@ -11,7 +11,7 @@ class Resample(Transform):
         self.old_fs = old_fs
         self.new_fs = new_fs
 
-    def __call__(self, x: np.ndarray) -> np.ndarray:
+    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> np.ndarray:
         if self.roll():
             num_samples = int(x.shape[0] * self.new_fs / self.old_fs)
             return resample(x, num_samples, axis=0)  # type: ignore

@@ -25,7 +25,7 @@ class TimeShift(Transform):
             else int(max_shift)
         )
 
-    def __call__(self, x: np.ndarray) -> np.ndarray:
+    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> np.ndarray:
         if self.roll():
             shift = np.random.randint(-self.max_shift, self.max_shift)
             if shift >= 0:

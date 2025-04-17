@@ -27,10 +27,6 @@ data:
                 # - 7 # NUS
                 # - 8 # PKU
                 # - 9 # sparKULee
-          - class_path: superhuge.datasets.metadata_processing.filters.MetadataValueSelector
-            init_args:
-              attribute_name: trial_id
-              attribute_value: [1, 2, 3, 4, 5, 6, 7, 8]
           - class_path: superhuge.datasets.metadata_processing.filters.classify_filter.binary_leftright_filter
       metadata_fields:
         - dataset_id
@@ -41,7 +37,7 @@ data:
         - fs
         - channel_infos
       overlap: 2
-      root_path: /data/nvme/ssd2/zhangyuanming/EEG/derivatives/SuperHuge
+      root_path: E:\derivatives\SuperHuge
       transform:
         null
         # - class_path: superhuge.utils.transforms.ChannelMask
@@ -95,21 +91,17 @@ data:
         #     fs: 128
       window_length: 10
 lr_scheduler:
-  # class_path: lightning.pytorch.cli.ReduceLROnPlateau
-  # init_args:
-  #   cooldown: 3
-  #   eps: 1.e-8
-  #   factor: 0.5
-  #   min_lr: 1.e-8
-  #   mode: max
-  #   monitor: val/acc_epoch
-  #   patience: 5
-  #   threshold: 1.e-4
-  #   threshold_mode: rel
-  class_path: torch.optim.lr_scheduler.MultiStepLR
+  class_path: lightning.pytorch.cli.ReduceLROnPlateau
   init_args:
-    milestones: [10, 35]
-    gamma: 0.5
+    cooldown: 3
+    eps: 1.e-8
+    factor: 0.5
+    min_lr: 1.e-8
+    mode: max
+    monitor: val/acc_epoch
+    patience: 5
+    threshold: 1.e-4
+    threshold_mode: rel
 optimizer:
   class_path: superhuge.optimizers.optimizer_interface.AutoDetachBiasDecay
   init_args:
@@ -126,12 +118,12 @@ trainer:
     - class_path: lightning.pytorch.callbacks.LearningRateMonitor
       init_args:
         logging_interval: epoch
-    # - class_path: lightning.pytorch.callbacks.EarlyStopping
-    #   init_args:
-    #     min_delta: 0.01
-    #     mode: max
-    #     monitor: val/acc_epoch
-    #     patience: 15
+    - class_path: lightning.pytorch.callbacks.EarlyStopping
+      init_args:
+        min_delta: 0.01
+        mode: max
+        monitor: val/acc_epoch
+        patience: 15
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
         mode: max

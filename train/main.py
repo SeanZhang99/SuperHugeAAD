@@ -27,7 +27,7 @@ import os
 
 os.environ["KERAS_BACKEND"] = "torch"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import torch
 
 import keras
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     cli = MultiRunCLI(
         "--task_config",
         os.path.join(config_path, "task_config.yaml"),
-        "--trainer",
+        "--config",
         os.path.join(config_path, "trainer_config.yaml"),
         "--data",
         os.path.join(config_path, "data_config.yaml"),

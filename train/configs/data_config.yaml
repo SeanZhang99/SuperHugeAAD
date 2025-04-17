@@ -35,7 +35,7 @@ init_args:
       - fs
       - channel_infos
     overlap: 2
-    root_path: /data/nvme/ssd2/zhangyuanming/EEG/derivatives/SuperHuge
+    root_path: E:\derivatives\SuperHuge
     preproc_stage: preprocessed
     transform:
       # null
@@ -51,7 +51,8 @@ init_args:
           when: "before_returning"
           whom: "eeg"
           Wn: [1., 32.]
-          fs: ${init_args.dataset_args.fs}
+          # fs: ${init_args.dataset_args.fs}
+          fs: 128
           btype: bandpass
           order: 5
       # - class_path: superhuge.utils.transforms.Filter

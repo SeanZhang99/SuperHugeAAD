@@ -1,64 +1,65 @@
-accelerator: gpu
-accumulate_grad_batches: 1
-barebones: false
-benchmark: false
-callbacks:
-  - class_path: lightning.pytorch.callbacks.LearningRateMonitor
-    init_args:
-      logging_interval: epoch
-  - class_path: lightning.pytorch.callbacks.EarlyStopping
-    init_args:
-      min_delta: 0.01
-      mode: max
-      monitor: val/acc_epoch
-      patience: 15
-  - class_path: lightning.pytorch.callbacks.ModelCheckpoint
-    init_args:
-      mode: max
-      monitor: val/acc_epoch
-      save_last: true
-      save_top_k: 2
-      save_weights_only: true
-  - class_path: superhuge.utils.fancy_progress_bar.FancyProgressBar
-    init_args:
-      refresh_rate: 5
-check_val_every_n_epoch: 1
-default_root_dir: null
-detect_anomaly: false
-deterministic: null
-devices: auto
-enable_checkpointing: null
-enable_model_summary: false
-enable_progress_bar: null
-fast_dev_run: false
-gradient_clip_algorithm: null
-gradient_clip_val: null
-inference_mode: true
-limit_predict_batches: null
-limit_test_batches: null
-limit_train_batches: null
-limit_val_batches: null
-log_every_n_steps: 10
-logger:
-  - class_path: TensorBoardLogger
-    init_args:
-      save_dir: ./logs/tb_logs
-  - class_path: CSVLogger
-    init_args:
-      save_dir: ./logs/csv_logs
-max_epochs: 100
-max_steps: -1
-max_time: null
-min_epochs: 20
-min_steps: null
-num_nodes: 1
-num_sanity_val_steps: null
-overfit_batches: 0
-plugins: null
-precision: null
-profiler: null
-reload_dataloaders_every_n_epochs: 0
-strategy: auto
-sync_batchnorm: false
-use_distributed_sampler: true
-val_check_interval: null
+trainer:
+  accelerator: gpu
+  accumulate_grad_batches: 1
+  barebones: false
+  benchmark: false
+  callbacks:
+    - class_path: lightning.pytorch.callbacks.LearningRateMonitor
+      init_args:
+        logging_interval: epoch
+    - class_path: lightning.pytorch.callbacks.EarlyStopping
+      init_args:
+        min_delta: 0.01
+        mode: max
+        monitor: val/acc_epoch
+        patience: 15
+    - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+      init_args:
+        mode: max
+        monitor: val/acc_epoch
+        save_last: true
+        save_top_k: 2
+        save_weights_only: true
+    - class_path: superhuge.utils.fancy_progress_bar.FancyProgressBar
+      init_args:
+        refresh_rate: 5
+  check_val_every_n_epoch: 1
+  default_root_dir: null
+  detect_anomaly: false
+  deterministic: null
+  devices: auto
+  enable_checkpointing: null
+  enable_model_summary: false
+  enable_progress_bar: null
+  fast_dev_run: false
+  gradient_clip_algorithm: null
+  gradient_clip_val: null
+  inference_mode: true
+  limit_predict_batches: null
+  limit_test_batches: null
+  limit_train_batches: null
+  limit_val_batches: null
+  log_every_n_steps: 10
+  logger:
+    - class_path: TensorBoardLogger
+      init_args:
+        save_dir: ./logs/tb_logs
+    - class_path: CSVLogger
+      init_args:
+        save_dir: ./logs/csv_logs
+  max_epochs: 100
+  max_steps: -1
+  max_time: null
+  min_epochs: 20
+  min_steps: null
+  num_nodes: 1
+  num_sanity_val_steps: null
+  overfit_batches: 0
+  plugins: null
+  precision: null
+  profiler: null
+  reload_dataloaders_every_n_epochs: 0
+  strategy: auto
+  sync_batchnorm: false
+  use_distributed_sampler: true
+  val_check_interval: null

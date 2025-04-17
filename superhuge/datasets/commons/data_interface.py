@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import inspect
+from re import I
 from typing import Any
 
 import lightning as pl2
@@ -150,3 +151,11 @@ class DInterface(pl2.LightningDataModule):
     @property
     def batch_size(self):
         return self.config.dataloader_args["batch_size"]
+
+    @property
+    def fs(self):
+        return self.config.dataset_args["fs"]
+
+    @property
+    def window_length(self):
+        return self.config.dataset_args["window_length"]

@@ -4,7 +4,7 @@ import numpy as np
 import einops
 from einops.layers import torch as layers
 
-from ..modules.lambda_layer import LambdaLayer
+from ..module.lambda_layer import LambdaLayer
 
 
 def classify_post_model(

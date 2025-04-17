@@ -6,8 +6,8 @@ from einops import rearrange
 from einops.layers.torch import EinMix, Rearrange
 from pydantic import BaseModel, Field
 
-from ...models.modules.multi_head_attention import MultiHeadAttention
-from ...models.modules.residual_layer import ResidualLayer
+from ...models.module.multi_head_attention import MultiHeadAttention
+from ...models.module.residual_layer import ResidualLayer
 
 from ...torch_models.deformer import output_mlp, preconv, transformer_encoder_layer
 

@@ -7,11 +7,11 @@ from einops.layers.torch import Rearrange, EinMix
 from pydantic import BaseModel
 from torch import nn
 
-from ..models.modules.lazy_layernorm import LazyLayerNorm
+from ..models.module.lazy_layernorm import LazyLayerNorm
 
-from ..models.modules.multi_head_attention import MultiHeadAttention
+from ..models.module.multi_head_attention import MultiHeadAttention
 
-from ..models.modules.residual_layer import ResidualLayer
+from ..models.module.residual_layer import ResidualLayer
 
 
 # ===========================

@@ -14,7 +14,7 @@ from ..tools import post_model, pre_model
 
 
 from ..tools.model_template import ModelInputArgs
-from superhuge.models.modules import lambda_layer
+from ..module import lambda_layer
 
 
 class MInterface(pl2.LightningModule, ABC):

@@ -46,14 +46,14 @@ class EegRegressionBaseDataset(EegDataset):
             )
 
         self.speech_feature_path = os.path.join(
-            self.exg_path.replace("exg", "stimuli"), self.speech_feature_type
+            self.eeg_path.replace("eeg", "stimuli"), self.speech_feature_type
         )
 
     def __getitem__(self, idx):
         """
         加载样本数据，并返回元数据、EEG段、语音特征段和标签。
         """
-        meta, exg = super().__getitem__(idx).values()
+        meta, eeg = super().__getitem__(idx).values()
 
         entry = meta["entry"]
         # 加载语音特征
@@ -98,7 +98,7 @@ class EegRegressionBaseDataset(EegDataset):
                 if f"{field}_fs" in meta:
                     del meta[f"{field}_fs"]
 
-        return {"meta": meta, "exg": exg, "audio": speech_segment.astype(np.float32)}
+        return {"meta": meta, "eeg": eeg, "audio": speech_segment.astype(np.float32)}
 
     @classmethod
     def meta_filter_func_parser(

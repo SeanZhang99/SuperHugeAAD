@@ -31,7 +31,7 @@ from ...utils.validate import validate_kwargs
 
 class CreateDatasetsInputConfig(BaseModel):
     meta_path: str
-    exg_path: str
+    eeg_path: str
     meta_filter_func: (
         Callable[[ClassifyMetaDataElement], ClassifyMetaDataElement | None]
         | Callable[[RegressionMetaDataElement], RegressionMetaDataElement | None]
@@ -82,7 +82,7 @@ class EegDataset(Dataset):
 
         Args:
             meta_path (str): 元信息文件路径。
-            exg_path (str): 数据集文件夹路径。
+            eeg_path (str): 数据集文件夹路径。
             group_func (Callable): 用于分组的键。
             fold_idx (int): 当前 fold 索引。
             n_folds (int): 总 fold 数。
@@ -145,7 +145,7 @@ class EegDataset(Dataset):
 
         config = CreateDatasetsInputConfig(
             meta_path=os.path.join(root_path, preproc_stage, "meta", "metadata.pkl"),
-            exg_path=os.path.join(root_path, preproc_stage, "exg"),
+            eeg_path=os.path.join(root_path, preproc_stage, "eeg"),
             meta_filter_func=cls.meta_filter_func_parser(
                 meta_filter_func, *meta_filter_func_args
             ),
@@ -179,7 +179,7 @@ class EegDataset(Dataset):
 
         datasets = [
             cls(
-                exg_path=config.exg_path,
+                eeg_path=config.eeg_path,
                 files=splits[mode],
                 metadata=metadata,
                 fs=config.fs,
@@ -278,7 +278,7 @@ class EegDataset(Dataset):
     def __init__(self, **kwargs):
         """
         Args:
-            exg_path (str): 数据集文件夹路径。
+            eeg_path (str): 数据集文件夹路径。
             files (list): 文件名列表。
             metadata (dict): 包含每个试次的元信息。
             segment_length (int): 截取的信号段长度。
@@ -286,10 +286,10 @@ class EegDataset(Dataset):
             transform (Transform | None): 应用在样本上的变换函数。
             metadata_fields (list): 需要记录的元数据字段。
         """
-        required_keys = ["exg_path", "files", "metadata", "metadata_fields"]
+        required_keys = ["eeg_path", "files", "metadata", "metadata_fields"]
         self._validate_kwargs(kwargs.keys(), required_keys)
 
-        self.exg_path: str = kwargs["exg_path"]
+        self.eeg_path: str = kwargs["eeg_path"]
         self.files: Sequence[str] = kwargs["files"]
         self.metadata: MetaData = kwargs["metadata"]
         self.segment_length: int = kwargs.get("fs", 128) * kwargs.get(
@@ -342,35 +342,35 @@ class EegDataset(Dataset):
         """
         file_idx, segment_idx = self._map_idx_to_file_and_segment(idx)
         file_name = self.files[file_idx]
-        file_path = os.path.join(self.exg_path, file_name + ".npy")
+        file_path = os.path.join(self.eeg_path, file_name + ".npy")
 
-        exg: np.ndarray | np.memmap = np.load(
+        eeg: np.ndarray | np.memmap = np.load(
             file_path, mmap_mode="r", allow_pickle=False
         )
 
         assert (
-            exg.shape[0] == self.metadata[file_name].signal_length
-        ), f"EEG_DATASET:GETITEM:SHAPE_ERROR: The shape of the loaded data {exg.shape} does not match the expected shape {self.metadata[file_name].signal_length}. Problem given with metadata {self.metadata[file_name].model_dump()}"
+            eeg.shape[0] == self.metadata[file_name].signal_length
+        ), f"EEG_DATASET:GETITEM:SHAPE_ERROR: The shape of the loaded data {eeg.shape} does not match the expected shape {self.metadata[file_name].signal_length}. Problem given with metadata {self.metadata[file_name].model_dump()}"
         assert (
-            exg.ndim == 2
-        ), f"EEG_DATASET:GETITEM:SHAPE_ERROR: The loaded data is not 2D, but {exg.ndim}D. Problem given with metadata {self.metadata[file_name].model_dump()}"
+            eeg.ndim == 2
+        ), f"EEG_DATASET:GETITEM:SHAPE_ERROR: The loaded data is not 2D, but {eeg.ndim}D. Problem given with metadata {self.metadata[file_name].model_dump()}"
         assert (
-            exg.shape[1] == self.metadata[file_name].channel_infos.__len__()
-        ), f"EEG_DATASET:GETITEM:SHAPE_ERROR: The number of channels in the loaded data {exg.shape[1]} does not match the expected number {self.metadata[file_name].channel_infos.__len__()}. Problem given with metadata {self.metadata[file_name].model_dump()}"
+            eeg.shape[1] == self.metadata[file_name].channel_infos.__len__()
+        ), f"EEG_DATASET:GETITEM:SHAPE_ERROR: The number of channels in the loaded data {eeg.shape[1]} does not match the expected number {self.metadata[file_name].channel_infos.__len__()}. Problem given with metadata {self.metadata[file_name].model_dump()}"
 
         if self.transform:
             for transform in self.transform:
                 if transform.when == "before_slicing" and (
                     "eeg" in transform.whom or "all" in transform.whom
                 ):
-                    exg = transform(exg)
+                    eeg = transform(eeg)
 
         # 加载信号和标签
 
         # 根据 segment_length 和 overlap 截取信号段
         stride = self.segment_length // self.overlap
         start_idx = segment_idx * stride
-        exg_seg = exg[start_idx : start_idx + self.segment_length]
+        eeg_seg = eeg[start_idx : start_idx + self.segment_length]
 
         # 应用变换
         if self.transform:
@@ -378,12 +378,12 @@ class EegDataset(Dataset):
                 if transform.when == "before_returning" and (
                     "eeg" in transform.whom or "all" in transform.whom
                 ):
-                    exg_seg = transform(exg_seg)
+                    eeg_seg = transform(eeg_seg)
 
         # 获取元数据
         meta = self.metadata[file_name].model_dump()
 
-        return {"meta": meta, "exg": exg_seg.astype(np.float32)}
+        return {"meta": meta, "eeg": eeg_seg.astype(np.float32)}
 
     def _map_idx_to_file_and_segment(self, idx: int):
         """

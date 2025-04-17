@@ -1,5 +1,5 @@
 ---
-class_path: superhuge.models.commons.m_interface.MInterface
+class_path: superhuge.models.interface.m_interface.MInterface
 init_args:
   model_class: superhuge.torch_models.simple_cnn.SimpleCNN
   model_args:

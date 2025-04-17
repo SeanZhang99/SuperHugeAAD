@@ -18,8 +18,8 @@ directional_focus_decoding:
             ]
           n_folds: 5
     model:
-      class_path: superhuge.models.commons.classify_interface.Channel1DMappingClassifyInterface
-      # class_path: superhuge.models.commons.classify_interface.Channel1DMixingClassifyInterface
+      class_path: superhuge.models.interface.classify_interface.Channel1DMappingClassifyInterface
+      # class_path: superhuge.models.interface.classify_interface.Channel1DMixingClassifyInterface
       init_args:
         hidden_dim: 5
         # num_mix_out_channels: 64
@@ -98,7 +98,7 @@ speech_reconstruction:
         n_folds: 6
 
     model:
-      class_path: superhuge.models.commons.regression_interface.Channel1DRegressionInterface
+      class_path: superhuge.models.interface.regression_interface.Channel1DRegressionInterface
       init_args:
         loss:
           class_path: superhuge.models.loss.regression.mse_loss.MSELoss

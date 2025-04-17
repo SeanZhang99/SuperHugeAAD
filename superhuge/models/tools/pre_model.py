@@ -24,7 +24,7 @@ class Channel1D(torch.nn.Module):
                 metadata["channel_infos"] = {1: {"name": [`channel_name_sample1`,`channel_name_sample2`]}}
                 In our implementation, the multidataset collect fn `collect_multidataset.collect_multidataset` handles data from different datasets,grouping them into different keys. And the date_interface will handle this grouped data, pass each group (correspond to samples coming from one specific dataset) into the forward path. Therefore, in this object, x is expected to be from the same dataset, thus with the same channel arrangement, making it possible to perform batch-wise channel rearrangement.
         """
-        x: torch.Tensor = data["exg"]
+        x: torch.Tensor = data["eeg"]
         metadata: dict = data["meta"]
         y = torch.zeros(
             *x.shape[:-1], len(CHANNEL1D_ENUM), device=x.device, dtype=x.dtype
@@ -94,7 +94,7 @@ class Channel2D(torch.nn.Module):
         super().__init__()
 
     def forward(self, data: dict) -> torch.Tensor:
-        x: torch.Tensor = data["exg"]
+        x: torch.Tensor = data["eeg"]
         metadata = data["meta"]
         y = torch.zeros(*x.shape[:-1], self.max_row, self.max_col)
         # z-score normalization over batch

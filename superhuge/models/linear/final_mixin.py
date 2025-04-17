@@ -87,7 +87,7 @@ class lsBaseFinalMixin(lsBaseABCModel, pl2.LightningModule):
 
     @final
     def get_batch_data(self, batch, batch_idx):
-        return batch["exg"], batch["audio"][:, :, 0]
+        return batch["eeg"], batch["audio"][:, :, 0]
 
     @final
     def forward(self):
@@ -109,7 +109,7 @@ class lsBaseFinalMixin(lsBaseABCModel, pl2.LightningModule):
 
     @final
     def validation_step(self, batch, batch_idx):
-        x: torch.Tensor = batch["exg"]
+        x: torch.Tensor = batch["eeg"]
         y: torch.Tensor = batch["audio"]
         x_pred, y_pred = self.predict(x, y)
         stats = self.get_stats(x_pred, y_pred)

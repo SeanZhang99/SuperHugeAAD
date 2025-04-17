@@ -29,15 +29,18 @@ def classify_post_model(
 
 
 def regression_post_model(input_size: Sequence[int | None], num_features: int = 1):
-    # input = Input(shape=input_size)
-    # x = layers.Dense(1)(input)
-    # x = layers.Flatten()(x)
-    # return Model(inputs=input, outputs=x)
-    return nn.Sequential(
-        layers.EinMix(
-            "b t c -> b t num_features",
-            weight_shape="c num_features",
-            c=input_size[-1],
-            num_features=num_features,
-        ),
+    # If the last dimension of input_size is not equal to num_features, we need to add a linear layer to map it to num_features.
+    # Otherwise, we can just use an identity layer.
+    # This is useful for regression tasks where we want to predict a single value (num_features=1) from the input.
+    return (
+        nn.Sequential(
+            layers.EinMix(
+                "b t c -> b t num_features",
+                weight_shape="c num_features",
+                c=input_size[-1],
+                num_features=num_features,
+            ),
+        )
+        if input_size[-1] != num_features
+        else nn.Identity()
     )

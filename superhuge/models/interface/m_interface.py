@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
+from collections import OrderedDict
 from collections.abc import Callable, Sequence
-from contextlib import contextmanager
-import importlib
 from typing import Any, final
-from warnings import warn
+import inspect
 
 import keras
 import lightning as pl2
@@ -18,6 +17,7 @@ from ..module import lambda_layer
 
 
 class MInterface(pl2.LightningModule, ABC):
+    required_output_keys: list[str]
 
     def __init__(
         self,
@@ -34,6 +34,8 @@ class MInterface(pl2.LightningModule, ABC):
         summary: bool = True,
     ):
         super().__init__()
+
+        # Check and configure loss
         if isinstance(loss, Sequence):
             assert loss_hparams is None or (
                 isinstance(loss_hparams, Sequence) and len(loss) == len(loss_hparams)
@@ -42,6 +44,11 @@ class MInterface(pl2.LightningModule, ABC):
             assert (
                 loss_hparams is None
             ), f"When specifying a single loss, you should not specify the loss weights, but got {loss} and {loss_hparams}"
+        self.loss = loss
+        self.loss_hparams = loss_hparams
+        self.configure_loss()
+
+        # Instantiate main model and possibly load checkpoint
         if model_common_args.num_channels is None:
             from ...utils.channel_enum import NUM_ELECTRODES as num_channels
 
@@ -53,100 +60,136 @@ class MInterface(pl2.LightningModule, ABC):
                 self.model.load_weights(ckpt_path, skip_mismatch=True, by_name=True)
             elif isinstance(self.model, torch.nn.Module):
                 self.model.load_state_dict(torch.load(ckpt_path), strict=False)
-        self.loss = loss
-        self.loss_hparams = loss_hparams
-        self.configure_loss()
-        self.stage = "train"
 
+        # Instantiate pre_model and post_model
+        self.stage = "train"
+        self.pre_model: torch.nn.Module = lambda_layer.LambdaLayer(lambda x: x["eeg"])
+        self.post_model: torch.nn.Module = torch.nn.Identity()
+
+        # Configure the input/output of the main model.
+        self._required_inputs = self.configure_input()
         self.get_input_size(**model_common_args.model_dump())
+        self._output_keys = self.configure_output()
 
         if summary:
             if hasattr(self.model, "summary"):
                 self.model.summary()
             else:
-                torchinfo.summary(self.model, input_size=self.input_size)
-
-        self.pre_model: torch.nn.Module = lambda_layer.LambdaLayer(lambda x: x["exg"])
-        self.post_model: torch.nn.Module = torch.nn.Identity()
+                torchinfo.summary(self.model, input_size=list(self.input_size.values()))
 
     @final
-    def get_input_size(self, /, **kwargs) -> tuple[int | None, int]:
-        if "input_length" in kwargs:
-            input_length = kwargs["input_length"]
-        elif "window_length" in kwargs and "fs" in kwargs:
-            input_length = kwargs["window_length"] * kwargs["fs"]
-        else:
-            warn(
-                f"SUPERHUGE:MODELS:MODEL_INTERFACE:__INIT__: Cannot interfere the input length from {kwargs}, Using 1280 as input_length"
-            )
-            input_length = 1280
-        if "num_channel" in kwargs:
-            num_channel = kwargs["num_channel"]
-        elif "num_electrodes" in kwargs:
-            num_channel = kwargs["num_electrodes"]
-        elif "input_channels" in kwargs:
-            num_channel = kwargs["input_channels"]
-        elif "num_chan" in kwargs:
-            num_channel = kwargs["num_chan"]
-        elif "num_channels" in kwargs:
-            num_channel = kwargs["num_channels"]
-        else:
-            warn(
-                f"SUPERHUGE:MODELS:MODEL_INTERFACE:__INIT__: Cannot interfere the number of channels from {kwargs}. Using 64 as num_channel"
-            )
-            num_channel = 64
-        self.input_size = (1, input_length, num_channel)
-
-        return self.input_size
-
-        # def get_input_size(self, /, **kwargs):
-        #    eeg_input_size = super().get_input_size(**kwargs)
-        #    ... audio input size ...
-        #    self.input_size = (eeg_input_size, audio_input_size)
-        #    return self.input_size
-
-    def forward(self, data) -> torch.Tensor:
-        pre_inputs = self.pre_model(data)
-        # exg_inputs = self.pre_model(data) // audio_inputs = data['audio]
-        # exg_outputs, audio_outputs = self.model(exg_inputs, audio_inputs)
-        # exg_outputs = self.post_model(exg_outputs)
-        # return exg_outputs, audio_outputs
-
-        outputs = self.model(pre_inputs)
-        post_outputs = self.post_model(outputs)
-        return post_outputs
-
-    @abstractmethod
-    def training_closure(
-        self, data: dict[str, torch.Tensor]
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        """training_closure. This method will be called during `training_step`. It should return the prediction (the output of the model) and the target (`label` in classification or `target` in regression).
+    def get_input_size(self, /, **kwargs) -> list[tuple[int | None, ...]]:
+        """
+        Get the input size for each required input type based on the model's forward method.
 
         Args:
-            data (dict[str, torch.Tensor]): input data dict. should be a dict with key `exg`, `meta` and `label` or `target`.
+            kwargs: Additional arguments to determine input dimensions.
 
         Returns:
-            tuple[torch.Tensor, torch.Tensor]: [output, target/label]
-
-        Example:
-            ```python
-            def training_closure(self, data: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
-            # Regression task
-                outputs = self.forward(data)
-                target = data['audio']
-                return outputs, target
-
-            def training_closure(self, data: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
-            # Classification task
-                outputs = self.forward(data).argmax[1]
-                target = data['label']
-                return outputs, target
+            list[tuple[int | None, ...]]: A list of input sizes in the order specified by self._required_inputs.
         """
-        pass
+        # Explicitly ensure dictionary insert order
+        input_sizes = OrderedDict()
+
+        # Determine EEG/EXG input size
+        input_length = kwargs["fs"] * kwargs["window_length"]
+
+        num_channels = kwargs["num_channels"]
+
+        for required_input in self._required_inputs:
+            # Add EEG/EXG input size if required
+            if required_input == "eeg":
+                input_sizes["eeg"] = (1, input_length, num_channels)
+
+            # Add audio input size if required
+            if "audio" == required_input:
+                input_sizes["audio"] = (1, input_length, kwargs["num_audio_features"])
+
+            # Add label input size if required
+            if "label" == required_input:
+                input_sizes["label"] = (1, 1)
+
+        self.input_size = input_sizes
+
+    def forward(self, data) -> tuple:
+        """
+        Forward pass of the model.
+
+        Args:
+            data (dict): A dictionary containing the input data. Keys may include 'eeg', 'audio', and 'label'.
+
+        Returns:
+            tuple: The output of the model after processing through pre_model, model, and post_model,
+                along with any additional required outputs from data.
+        """
+        # Prepare inputs based on the required order from configure_input
+        inputs = []
+        for input_type in self._required_inputs:
+            if input_type == "eeg":
+                # Process EEG/EXG input through pre_model
+                inputs.append(self.pre_model(data))
+            elif input_type == "audio":
+                # Extract audio input directly from data
+                inputs.append(data["audio"])
+            elif input_type == "label":
+                # Extract label input directly from data
+                inputs.append(data["label"])
+
+        # Pass the inputs to the model in the required order
+        model_outputs = self.model(*inputs)
+
+        # Ensure model_outputs is a tuple
+        if not isinstance(model_outputs, tuple):
+            model_outputs = (model_outputs,)
+
+        # Process the first output (eeg_hat) through post_model
+        eeg_output = self.post_model(model_outputs[0])
+
+        # Collect all outputs
+        outputs = [eeg_output]
+
+        # Add additional outputs from the model if they exist
+        if len(self._output_keys) > 1:
+            outputs.extend(model_outputs[1:])
+
+        # Add required outputs from data if not already in model outputs
+        for key in self.required_output_keys:
+            if key not in self._output_keys:
+                outputs.append(data[key])
+
+        return tuple(outputs)
+
+    # @abstractmethod
+    # def training_closure(
+    #     self, data: dict[str, torch.Tensor]
+    # ) -> tuple[torch.Tensor, torch.Tensor]:
+    #     """training_closure. This method will be called during `training_step`. It should return the prediction (the output of the model) and the target (`label` in classification or `target` in regression).
+
+    #     Args:
+    #         data (dict[str, torch.Tensor]): input data dict. should be a dict with key `eeg`, `meta` and `label` or `target`.
+
+    #     Returns:
+    #         tuple[torch.Tensor, torch.Tensor]: [output, target/label]
+
+    #     Example:
+    #         ```python
+    #         def training_closure(self, data: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
+    #         # Regression task
+    #             outputs = self.forward(data)
+    #             target = data['audio']
+    #             return outputs, target
+
+    #         def training_closure(self, data: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
+    #         # Classification task
+    #             outputs = self.forward(data).argmax[1]
+    #             target = data['label']
+    #             return outputs, target
+    #     """
+    #     pass
 
     @abstractmethod
     def get_stats(
-        self, outputs: torch.Tensor, targets: torch.Tensor, meta: dict
+        self, outputs: torch.Tensor, targets: torch.Tensor, /, *, meta: dict
     ) -> None:
         """get_stats. This method will be called during `training_step`, `validation_step` and `test_step`. It should calculate the statistics of the model's output and the target.
 
@@ -170,13 +213,13 @@ class MInterface(pl2.LightningModule, ABC):
         loss: torch.Tensor = torch.zeros(1, device=self.device)
         batch_size = 0
         for data in batch.values():
-            outputs, targets = self.training_closure(data)
-            loss += self.loss_fn(outputs, targets).sum()
-            batch_size += outputs.shape[0]
+            # outputs, targets = self.training_closure(data)
+            outputs = self.forward(data)
+            loss += self.loss_fn(*outputs).sum()
+            batch_size += outputs[0].shape[0]
             self.get_stats(
-                outputs,
-                targets,
-                data["meta"],
+                *outputs,
+                meta=data["meta"],
             )
 
         loss /= batch_size
@@ -263,3 +306,60 @@ class MInterface(pl2.LightningModule, ABC):
                     enable_graph=False,
                 )
         return super().on_after_backward()
+
+    @final
+    def configure_input(self) -> list[str]:
+        """
+        Configure the input requirements for the model based on the forward method's input signature.
+
+        Returns:
+            list[str]: A sequence of strings indicating the required inputs in the order
+                       specified by the model's forward method signature.
+                       Possible values: 'eeg', 'audio', 'label'.
+        """
+
+        required_inputs = ["eeg"]
+
+        # Inspect the forward method of the model
+        if hasattr(self.model, "forward"):
+            forward_signature = inspect.signature(self.model.forward)
+            forward_params = forward_signature.parameters
+
+            # Check for required inputs based on parameter names
+            for param_name in forward_params:
+                if param_name in ["env", "mel", "audio"]:
+                    required_inputs.append("audio")
+                elif param_name == "label":
+                    required_inputs.append("label")
+
+        return required_inputs
+
+    @final
+    def configure_output(self) -> list[str]:
+        """
+        Configure the output requirements for the model based on the forward method's output signature.
+
+        Returns:
+            list[str]: A sequence of strings indicating the outputs of the model.
+                    Possible values: 'eeg_hat', 'audio_hat', 'label_hat'.
+        """
+
+        output_keys = ["eeg"]  # EEG output is always present by default
+
+        # Inspect the forward method of the model
+        if hasattr(self.model, "forward"):
+            forward_signature = inspect.signature(self.model.forward)
+            return_annotation = forward_signature.return_annotation
+
+            # Check if the return annotation is a tuple or a single value
+            if hasattr(return_annotation, "__args__") and isinstance(
+                return_annotation.__args__, tuple
+            ):
+                # If the return type is a tuple, inspect its elements
+                for output_type in return_annotation.__args__[1:]:
+                    if "audio" in str(output_type).lower():
+                        output_keys.append("audio")
+                    elif "label" in str(output_type).lower():
+                        output_keys.append("label")
+
+        return output_keys

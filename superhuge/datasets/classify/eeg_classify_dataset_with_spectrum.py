@@ -28,4 +28,4 @@ class EegClassifyDatasetWithSpectrum(EegClassifyBaseDataset):
                 f"EEG_CLASSIFY_DATASET_WITH_SPECTRUM:__GETITEM__:GETATTR:ATTRIBUTE_ERROIR: Spectrum key '{self.spectrum_key}' not found in metadata for file {self.files[idx]}."
             )
 
-        return {"meta": meta, "exg": segment, "label": label, "spectrum": spectrum}
+        return {"meta": meta, "eeg": segment, "label": label, "spectrum": spectrum}

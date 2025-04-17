@@ -13,27 +13,19 @@ from .channel_mapping_interface import (
 
 
 class RegressionInterface(MInterface):
-    def __init__(self, **kwargs):
-        # Get the signature of the parent __init__ method
-        parent_signature = inspect.signature(super().__init__)
 
-        # Validate the arguments against the parent's signature
-        bound_arguments = parent_signature.bind(**kwargs)
-        bound_arguments.apply_defaults()
+    def __init__(self, /, *, num_audio_features, **kwargs):
+        self.required_output_keys = ["eeg", "audio"]
+        super().__init__(**kwargs)
 
-        # Forward the validated arguments to the parent
-        super().__init__(**bound_arguments.kwargs)
+        self.post_model = regression_post_model(self.input_size, num_audio_features)
 
-        self.post_model = regression_post_model(self.input_size)
+    # def training_closure(self, data: dict) -> torch.Tensor:
+    #     outputs: torch.Tensor = self.forward(data)
+    #     target: torch.Tensor = data["audio"]  # type: ignore
 
-    __init__.__signature__ = inspect.signature(MInterface.__init__)  # type: ignore
-
-    def training_closure(self, data: dict) -> torch.Tensor:
-        outputs: torch.Tensor = self.forward(data)
-        target: torch.Tensor = data["audio"]  # type: ignore
-
-        return outputs, target
-        # return self.forward(data)
+    #     return outputs, target
+    #     # return self.forward(data)
 
     def get_stats(
         self, x_pred: torch.Tensor, y_pred: torch.Tensor, meta: dict

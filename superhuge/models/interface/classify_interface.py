@@ -1,3 +1,4 @@
+from pkg_resources import require
 import torch
 from torchmetrics import ConfusionMatrix
 
@@ -13,6 +14,7 @@ from ..tools.post_model import classify_post_model
 class ClassifyInterface(MInterface):
 
     def __init__(self, /, *, num_class: int, hidden_dim: int, **kwargs):
+        self.required_output_keys = ["eeg", "label"]
         super().__init__(**kwargs)
         self.confusion_matrix = ConfusionMatrix(
             task="multiclass",
@@ -20,11 +22,11 @@ class ClassifyInterface(MInterface):
         )
         self.post_model = classify_post_model(self.input_size, num_class, hidden_dim)
 
-    def training_closure(self, data):
-        outputs: torch.Tensor = self.forward(data)
-        targets = data["label"].to(torch.long)
+    # def training_closure(self, data):
+    #     outputs: torch.Tensor = self.forward(data)
+    #     targets = data["label"].to(torch.long)
 
-        return outputs, targets
+    #     return outputs, targets
 
     def get_stats(self, pred: torch.Tensor, label: torch.Tensor, meta: dict):
         pred = pred.argmax(dim=1)

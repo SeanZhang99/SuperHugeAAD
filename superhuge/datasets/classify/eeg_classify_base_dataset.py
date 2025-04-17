@@ -19,7 +19,7 @@ class EegClassifyBaseDataset(EegDataset):
         self._validate_kwargs(kwargs["metadata_fields"], required_meta_fields)
 
     def __getitem__(self, idx):
-        meta, exg = super().__getitem__(idx).values()
+        meta, eeg = super().__getitem__(idx).values()
         label: str | int = meta["label"]
         label = (
             self.label_hash.setdefault(label, int(len(self.label_hash)))
@@ -46,7 +46,7 @@ class EegClassifyBaseDataset(EegDataset):
             if f"{field}_fs" in meta:
                 del meta[f"{field}_fs"]
 
-        return {"meta": meta, "exg": exg, "label": label}
+        return {"meta": meta, "eeg": eeg, "label": label}
 
     @classmethod
     def meta_filter_func_parser(

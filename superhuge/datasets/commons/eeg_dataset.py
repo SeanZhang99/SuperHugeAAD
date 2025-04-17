@@ -1,9 +1,8 @@
 import inspect
 import os
 import pickle
-import gc
 from collections import namedtuple
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from importlib import import_module
 from typing import Any, Sequence
 
@@ -27,6 +26,7 @@ from ..metadata_processing.data import (
 )
 from ..metadata_processing.filters.composer import MetaDataFilterComposer
 from ..metadata_processing.group import loto
+from ...utils.validate import validate_kwargs
 
 
 class CreateDatasetsInputConfig(BaseModel):
@@ -413,15 +413,8 @@ class EegDataset(Dataset):
             "EEG_DATASET:MAP_IDX_TO_FILE_AND_SEGMENT:INDEX_ERROR: After consuming all files, a valid file_idx and segment_idx pair was not found."
         )
 
-    def _validate_kwargs(self, kwargs: Iterable, required_keys: Iterable):
-        """
-        验证 kwargs 是否包含所有必需的键。
-        """
-        for key in required_keys:
-            if key not in kwargs:
-                raise KeyError(
-                    f"EEG_DATASET:VALIDATE_KWARGS:KEY_ERROR: Missing required key '{key}' in kwargs {kwargs}. You should go back to the caller function and check the kwargs to be validated"
-                )
+    def _validate_kwargs(self, kwargs: set[str], required_keys: list[str]):
+        validate_kwargs(kwargs, required_keys)
 
 
 if __name__ == "__main__":

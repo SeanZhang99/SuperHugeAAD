@@ -4,6 +4,7 @@ from torchmetrics import ConfusionMatrix
 from .channel_mapping_interface import (
     ChannelMapping1DInterface,
     ChannelMapping2DInterface,
+    ChannelMixing1DInterface,
 )
 from .m_interface import MInterface
 from .post_model import classify_post_model
@@ -68,7 +69,12 @@ class ClassifyInterface(MInterface):
         )
 
 
-class Channel1DClassifyInterface(ClassifyInterface, ChannelMapping1DInterface):
+class Channel1DMappingClassifyInterface(ChannelMapping1DInterface, ClassifyInterface):
+    def __init__(self, /, **kwargs):
+        super().__init__(**kwargs)
+
+
+class Channel1DMixingClassifyInterface(ChannelMixing1DInterface, ClassifyInterface):
     def __init__(self, /, **kwargs):
         super().__init__(**kwargs)
 

@@ -1,13 +1,19 @@
 from .m_interface import MInterface
-from .pre_model import Channel1D, Channel2D
+from .pre_model import Channel1D, Channel1DMixer, Channel2D
 
 import lightning as pl2
 
 
 class ChannelMapping1DInterface(MInterface):
-    def __init__(self, /, *, num_electrodes: int, num_mix_channels: int, **kwargs):
+    def __init__(self, /, **kwargs):
         super().__init__(**kwargs)
-        self.pre_model = Channel1D(num_electrodes, num_mix_channels)
+        self.pre_model = Channel1D()
+
+
+class ChannelMixing1DInterface(MInterface):
+    def __init__(self, /, *, num_mix_out_channels: int, **kwargs):
+        super().__init__(**kwargs)
+        self.pre_model = Channel1DMixer(num_mix_out_channels)
 
 
 class ChannelMapping2DInterface:

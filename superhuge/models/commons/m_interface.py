@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
+from contextlib import contextmanager
+import importlib
 from typing import Any, final
 from warnings import warn
 
@@ -11,8 +13,7 @@ import torchinfo
 from superhuge.models.commons import post_model, pre_model
 
 
-from .model_template import ModelTemplate
-from .lambda_layer import LambdaLayer
+from .model_template import ModelInputArgs
 from superhuge.models.commons import lambda_layer
 
 
@@ -23,7 +24,10 @@ class MInterface(pl2.LightningModule, ABC):
         /,
         *,
         # Must declare using ModelTemplate to get the linked arguments. e.g., fs and window_length in our case. Otherwise, jsonargparse will ignore this argument. If you want other arguments to be linked, please declare them in the ModelTemplate class.
-        module: ModelTemplate,
+        # module: ModelTemplate,
+        model_class: type[torch.nn.Module],
+        model_args: dict[str, Any],
+        model_common_args: ModelInputArgs,
         loss: torch.nn.modules.loss._Loss | Sequence[torch.nn.modules.loss._Loss],
         loss_hparams: Sequence[float] | None = None,
         ckpt_path: str | None = None,
@@ -38,7 +42,11 @@ class MInterface(pl2.LightningModule, ABC):
             assert (
                 loss_hparams is None
             ), f"When specifying a single loss, you should not specify the loss weights, but got {loss} and {loss_hparams}"
-        self.model = module
+        if model_common_args.num_channels is None:
+            from ...utils.channel_enum import NUM_ELECTRODES as num_channels
+
+            model_common_args.num_channels = num_channels
+        self.model = model_class(**model_args, **model_common_args.model_dump())
 
         if ckpt_path is not None:
             if isinstance(self.model, keras.Model):
@@ -50,7 +58,7 @@ class MInterface(pl2.LightningModule, ABC):
         self.configure_loss()
         self.stage = "train"
 
-        self.get_input_size(**self.model.__dict__)
+        self.get_input_size(**model_common_args.model_dump())
 
         if summary:
             if hasattr(self.model, "summary"):
@@ -80,6 +88,8 @@ class MInterface(pl2.LightningModule, ABC):
             num_channel = kwargs["input_channels"]
         elif "num_chan" in kwargs:
             num_channel = kwargs["num_chan"]
+        elif "num_channels" in kwargs:
+            num_channel = kwargs["num_channels"]
         else:
             warn(
                 f"SUPERHUGE:MODELS:MODEL_INTERFACE:__INIT__: Cannot interfere the number of channels from {kwargs}. Using 64 as num_channel"

@@ -1,10 +1,7 @@
 ---
 class_path: superhuge.models.commons.m_interface.MInterface
 init_args:
-  # summary: true
-  module:
-    class_path: superhuge.torch_models.simple_cnn.SimpleCNN
-    init_args:
-      temporal_kernel_size: 17
-      num_kernels: 5
-      num_chan: 64
+  model_class: superhuge.torch_models.simple_cnn.SimpleCNN
+  model_args:
+    temporal_kernel_size: 17
+    num_kernels: 5

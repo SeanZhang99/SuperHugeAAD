@@ -1,8 +1,19 @@
+from dataclasses import dataclass
+from typing import TypedDict
+from pydantic import BaseModel
 from torch.nn import Module
 
 
-class ModelTemplate(Module):
-    def __init__(self, fs: int, window_length: int):
-        super().__init__()
-        self.fs = fs
-        self.window_length = window_length
+@dataclass
+class ModelTemplate:
+    fs: int
+    window_length: int
+    
+
+
+class ModelInputArgs(BaseModel):
+    fs: int
+    window_length: int
+    num_channels: int | None = None
+
+    model_config = {"extra": "allow"}

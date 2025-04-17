@@ -1,25 +1,30 @@
 from typing import Any
 from torch import nn
 from einops.layers.torch import Rearrange, Reduce
-from ..models.commons.model_template import ModelTemplate
+
+from ..utils.validate import validate_kwargs
+from ..models.commons.model_template import ModelInputArgs, ModelTemplate
 
 
-class SimpleCNN(ModelTemplate):
+class SimpleCNN(nn.Module):
     def __init__(
         self,
+        /,
+        *,
         temporal_kernel_size: int,
         num_kernels: int,
-        num_chan: int,
-        **kwargs: Any,
+        **kwargs,
     ):
-        super().__init__(**kwargs)
+        validate_kwargs(kwargs, ["num_channels"])
+        super().__init__()
         self.model = nn.Sequential(
             Rearrange("batch time channel -> batch 1 time channel"),
-            nn.ZeroPad2d((0, temporal_kernel_size - 1, 0, 0)),
+            # Padding order: last dimension, second last, ...
+            nn.ZeroPad2d((0, 0, 0, temporal_kernel_size - 1)),
             nn.Conv2d(
                 in_channels=1,
                 out_channels=num_kernels,
-                kernel_size=(temporal_kernel_size, num_chan),
+                kernel_size=(temporal_kernel_size, kwargs["num_channels"]),
             ),
             nn.BatchNorm2d(num_kernels),
             nn.ReLU(),
@@ -28,3 +33,10 @@ class SimpleCNN(ModelTemplate):
 
     def forward(self, x):
         return self.model(x)
+
+
+class SimpleCNNInputArgs(ModelInputArgs):
+    temporal_kernel_size: int = 128
+    num_kernels: int = 64
+
+    model_config = {"extra": "allow"}

@@ -8,11 +8,10 @@ from ...utils.channel_enum import CHANNEL1D_ENUM, CHANNEL2D_ENUM, NUM_ELECTRODES
 
 
 class Channel1D(torch.nn.Module):
-    NUM_ELECTRODES = NUM_ELECTRODES
+    _num_electrodes = NUM_ELECTRODES
 
     def __init__(self, /, **kwargs):
         super().__init__()
-        self.num_channels = self.NUM_ELECTRODES
 
     def forward(self, data: dict) -> torch.Tensor:
         """
@@ -44,20 +43,28 @@ class Channel1D(torch.nn.Module):
 
         return y
 
+    @property
+    def num_channels(self):
+        return self._num_electrodes
+
+    @property
+    def num_electrodes(self):
+        return self._num_electrodes
+
 
 class Channel1DMixer(Channel1D):
-    def __init__(self, /, num_channels, **kwargs):
+    def __init__(self, /, num_mix_out_channels, **kwargs):
         super().__init__(**kwargs)
-        self.channel_mixer = torch.nn.Sequential(
+        self._channel_mixer = torch.nn.Sequential(
             EinMix(
                 "b t c -> b t m",
-                m=num_channels,
-                c=self.NUM_ELECTRODES,
+                m=num_mix_out_channels,
+                c=self.num_electrodes,
                 weight_shape="c m",
                 bias_shape="m",
             ),
         )
-        self.num_channels = num_channels
+        self._num_mix_out_channels = num_mix_out_channels
 
     def forward(self, x):
         """
@@ -71,7 +78,11 @@ class Channel1DMixer(Channel1D):
                 In our implementation, the multidataset collect fn `collect_multidataset.collect_multidataset` handles data from different datasets,grouping them into different keys. And the date_interface will handle this grouped data, pass each group (correspond to samples coming from one specific dataset) into the forward path. Therefore, in this object, x is expected to be from the same dataset, thus with the same channel arrangement, making it possible to perform batch-wise channel rearrangement.
         """
         x = super().forward(x)
-        return self.channel_mixer(x)
+        return self._channel_mixer(x)
+
+    @property
+    def num_channels(self):
+        return self._num_mix_out_channels
 
 
 class Channel2D(torch.nn.Module):

@@ -10,11 +10,11 @@ import lightning as pl2
 import torch
 import torchinfo
 
-from superhuge.models.commons import post_model, pre_model
+from ..tools import post_model, pre_model
 
 
-from .model_template import ModelInputArgs
-from superhuge.models.commons import lambda_layer
+from ..tools.model_template import ModelInputArgs
+from superhuge.models.modules import lambda_layer
 
 
 class MInterface(pl2.LightningModule, ABC):
@@ -25,7 +25,7 @@ class MInterface(pl2.LightningModule, ABC):
         *,
         # Must declare using ModelTemplate to get the linked arguments. e.g., fs and window_length in our case. Otherwise, jsonargparse will ignore this argument. If you want other arguments to be linked, please declare them in the ModelTemplate class.
         # module: ModelTemplate,
-        model_class: type[torch.nn.Module],
+        model_class: type[torch.nn.Module] | Callable[..., torch.nn.Module],
         model_args: dict[str, Any],
         model_common_args: ModelInputArgs,
         loss: torch.nn.modules.loss._Loss | Sequence[torch.nn.modules.loss._Loss],
@@ -64,7 +64,7 @@ class MInterface(pl2.LightningModule, ABC):
             if hasattr(self.model, "summary"):
                 self.model.summary()
             else:
-                torchinfo.summary(self.model, input_size=(1, *self.input_size))
+                torchinfo.summary(self.model, input_size=self.input_size)
 
         self.pre_model: torch.nn.Module = lambda_layer.LambdaLayer(lambda x: x["exg"])
         self.post_model: torch.nn.Module = torch.nn.Identity()
@@ -95,12 +95,23 @@ class MInterface(pl2.LightningModule, ABC):
                 f"SUPERHUGE:MODELS:MODEL_INTERFACE:__INIT__: Cannot interfere the number of channels from {kwargs}. Using 64 as num_channel"
             )
             num_channel = 64
-        self.input_size = (input_length, num_channel)
+        self.input_size = (1, input_length, num_channel)
 
         return self.input_size
 
+        # def get_input_size(self, /, **kwargs):
+        #    eeg_input_size = super().get_input_size(**kwargs)
+        #    ... audio input size ...
+        #    self.input_size = (eeg_input_size, audio_input_size)
+        #    return self.input_size
+
     def forward(self, data) -> torch.Tensor:
         pre_inputs = self.pre_model(data)
+        # exg_inputs = self.pre_model(data) // audio_inputs = data['audio]
+        # exg_outputs, audio_outputs = self.model(exg_inputs, audio_inputs)
+        # exg_outputs = self.post_model(exg_outputs)
+        # return exg_outputs, audio_outputs
+
         outputs = self.model(pre_inputs)
         post_outputs = self.post_model(outputs)
         return post_outputs

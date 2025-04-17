@@ -6,11 +6,10 @@ from einops import rearrange
 from einops.layers.torch import EinMix, Rearrange
 from pydantic import BaseModel, Field
 
-from ...models.commons.multi_head_attention import MultiHeadAttention
-from ...models.commons.residual_layer import ResidualLayer
-#from .torch_deformer import *
-from ...torch_models.deformer import (output_mlp, preconv,
-                                      transformer_encoder_layer)
+from ...models.modules.multi_head_attention import MultiHeadAttention
+from ...models.modules.residual_layer import ResidualLayer
+
+from ...torch_models.deformer import output_mlp, preconv, transformer_encoder_layer
 
 
 # ===========================
@@ -45,6 +44,7 @@ class PositionalEmbedding2D(nn.Module):
     """
     动态支持任意长度 [B, C, T] 的位置嵌入
     """
+
     def __init__(self, channels: int):
         super().__init__()
         self.channels = channels
@@ -60,10 +60,10 @@ class PositionalEmbedding2D(nn.Module):
         return x + self.pos_embedding
 
 
-
 # ===========================
 # Transformer Module
 # ===========================
+
 
 # ================
 # 主体 Transformer
@@ -81,7 +81,7 @@ def rebok_transformer(
     """
     不显式写 forward，直接返回一个 nn.Sequential，
     其中每一层都是 rebok_transformer_layer(...) 生成的子模块。
-    
+
     Args:
         depth (int): Transformer 层数
         num_heads (int): MultiHeadAttention 的 head 数量
@@ -101,10 +101,9 @@ def rebok_transformer(
         mha_num_heads=num_heads,
         ff_hidden_dim=ff_hidden_dims,
         dropout=dp_rate,
-            )
-    return nn.Sequential(
-    *[layer for _ in range(depth)]
-        )
+    )
+    return nn.Sequential(*[layer for _ in range(depth)])
+
 
 def deformer(
     num_electrodes: int,
@@ -137,18 +136,19 @@ def deformer(
         ),  # (b, num_kernels, 1, num_time)
         Rearrange("b k c t -> b (k c) t"),  # (b, num_kernels, num_time)
         rebok_transformer(
-            mha_depth,          # depth
-            mha_num_heads,      # num_heads
-            mha_dim_heads,      # dim_heads
-            num_kernels,        # num_kernels
+            mha_depth,  # depth
+            mha_num_heads,  # num_heads
+            mha_dim_heads,  # dim_heads
+            num_kernels,  # num_kernels
             temporal_kernel_size,
-            ff_hidden_dim,     # ff_hidden_dims
-            dropout,            # dp_rate
-            mha_embed_dim,    # mha_embed_dim
+            ff_hidden_dim,  # ff_hidden_dims
+            dropout,  # dp_rate
+            mha_embed_dim,  # mha_embed_dim
         ),
         Rearrange("b k t -> b t k"),
         output_mlp(num_kernels, ff_hidden_dim, num_electrodes),
     )
+
 
 def rebok_deformer(
     window_length: int,
@@ -203,9 +203,9 @@ def rebok_deformer(
         mha_num_heads,
         mha_dim_heads,
         ff_hidden_dim,
-        dropout = dp_rate,
+        dropout=dp_rate,
         window_length=window_length,
-        )
+    )
 
     return model
 

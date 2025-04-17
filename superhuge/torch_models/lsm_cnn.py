@@ -98,27 +98,33 @@ def cnn_block(
     return model
 
 
-def lsm_cnn(
-    num_chan: int,
-    lsm_chan_dim: int,
-    cnn_num_layers: int,
-    cnn_temporal_kernel_size: int | Sequence[int],
-    cnn_channel_kernel_size: int | Sequence[int],
-    cnn_num_kernels: int | Sequence[int],
-    fc_hidden_dim: int,
-    dropout: float = 0.0,
-):
-    return nn.Sequential(
-        learnable_mapping(num_chan, lsm_chan_dim, dropout),
-        cnn_block(
-            in_features=1,
-            num_layers=cnn_num_layers,
-            temporal_kernel_size=cnn_temporal_kernel_size,
-            channel_kernel_size=cnn_channel_kernel_size,
-            num_kernels=cnn_num_kernels,
-            dropout=dropout,
-        ),
-        Rearrange(
-            "batch feature time c1 c2 -> batch time (feature c1 c2)",
-        ),
-    )
+class LSM_CNN(nn.Module):
+    def __init__(
+        self,
+        /,
+        *,
+        lsm_chan_dim: int,
+        cnn_num_layers: int,
+        cnn_temporal_kernel_size: int | Sequence[int],
+        cnn_channel_kernel_size: int | Sequence[int],
+        cnn_num_kernels: int | Sequence[int],
+        dropout: float = 0.0,
+        **kwargs,
+    ):
+        self.model = nn.Sequential(
+            learnable_mapping(kwargs["num_channels"], lsm_chan_dim, dropout),
+            cnn_block(
+                in_features=1,
+                num_layers=cnn_num_layers,
+                temporal_kernel_size=cnn_temporal_kernel_size,
+                channel_kernel_size=cnn_channel_kernel_size,
+                num_kernels=cnn_num_kernels,
+                dropout=dropout,
+            ),
+            Rearrange(
+                "batch feature time c1 c2 -> batch time (feature c1 c2)",
+            ),
+        )
+
+    def forward(self, x, *args, **kwargs):
+        return self.model(x)

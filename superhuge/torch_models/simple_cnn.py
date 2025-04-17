@@ -1,9 +1,7 @@
-from typing import Any
 from torch import nn
 from einops.layers.torch import Rearrange, Reduce
 
 from ..utils.validate import validate_kwargs
-from ..models.commons.model_template import ModelInputArgs, ModelTemplate
 
 
 class SimpleCNN(nn.Module):
@@ -33,10 +31,3 @@ class SimpleCNN(nn.Module):
 
     def forward(self, x):
         return self.model(x)
-
-
-class SimpleCNNInputArgs(ModelInputArgs):
-    temporal_kernel_size: int = 128
-    num_kernels: int = 64
-
-    model_config = {"extra": "allow"}

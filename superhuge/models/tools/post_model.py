@@ -4,7 +4,7 @@ import numpy as np
 import einops
 from einops.layers import torch as layers
 
-from .lambda_layer import LambdaLayer
+from ..modules.lambda_layer import LambdaLayer
 
 
 def classify_post_model(
@@ -28,7 +28,7 @@ def classify_post_model(
     )
 
 
-def regression_post_model(input_size: Sequence[int | None]):
+def regression_post_model(input_size: Sequence[int | None], num_features: int = 1):
     # input = Input(shape=input_size)
     # x = layers.Dense(1)(input)
     # x = layers.Flatten()(x)
@@ -38,7 +38,6 @@ def regression_post_model(input_size: Sequence[int | None]):
             "b t c -> b t num_features",
             weight_shape="c num_features",
             c=input_size[-1],
-            num_features=1,
+            num_features=num_features,
         ),
-        LambdaLayer(lambda x: x.squeeze(-1)),
     )

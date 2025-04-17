@@ -1,5 +1,5 @@
 from .m_interface import MInterface
-from .pre_model import Channel1D, Channel1DMixer, Channel2D
+from ..tools.pre_model import Channel1D, Channel1DMixer, Channel2D
 
 import lightning as pl2
 

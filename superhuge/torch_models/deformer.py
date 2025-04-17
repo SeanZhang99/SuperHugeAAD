@@ -1,16 +1,17 @@
 # ===========================
 # Imports
 # ===========================
+from collections.abc import Callable
 import torch
 from einops.layers.torch import Rearrange, EinMix
 from pydantic import BaseModel
 from torch import nn
 
-from ..models.commons.lazy_layernorm import LazyLayerNorm
+from ..models.modules.lazy_layernorm import LazyLayerNorm
 
-from ..models.commons.multi_head_attention import MultiHeadAttention
+from ..models.modules.multi_head_attention import MultiHeadAttention
 
-from ..models.commons.residual_layer import ResidualLayer
+from ..models.modules.residual_layer import ResidualLayer
 
 
 # ===========================
@@ -147,6 +148,46 @@ def transformer(
     )
 
 
+def transformer_ws(
+    depth: int,
+    fg_cnn_num_kernels: int,
+    fg_cnn_kernel_size: int,
+    time_dim: int,
+    mha_embed_dim: int,
+    mha_num_heads: int,
+    ff_hidden_dim: int,
+    dropout: float = 0.0,
+):
+    """
+    Args:
+        input_shape: (b, k, t)
+        depth: int
+        fg_cnn_args: dict
+            num_kernel: int, Optional, infer from input,
+            kernel_size: int,
+            dp_rate: float, Optional, infer from dropout
+        mha_args: dict
+            num_heads: int
+            embed_dim: int, Optional, infer from input,
+            dropout: float, Optional, infer from dropout
+        ff_args: dict
+            in_features: int, Optional, infer from input,
+            hidden_dim: int,
+            dropout: float, Optional, infer from dropout
+        dropout: float, Optional, default 0.0
+    """
+    transformer_encode_layer = transformer_encoder_layer(
+        fg_cnn_num_kernels,
+        fg_cnn_kernel_size,
+        time_dim,
+        mha_embed_dim,
+        mha_num_heads,
+        ff_hidden_dim,
+        dropout,
+    )
+    return nn.Sequential(*[transformer_encode_layer for _ in range(depth)])
+
+
 # ===========================
 # Custom Layers
 # ===========================
@@ -213,46 +254,85 @@ def output_mlp(in_features, ff_hidden_dim, num_electrodes):
 # ===========================
 # Main Model Definition
 # ===========================
-def deformer(
-    num_electrodes: int,
-    num_kernels: int,
-    temporal_kernel_size: int,
-    time_dim: int,
-    mha_embed_dim: int,
-    mha_depth: int,
-    mha_num_heads: int,
-    ff_hidden_dim: int,
-    dropout: float = 0.0,
-):
-    """
-    input_shape: Sequence[int]
-    num_kernels: int
-    temporal_kernel_size: int
-    mha_depth: int
-    mha_num_heads: int
-    mha_dim_per_head: int
-    ff_hidden_dim: int
-    dropout: float, Optional, default 0.0
-    """
-    return nn.Sequential(
-        # Rearrange("b t c -> b 1 c t"),
-        EinMix("b t c -> b 1 k t", weight_shape="c k", c=num_electrodes, k=num_kernels),
-        preconv(
-            num_kernels,
-            num_kernels,
-            temporal_kernel_size,
-        ),  # (b, num_kernels, 1, num_time)
-        Rearrange("b k c t -> b k (c t)"),  # (b, num_kernels, num_time)
-        transformer(
-            mha_depth,
-            num_kernels,
-            temporal_kernel_size,
-            time_dim,
-            mha_embed_dim,
-            mha_num_heads,
-            ff_hidden_dim,
-            dropout,
-        ),
-        Rearrange("b k t -> b t k"),
-        output_mlp(num_kernels, ff_hidden_dim, num_electrodes),
-    )
+class Deformer(nn.Module):
+    def __init__(
+        self,
+        /,
+        *,
+        num_kernels: int,
+        temporal_kernel_size: int,
+        mha_embed_dim: int,
+        mha_depth: int,
+        mha_num_heads: int,
+        ff_hidden_dim: int,
+        dropout: float = 0.0,
+        transformer_callable: Callable[..., torch.nn.Module] = transformer,
+        **kwargs,
+    ):
+        """
+        input_shape: Sequence[int]
+        num_kernels: int
+        temporal_kernel_size: int
+        mha_depth: int
+        mha_num_heads: int
+        mha_dim_per_head: int
+        ff_hidden_dim: int
+        dropout: float, Optional, default 0.0
+        """
+        self.model = nn.Sequential(
+            EinMix(
+                "b t c -> b 1 k t",
+                weight_shape="c k",
+                c=kwargs["num_channels"],
+                k=num_kernels,
+            ),
+            preconv(
+                num_kernels,
+                num_kernels,
+                temporal_kernel_size,
+            ),  # (b, num_kernels, 1, num_time)
+            Rearrange("b k c t -> b k (c t)"),  # (b, num_kernels, num_time)
+            transformer_callable(
+                mha_depth,
+                num_kernels,
+                temporal_kernel_size,
+                kwargs["fs"] * kwargs["window_length"],
+                mha_embed_dim,
+                mha_num_heads,
+                ff_hidden_dim,
+                dropout,
+            ),
+            Rearrange("b k t -> b t k"),
+            output_mlp(num_kernels, ff_hidden_dim, kwargs["num_channels"]),
+        )
+
+    def forward(self, x, *args, **kwargs):
+        return self.model(x)
+
+
+class Deformer_ws(Deformer):
+    def __init__(
+        self,
+        /,
+        *,
+        num_kernels: int,
+        temporal_kernel_size: int,
+        mha_embed_dim: int,
+        mha_depth: int,
+        mha_num_heads: int,
+        ff_hidden_dim: int,
+        dropout: float = 0.0,
+        **kwargs,
+    ):
+        transformer_callable = transformer_ws
+        super().__init__(
+            num_kernels=num_kernels,
+            temporal_kernel_size=temporal_kernel_size,
+            mha_embed_dim=mha_embed_dim,
+            mha_depth=mha_depth,
+            mha_num_heads=mha_num_heads,
+            ff_hidden_dim=ff_hidden_dim,
+            dropout=dropout,
+            transformer_callable=transformer_callable,
+            **kwargs,
+        )

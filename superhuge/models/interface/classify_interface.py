@@ -7,7 +7,7 @@ from .channel_mapping_interface import (
     ChannelMixing1DInterface,
 )
 from .m_interface import MInterface
-from .post_model import classify_post_model
+from ..tools.post_model import classify_post_model
 
 
 class ClassifyInterface(MInterface):
@@ -70,13 +70,11 @@ class ClassifyInterface(MInterface):
 
 
 class Channel1DMappingClassifyInterface(ChannelMapping1DInterface, ClassifyInterface):
-    def __init__(self, /, **kwargs):
-        super().__init__(**kwargs)
+    pass
 
 
 class Channel1DMixingClassifyInterface(ChannelMixing1DInterface, ClassifyInterface):
-    def __init__(self, /, **kwargs):
-        super().__init__(**kwargs)
+    pass
 
 
 class Channel2DClassifyInterface(ClassifyInterface, ChannelMapping2DInterface):

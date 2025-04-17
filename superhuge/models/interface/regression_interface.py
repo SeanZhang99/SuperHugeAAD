@@ -5,7 +5,7 @@ import torch
 from torchmetrics.functional import pearson_corrcoef
 
 from .m_interface import MInterface
-from .post_model import regression_post_model
+from ..tools.post_model import regression_post_model
 from .channel_mapping_interface import (
     ChannelMapping1DInterface,
     ChannelMapping2DInterface,
@@ -30,11 +30,10 @@ class RegressionInterface(MInterface):
 
     def training_closure(self, data: dict) -> torch.Tensor:
         outputs: torch.Tensor = self.forward(data)
-        if outputs.ndim == 2:
-            outputs = einops.rearrange(outputs, "batch time -> batch time 1")
         target: torch.Tensor = data["audio"]  # type: ignore
 
         return outputs, target
+        # return self.forward(data)
 
     def get_stats(
         self, x_pred: torch.Tensor, y_pred: torch.Tensor, meta: dict

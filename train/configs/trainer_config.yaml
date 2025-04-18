@@ -20,7 +20,7 @@ trainer:
         save_last: true
         save_top_k: 2
         save_weights_only: true
-    - class_path: superhuge.utils.fancy_progress_bar.FancyProgressBar
+    - class_path: superhuge.util.fancy_progress_bar.FancyProgressBar
       init_args:
         refresh_rate: 5
   check_val_every_n_epoch: 1

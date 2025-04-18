@@ -1,6 +1,6 @@
-class_path: superhuge.models.interface.model_interface.MInterface
+class_path: superhuge.model.interface.MInterface
 init_args:
-  model_class: superhuge.models.rebok_deformer.rebok_torch_deformer.rebok_deformer
+  model_class: superhuge.model.former.Deformer_ws
   model_args:
     window_length: 10
     fs: 128
@@ -14,5 +14,3 @@ init_args:
     ff_hidden_dim: 128
     num_electrodes: 70
     dp_rate: .5
-    # preconv_callable: superhuge.models.rebok_deformer.deformer.preconv
-    # transformer_callable: superhuge.models.rebok_deformer.rebok_torch_deformer.rebok_transformer

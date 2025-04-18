@@ -1,5 +1,5 @@
 ---
-class_path: superhuge.models.interface.model_interface.MInterface
+class_path: superhuge.model.interface.MInterface
 init_args:
   model_args:
     extractor_args:
@@ -10,4 +10,4 @@ init_args:
     output_context_args:
       kernel_size: 15
       num_kernel: 32
-  model_class: superhuge.torch_models.vlaai.VLAAI
+  model_class: superhuge.model.pure_cnn.VLAAI

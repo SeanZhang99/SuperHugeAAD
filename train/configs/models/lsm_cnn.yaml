@@ -1,5 +1,5 @@
 ---
-class_path: superhuge.models.interface.model_interface.MInterface
+class_path: superhuge.model.interface.MInterface
 init_args:
   model_args:
     num_chan: 74
@@ -10,4 +10,4 @@ init_args:
     cnn_num_kernels: 5
     fc_hidden_dim: 5
     dropout: 0.3
-  model_class: superhuge.torch_models.lsm_cnn.lsm_cnn
+  model_class: superhuge.model.pure_cnn.LSM_CNN

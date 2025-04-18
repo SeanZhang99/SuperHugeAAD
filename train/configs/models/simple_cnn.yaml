@@ -1,7 +1,7 @@
 ---
-class_path: superhuge.models.interface.model_interface.MInterface
+class_path: superhuge.model.interface.MInterface
 init_args:
-  model_class: superhuge.torch_models.simple_cnn.SimpleCNN
+  model_class: superhuge.model.pure_cnn.SimpleCNN
   model_args:
     temporal_kernel_size: 17
     num_kernels: 5

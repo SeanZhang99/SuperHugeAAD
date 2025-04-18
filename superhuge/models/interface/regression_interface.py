@@ -4,7 +4,7 @@ import einops
 import torch
 from torchmetrics.functional import pearson_corrcoef
 
-from .m_interface import MInterface
+from .model_interface import MInterface
 from ..tools.post_model import regression_post_model
 from .channel_mapping_interface import (
     ChannelMapping1DInterface,

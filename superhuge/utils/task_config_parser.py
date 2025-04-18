@@ -61,7 +61,7 @@ class TaskConfigParser:
                 ).items():
                     n_folds: int = self.config[task_type]["general"]["data"][
                         "init_args"
-                    ]["dataset_args"].get("n_folds", 5)
+                    ].get("n_folds", 5)
                     for test_fold_idx, val_fold_idx in product(
                         range(n_folds), range(n_folds)
                     ):
@@ -87,12 +87,8 @@ class TaskConfigParser:
                         )
                         merged_model = self._deep_merge_dicts(merged_model, cv_model)
 
-                        merged_data["init_args"]["dataset_args"][
-                            "test_fold_idx"
-                        ] = test_fold_idx
-                        merged_data["init_args"]["dataset_args"][
-                            "val_fold_idx"
-                        ] = val_fold_idx
+                        merged_data["init_args"]["test_fold_idx"] = test_fold_idx
+                        merged_data["init_args"]["val_fold_idx"] = val_fold_idx
 
                         config_copy: dict = {
                             "data": merged_data,

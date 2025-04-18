@@ -1,5 +1,5 @@
 ---
-class_path: superhuge.models.interface.m_interface.MInterface
+class_path: superhuge.models.interface.model_interface.MInterface
 init_args:
   model_args:
     num_chan: 74

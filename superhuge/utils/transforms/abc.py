@@ -68,7 +68,7 @@ class Transform(ABC):
         /,
         *,
         seed: int = 42,
-        apply_prob: float = 0.5,
+        apply_prob: float = 1.0,
         when: str = "before_returning",
         whom: str | Sequence[str] = "eeg",
         **kwargs,
@@ -91,42 +91,42 @@ class Transform(ABC):
 
             **kwargs: Additional parameters for subclasses.
         """
-        self.cfg = TransformConfig(when=when, whom=whom, apply_prob=apply_prob)
+        self._cfg = TransformConfig(when=when, whom=whom, apply_prob=apply_prob)
         self.dice = np.random.Generator(np.random.PCG64(seed))
         super().__init__()
 
     @property
     def apply_prob(self) -> float:
         """Probability of applying this transform."""
-        return self.cfg.apply_prob
+        return self._cfg.apply_prob
 
     @property
     def when(self) -> str:
         """When to apply this transform."""
-        return self.cfg.when
+        return self._cfg.when
 
     @property
     def whom(self) -> str | Sequence[str]:
         """Whom this transform is applied to."""
-        return self.cfg.whom
+        return self._cfg.whom
 
     @apply_prob.setter
     def apply_prob(self, value: float) -> None:
         """Set the probability of applying this transform."""
-        self.cfg.validate_apply_prob(value)
-        self.cfg.apply_prob = value
+        self._cfg.validate_apply_prob(value)
+        self._cfg.apply_prob = value
 
     @when.setter
     def when(self, value: str) -> None:
         """Set when to apply this transform."""
-        self.cfg.validate_when(value)
-        self.cfg.when = value
+        self._cfg.validate_when(value)
+        self._cfg.when = value
 
     @whom.setter
     def whom(self, value: str | Sequence[str]) -> None:
         """Set whom this transform is applied to."""
-        self.cfg.validate_whom(value)
-        self.cfg.whom = value
+        self._cfg.validate_whom(value)
+        self._cfg.whom = value
 
     @abstractmethod
     def __call__(self, x: np.ndarray, /, *args, **kwargs) -> np.ndarray:

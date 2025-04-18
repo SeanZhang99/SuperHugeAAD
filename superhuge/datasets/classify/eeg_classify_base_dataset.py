@@ -1,12 +1,5 @@
-from collections.abc import Callable
-
 from ..commons.eeg_dataset import EegDataset
 from ..metadata_processing.data import ClassifyMetaDataElement
-from ..metadata_processing.filters.classify_filter import (
-    ALLOWED_NUM_CLASS_INT,
-    ALLOWED_NUM_CLASS_STRING,
-    get_classify_filter,
-)
 
 
 class EegClassifyBaseDataset(EegDataset):
@@ -31,11 +24,7 @@ class EegClassifyBaseDataset(EegDataset):
         ), f"EEG_CLASSIFY_BASE_DATASET:GETITEM:ASSERTION:VALUE_ERROR: label must be an integer, got {type(label)}"
 
         if self.transform:
-            for transform in self.transform:
-                if transform.when == "before_returning" and (
-                    transform.whom == "all" or "label" in transform.whom
-                ):
-                    label = transform(label)
+            label = self.transform(label, meta, whom="label", when="before_returning")
 
         meta["label"] = label
 
@@ -47,36 +36,3 @@ class EegClassifyBaseDataset(EegDataset):
                 del meta[f"{field}_fs"]
 
         return {"meta": meta, "eeg": eeg, "label": label}
-
-    @classmethod
-    def meta_filter_func_parser(
-        cls,
-        meta_filter_func: (
-            Callable[
-                [
-                    ClassifyMetaDataElement,
-                ],
-                ClassifyMetaDataElement | None,
-            ]
-            | None
-        ),
-        *args,
-        **kwargs,
-    ):
-        if meta_filter_func is None:
-            assert (
-                len(args) > 0 or "target" in kwargs
-            ), "EEG_CLASSIFY_BASE_DATASET:META_FILTER_FUNC_PARSER:ASSERTION:INPUT_ARGUMENT_ERROR: target must be specified at the first positional argument or as a keyword argument"
-            target = args[0] if len(args) > 0 else kwargs["target"]
-
-            # Validate target is a valid argument
-            assert (isinstance(target, int) and target in ALLOWED_NUM_CLASS_INT) or (
-                isinstance(target, str) and target in ALLOWED_NUM_CLASS_STRING
-            ), f"EEG_CLASSIFY_BASE_DATASET:META_FILTER_FUNC_PARSER:ASSERTION:VALUE_ERROR: target must be a valid integer from {ALLOWED_NUM_CLASS_INT} or a valid string from {ALLOWED_NUM_CLASS_STRING}"
-            return get_classify_filter(target)
-        elif isinstance(meta_filter_func, Callable):
-            return super().meta_filter_func_parser(meta_filter_func, *args, **kwargs)
-        else:
-            raise TypeError(
-                f"EEG_CLASSIFY_BASE_DATASET:META_FILTER_FUNC_PARSER:TYPE_ERROR: meta_filter_func must be a Callable or None, got {type(meta_filter_func)}"
-            )

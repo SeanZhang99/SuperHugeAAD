@@ -7,8 +7,11 @@ from .data import (
     CrossValidationEntry,
 )
 
+from functools import wraps
+
 
 def leave_one_out_input_decorator(func) -> GroupingFunction:
+    @wraps(func)
     def wrapper(
         metadata: MetaData,
         test_fold_idx: int,
@@ -19,7 +22,8 @@ def leave_one_out_input_decorator(func) -> GroupingFunction:
     ) -> CrossValidationEntry:
         return func(metadata, test_fold_idx, val_fold_idx, n_folds, seed, **kwargs)
 
-    return cast(GroupingFunction, wrapper)
+    # return cast(GroupingFunction, wrapper)
+    return wrapper
 
 
 def collect_dataset_subject_trials(
@@ -64,7 +68,7 @@ def divide_sets(
     return train_set, val_set, test_set
 
 
-@leave_one_out_input_decorator
+# @leave_one_out_input_decorator
 def loto(
     metadata: MetaData,
     test_fold_idx: int,

@@ -11,7 +11,8 @@ from .metadata_processing import (
     RegressionMetaDataElement,
     leave_one_out_input_decorator,
 )
-from .commons import DInterface, EegDataset
+from .commons.eeg_dataset import EegDataset
+from .commons.data_interface import DInterface
 
 __all__ = [
     "ClassifyMetaDataElement",

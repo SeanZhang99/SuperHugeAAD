@@ -1,3 +1,4 @@
+from .abc import MetadataFilter, ClassifyMetadataFilter, RegressionMetadataFilter
 from .classify_filter import get_classify_filter
 from .composer import MetaDataFilterComposer
 from .general import MetadataValueSelector
@@ -9,4 +10,7 @@ __all__ = [
     "get_classify_filter",
     "get_regression_filter",
     "MetadataValueSelector",
+    "MetadataFilter",
+    "ClassifyMetadataFilter",
+    "RegressionMetadataFilter",
 ]

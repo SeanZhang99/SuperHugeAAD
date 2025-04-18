@@ -7,7 +7,7 @@ from .channel_mapping_interface import (
     ChannelMapping2DInterface,
     ChannelMixing1DInterface,
 )
-from .m_interface import MInterface
+from .model_interface import MInterface
 from ..tools.post_model import classify_post_model
 
 

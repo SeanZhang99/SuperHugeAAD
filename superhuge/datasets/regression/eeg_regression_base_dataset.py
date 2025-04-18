@@ -1,18 +1,9 @@
 import os
-from collections.abc import Callable
-import pickle
-
-from jinja2 import Template
 from pydantic import BaseModel
 import numpy as np
-import torch
 
 from ..commons.eeg_dataset import EegDataset
-from ..metadata_processing.data import MetaDataElement, RegressionMetaDataElement
-from ..metadata_processing.filters.regress_filter import (
-    ALLOWED_SPEECH_FEATURES,
-    get_regression_filter,
-)
+from ..metadata_processing.data import RegressionMetaDataElement
 
 
 ENV_ALIASE = ["env", "envelope", "env_path"]
@@ -68,11 +59,9 @@ class EegRegressionBaseDataset(EegDataset):
         _, segment_idx = self._map_idx_to_file_and_segment(idx)
 
         if self.transform:
-            for transform in self.transform:
-                if transform.when == "before_slicing" and (
-                    "audio" in transform.whom or "all" in transform.whom
-                ):
-                    speech_feature = transform(speech_feature)
+            speech_feature = self.transform(
+                speech_feature, meta, whom="audio", when="before_slicing"
+            )
 
         # 根据 segment_length 和 overlap 截取语音特征段
         stride = self.segment_length // self.overlap
@@ -82,11 +71,9 @@ class EegRegressionBaseDataset(EegDataset):
             speech_segment = speech_segment[:, np.newaxis]
 
         if self.transform:
-            for transform in self.transform:
-                if transform.when == "before_returning" and (
-                    "audio" in transform.whom or "all" in transform.whom
-                ):
-                    speech_segment = transform(speech_segment)
+            speech_segment = self.transform(
+                speech_segment, meta, whom="audio", when="before_returning"
+            )
 
         if "label" in meta:
             del meta["label"]
@@ -99,37 +86,3 @@ class EegRegressionBaseDataset(EegDataset):
                     del meta[f"{field}_fs"]
 
         return {"meta": meta, "eeg": eeg, "audio": speech_segment.astype(np.float32)}
-
-    @classmethod
-    def meta_filter_func_parser(
-        cls,
-        meta_filter_func: (
-            Callable[
-                [
-                    RegressionMetaDataElement,
-                ],
-                RegressionMetaDataElement | None,
-            ]
-            | None
-        ),
-        *args,
-        **kwargs,
-    ):
-
-        if meta_filter_func is None:
-            assert (
-                len(args) > 0 or "target" in kwargs
-            ), "EEG_REGRESSION_BASE_DATASET:META_FILTER_FUNC_PARSER:ASSERTION:INPUT_ARGUMENT_ERROR: target must be specified at the first positional argument or as a keyword argument"
-            target = args[0] if len(args) > 0 else kwargs["target"]
-
-            # Validate target is a valid argument
-            assert (
-                target in ALLOWED_SPEECH_FEATURES
-            ), f"EEG_REGRESSION_BASE_DATASET:META_FILTER_FUNC_PARSER:ASSERTION:TARGET:VALUE_ERROR: target must be a string from: {ALLOWED_SPEECH_FEATURES}"
-            return get_regression_filter(target)
-        elif isinstance(meta_filter_func, Callable):
-            return super().meta_filter_func_parser(meta_filter_func, *args, **kwargs)
-        else:
-            raise TypeError(
-                f"EEG_REGRESSION_BASE_DATASET:META_FILTER_FUNC_PARSER:TYPE_ERROR: meta_filter_func must be a Callable or None, got {type(meta_filter_func)}"
-            )

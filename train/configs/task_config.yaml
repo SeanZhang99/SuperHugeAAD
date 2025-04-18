@@ -4,19 +4,18 @@ directional_focus_decoding:
     data:
       init_args:
         dataset_class: superhuge.datasets.classify.eeg_classify_base_dataset.EegClassifyBaseDataset
-        dataset_args:
-          metadata_fields:
-            [
-              "dataset_id",
-              "subject_id",
-              "trial_id",
-              "signal_length",
-              "num_channel",
-              "fs",
-              "label",
-              "channel_infos",
-            ]
-          n_folds: 5
+        metadata_fields:
+          [
+            "dataset_id",
+            "subject_id",
+            "trial_id",
+            "signal_length",
+            "num_channel",
+            "fs",
+            "label",
+            "channel_infos",
+          ]
+        n_folds: 5
     model:
       class_path: superhuge.models.interface.classify_interface.Channel1DMappingClassifyInterface
       # class_path: superhuge.models.interface.classify_interface.Channel1DMixingClassifyInterface
@@ -30,9 +29,8 @@ directional_focus_decoding:
       enable: 1
       data:
         init_args:
-          dataset_args:
-            meta_filter_func_args:
-              - binary_leftright
+          meta_filter_func_args:
+            - binary_leftright
       model:
         init_args:
           num_class: 2
@@ -40,9 +38,8 @@ directional_focus_decoding:
       enable: 0
       data:
         init_args:
-          dataset_args:
-            meta_filter_func_args:
-              - binary_frontrear
+          meta_filter_func_args:
+            - binary_frontrear
       model:
         init_args:
           num_class: 2
@@ -50,9 +47,8 @@ directional_focus_decoding:
       enable: 0
       data:
         init_args:
-          dataset_args:
-            meta_filter_func_args:
-              - four-class
+          meta_filter_func_args:
+            - four-class
       model:
         init_args:
           num_class: 4
@@ -60,9 +56,8 @@ directional_focus_decoding:
       enable: 0
       data:
         init_args:
-          dataset_args:
-            meta_filter_func_args:
-              - eight-class
+          meta_filter_func_args:
+            - eight-class
       model:
         init_args:
           num_class: 8
@@ -72,22 +67,19 @@ directional_focus_decoding:
       enable: 1
       data:
         init_args:
-          dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.group.loto
-            n_folds: 5
+          meta_group_func: superhuge.datasets.metadata_processing.group.loto
+          n_folds: 5
     leave_one_subject_out:
       enable: 0
       data:
         init_args:
-          dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.group.loso
-            n_folds: 16
+          meta_group_func: superhuge.datasets.metadata_processing.group.loso
+          n_folds: 16
     leave_one_dataset_out:
       enable: 0
       data:
         init_args:
-          dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.group.lodo
+          meta_group_func: superhuge.datasets.metadata_processing.group.lodo
 
 speech_reconstruction:
   type: regression
@@ -107,27 +99,23 @@ speech_reconstruction:
       enable: 0
       data:
         init_args:
-          dataset_args:
-            meta_filter_func_args:
-              - env
-            speech_feature_key: env
+          meta_filter_func_args:
+            - env
+          speech_feature_key: env
 
   cross_validation:
     leave_one_trial_out:
       enable: 1
       data:
         init_args:
-          dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.group.loto
+          meta_group_func: superhuge.datasets.metadata_processing.group.loto
     leave_one_subject_out:
       enable: 0
       data:
         init_args:
-          dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.group.loso
+          meta_group_func: superhuge.datasets.metadata_processing.group.loso
     leave_one_dataset_out:
       enable: 0
       data:
         init_args:
-          dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.group.lodo
+          meta_group_func: superhuge.datasets.metadata_processing.group.lodo

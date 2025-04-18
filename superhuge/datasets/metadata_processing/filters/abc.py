@@ -9,3 +9,21 @@ class MetadataFilter(ABC):
         metadata_element: MetaDataElement | None,
     ) -> MetaDataElement | None:
         pass
+
+
+class ClassifyMetadataFilter(MetadataFilter):
+    """
+    Base class for classification metadata filters.
+    Does nothing, just for identification.
+    """
+
+    pass
+
+
+class RegressionMetadataFilter(MetadataFilter):
+    """
+    Base class for regression metadata filters.
+    Does nothing, just for identification.
+    """
+
+    pass

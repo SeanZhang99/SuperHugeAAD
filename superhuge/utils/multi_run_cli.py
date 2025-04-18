@@ -73,14 +73,18 @@ class NamedParamsCLI(LightningCLI):
             "model.init_args.num_mix_out_channels",
             "model.init_args.model_common_args.num_channels",
         )
-        # parser.link_arguments(
-        #     "data.init_args.root_path",
-        #     "data.init_args.transforms.init_args.root_path",
-        # )
-        # parser.link_arguments(
-        #     "data.init_args.fs",
-        #     "data.init_args.transforms.init_args.fs",
-        # )
+        parser.link_arguments(
+            "data.init_args.root_path",
+            "data.init_args.transform.init_args.root_path",
+        )
+        parser.link_arguments(
+            "data.init_args.fs",
+            "data.init_args.transform.init_args.fs",
+        )
+        parser.link_arguments(
+            "model.init_args.num_audio_features",
+            "model.init_args.model_common_args.num_audio_features",
+        )
 
     # parser.link_arguments(
     #     "data.init_args.fs",

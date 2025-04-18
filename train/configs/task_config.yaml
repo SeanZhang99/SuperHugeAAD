@@ -26,7 +26,7 @@ directional_focus_decoding:
           class_path: superhuge.models.loss.classify.cross_entropy_loss.CrossEntropyLoss
   tasks:
     binary_leftright:
-      enable: 1
+      enable: 0
       data:
         init_args:
           meta_filter_func_args:
@@ -88,20 +88,31 @@ speech_reconstruction:
       init_args:
         dataset_class: superhuge.datasets.regression.eeg_regression_base_dataset.EegRegressionBaseDataset
         n_folds: 6
+        metadata_fields:
+          [
+            "dataset_id",
+            "subject_id",
+            "trial_id",
+            "signal_length",
+            "num_channel",
+            "fs",
+            "env",
+            "channel_infos",
+          ]
 
     model:
       class_path: superhuge.models.interface.regression_interface.Channel1DRegressionInterface
       init_args:
+        num_audio_features: 1
         loss:
           class_path: superhuge.models.loss.regression.mse_loss.MSELoss
   tasks:
     envelope_reconstruction:
-      enable: 0
+      enable: 1
       data:
         init_args:
           meta_filter_func_args:
             - env
-          speech_feature_key: env
 
   cross_validation:
     leave_one_trial_out:

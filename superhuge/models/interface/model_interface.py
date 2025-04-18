@@ -31,7 +31,6 @@ class MInterface(pl2.LightningModule, ABC):
         loss: torch.nn.modules.loss._Loss | Sequence[torch.nn.modules.loss._Loss],
         loss_hparams: Sequence[float] | None = None,
         ckpt_path: str | None = None,
-        summary: bool = True,
     ):
         super().__init__()
 
@@ -71,11 +70,10 @@ class MInterface(pl2.LightningModule, ABC):
         self.get_input_size(**model_common_args.model_dump())
         self._output_keys = self.configure_output()
 
-        if summary:
-            if hasattr(self.model, "summary"):
-                self.model.summary()
-            else:
-                torchinfo.summary(self.model, input_size=list(self.input_size.values()))
+        summary: torchinfo.ModelStatistics = torchinfo.summary(
+            self.model, input_size=list(self.input_size.values())
+        )
+        self.output_size = summary.summary_list[0].output_size
 
     @final
     def get_input_size(self, /, **kwargs) -> list[tuple[int | None, ...]]:
@@ -158,34 +156,6 @@ class MInterface(pl2.LightningModule, ABC):
                 outputs.append(data[key])
 
         return tuple(outputs)
-
-    # @abstractmethod
-    # def training_closure(
-    #     self, data: dict[str, torch.Tensor]
-    # ) -> tuple[torch.Tensor, torch.Tensor]:
-    #     """training_closure. This method will be called during `training_step`. It should return the prediction (the output of the model) and the target (`label` in classification or `target` in regression).
-
-    #     Args:
-    #         data (dict[str, torch.Tensor]): input data dict. should be a dict with key `eeg`, `meta` and `label` or `target`.
-
-    #     Returns:
-    #         tuple[torch.Tensor, torch.Tensor]: [output, target/label]
-
-    #     Example:
-    #         ```python
-    #         def training_closure(self, data: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
-    #         # Regression task
-    #             outputs = self.forward(data)
-    #             target = data['audio']
-    #             return outputs, target
-
-    #         def training_closure(self, data: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
-    #         # Classification task
-    #             outputs = self.forward(data).argmax[1]
-    #             target = data['label']
-    #             return outputs, target
-    #     """
-    #     pass
 
     @abstractmethod
     def get_stats(

@@ -102,8 +102,8 @@ class DInterface(pl2.LightningDataModule):
         test_fold_idx: int = 0,
         val_fold_idx: int = 1,
         n_folds: int = 5,
-        window_length: int = 10,
-        fs: int = 128,
+        window_length: int | float = 10,
+        fs: int | float = 128,
         overlap: int = 1,
         metadata_fields: list[MetaDataField] = [
             "dataset_id",

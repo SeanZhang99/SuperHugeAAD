@@ -17,24 +17,25 @@ class EEGDatasetWithSpeechFeatureCreationConfig(BaseModel, extra="allow"):
 class EegRegressionBaseDataset(EegDataset):
     metadata_cls = RegressionMetaDataElement
 
-    def __init__(self, **kwargs):
+    def __init__(self, /, **kwargs):
         """
         Args:
             speech_feature_key (str): 元数据中存储语音特征文件名的键。
         """
-        config = EEGDatasetWithSpeechFeatureCreationConfig(**kwargs)
-        super().__init__(**kwargs)
-
-        # 处理支持的语音特征别名
-        feature_type = config.speech_feature_key.lower()
-        if feature_type in ENV_ALIASE:
-            self.speech_feature_type = "env"
-        elif feature_type in MEL_ALIASE:
-            self.speech_feature_type = "mel"
+        for metadata_field in kwargs["metadata_fields"]:
+            # 处理支持的语音特征别名
+            if metadata_field in ENV_ALIASE:
+                self.speech_feature_type = "env"
+                break
+            elif metadata_field in MEL_ALIASE:
+                self.speech_feature_type = "mel"
+                break
         else:
             raise ValueError(
-                f"EEG_REGRESSION_BASE_DATASET:__INIT__:VALUE_ERROR: Unsupported speech feature: {feature_type}. Supported values are {ENV_ALIASE+MEL_ALIASE}."
+                f"EEG_REGRESSION_BASE_DATASET:__INIT__:VALUE_ERROR: Supported speech feature not found. Supported values are {ENV_ALIASE+MEL_ALIASE}."
             )
+
+        super().__init__(**kwargs)
 
         self.speech_feature_path = os.path.join(
             self.eeg_path.replace("eeg", "stimuli"), self.speech_feature_type

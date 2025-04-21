@@ -7,27 +7,23 @@ class MSELoss(_Loss):
         self, y_pred: torch.Tensor, y_true: torch.Tensor, **kwargs
     ) -> torch.Tensor:
         return torch.nn.functional.mse_loss(
-            y_pred[:, :, 0], y_true[:, :, 0], reduction="none"
-        )
+            y_pred, y_true[..., 0], reduction="none"
+        ).mean(dim=tuple(range(1, y_pred.ndim)))
 
 
 class ContrastiveMSELoss(_Loss):
     def forward(
         self, y_pred: torch.Tensor, y_true: torch.Tensor, **kwargs
     ) -> torch.Tensor:
-        loss = torch.nn.functional.mse_loss(
-            y_pred[:, :, 0], y_true[:, :, 0], reduction="none"
-        )
-        loss -= (
-            torch.nn.functional.mse_loss(
-                y_pred[:, :, 0], y_true[:, :, 1], reduction="none"
-            )
-            * 0.5
-        )
-        loss -= (
-            torch.nn.functional.mse_loss(
-                y_pred[:, :, 0], y_true[:, :, 2], reduction="none"
-            )
-            * 0.5
-        )
+        if y_pred.ndim == 3 and y_true.ndim == 4:
+            y_pred = y_pred.unsqueeze(-1)
+        elif y_pred.ndim == 4 and y_true.ndim == 3:
+            y_true = y_true.unsqueeze(-1)
+        mse: torch.Tensor = torch.nn.functional.mse_loss(
+            y_pred, y_true, reduction="none"
+        ).mean(dim=range(1, 3))
+        # average across time and feature dimensions
+        loss = mse[..., 0]
+        for j in range(1, mse.shape[-1]):
+            loss += mse[..., j] / (mse.shape[-1] - 1)
         return loss

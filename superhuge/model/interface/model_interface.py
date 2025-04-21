@@ -46,7 +46,7 @@ class MInterface(pl2.LightningModule, ABC):
 
         # Instantiate main model and possibly load checkpoint
         if model_common_args.num_channels is None:
-            from ...util.channel_enum import NUM_ELECTRODES as num_channels
+            from ...utils.channel_enum import NUM_ELECTRODES as num_channels
 
             model_common_args.num_channels = num_channels
         self.model = model_class(**model_args, **model_common_args.model_dump())
@@ -106,7 +106,7 @@ class MInterface(pl2.LightningModule, ABC):
 
         self.input_size = input_sizes
 
-    def forward(self, data) -> tuple:
+    def forward(self, data) -> tuple[torch.Tensor, ...]:
         """
         Forward pass of the model.
 
@@ -175,13 +175,18 @@ class MInterface(pl2.LightningModule, ABC):
         """
         pass
 
+    def training_closure(self, *args):
+        """If you want to do any arbitary modification to the data before or after the calling of `self.forward`, override this method. This method will be called during `training_step`, and therefore, also `validation_step` and `test_step` in our logics. The default implementation is to call `self.forward` directly."""
+
+        # Call the forward method of the model with the provided arguments
+        return self.forward(*args)
+
     @final
     def training_step(self, batch: dict[str], batch_idx: int) -> torch.Tensor:
         loss: torch.Tensor = torch.zeros(1, device=self.device)
         batch_size = 0
         for data in batch.values():
-            # outputs, targets = self.training_closure(data)
-            outputs = self.forward(data)
+            outputs = self.training_closure(data)
             loss += self.loss_fn(*outputs).sum()
             batch_size += outputs[0].shape[0]
             self.get_stats(

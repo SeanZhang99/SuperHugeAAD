@@ -1,7 +1,7 @@
 from torch import nn
 from einops.layers.torch import Rearrange, Reduce
 
-from ...util.validate import validate_kwargs
+from ...utils.validate import validate_kwargs
 
 
 class SimpleCNN(nn.Module):

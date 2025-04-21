@@ -31,8 +31,8 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import torch
 
 import keras
-from superhuge.util.multi_run_cli import MultiRunCLI
-from superhuge.util.pick_model_config import pick_file
+from superhuge.utils.multi_run_cli import MultiRunCLI
+from superhuge.utils.pick_model_config import pick_file
 
 keras.config.set_image_data_format("channels_first")
 torch.set_float32_matmul_precision("medium")

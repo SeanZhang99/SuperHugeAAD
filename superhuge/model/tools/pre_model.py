@@ -1,7 +1,7 @@
 import torch
 from einops.layers.torch import EinMix
 
-from ...util.channel_enum import CHANNEL1D_ENUM, CHANNEL2D_ENUM, NUM_ELECTRODES
+from ...utils.channel_enum import CHANNEL1D_ENUM, CHANNEL2D_ENUM, NUM_ELECTRODES
 
 
 class Channel1D(torch.nn.Module):

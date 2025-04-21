@@ -5,7 +5,7 @@ import numpy as np
 import tqdm
 from torch.utils.data import Dataset
 
-from ...util.validate import validate_kwargs
+from ...utils.validate import validate_kwargs
 from ..metadata_processing.data import MetaData, MetaDataElement, MetaDataField
 from ..transforms.composer import TransformComposer
 

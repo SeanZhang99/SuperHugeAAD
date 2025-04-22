@@ -18,7 +18,7 @@ class SimpleCNN(nn.Module):
         self.model = nn.Sequential(
             Rearrange("batch time channel -> batch 1 time channel"),
             # Padding order: last dimension, second last, ...
-            nn.ZeroPad2d((0, 0, 0, temporal_kernel_size - 1)),
+            nn.ZeroPad2d((0, temporal_kernel_size - 1, 0, 0)),
             nn.Conv2d(
                 in_channels=1,
                 out_channels=num_kernels,

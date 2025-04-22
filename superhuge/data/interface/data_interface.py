@@ -44,7 +44,7 @@ from ..metadata_processing.data import (
     GroupingFunction,
     DatasetSubjectTrialEntry,
 )
-from ..metadata_processing.group import leave_one_out_input_decorator
+from ..metadata_processing.group import leave_one_out_input_decorator, loto
 from ..transforms.composer import TransformComposer
 from ..transforms.abc import Transform
 
@@ -116,17 +116,20 @@ class DInterface(pl2.LightningDataModule):
         super().__init__()
 
         if not dataloader_args.get("num_workers", None):
-            del dataloader_args["prefetch_factor"]
-            del dataloader_args["persistent_workers"]
+            if "prefetch_factor" in dataloader_args:
+                del dataloader_args["prefetch_factor"]
+            if "persistent_workers" in dataloader_args:
+                del dataloader_args["persistent_workers"]
 
         self.dataloader_args = dataloader_args
+
+        preproc_stage = preproc_stage or "preprocessed"
+        meta_group_func = meta_group_func or loto
 
         self.dataset_cfg = CreateDatasetsInputConfig(
             dataset_class=dataset_class,
             meta_path=os.path.join(root_path, preproc_stage, "meta", "metadata.pkl"),
-            eeg_path=os.path.join(
-                root_path, preproc_stage if preproc_stage else "preprocessed", "eeg"
-            ),
+            eeg_path=os.path.join(root_path, preproc_stage, "eeg"),
             meta_filter_func=self.meta_filter_func_parser(
                 dataset_class, meta_filter_func, *meta_filter_func_args
             ),
@@ -139,7 +142,7 @@ class DInterface(pl2.LightningDataModule):
             overlap=overlap,
             transform=(
                 TransformComposer(
-                    *transform if isinstance(transform, Sequence) else transform
+                    *(transform if isinstance(transform, Sequence) else [transform])
                 )
                 if transform
                 else None

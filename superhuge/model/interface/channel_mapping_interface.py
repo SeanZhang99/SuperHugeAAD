@@ -1,4 +1,4 @@
-from ..tools.pre_model import Channel1D, Channel2D, Channel1DMixer
+from ..module.pre_model import Channel1D, Channel2D, Channel1DMixer
 from .model_interface import MInterface
 
 

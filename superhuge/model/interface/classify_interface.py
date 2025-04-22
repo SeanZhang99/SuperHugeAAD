@@ -1,7 +1,7 @@
 import torch
 from torchmetrics import ConfusionMatrix
 
-from ..tools.post_model import classify_post_model
+from ..module.post_model import classify_post_model
 from .model_interface import MInterface
 from .channel_mapping_interface import (
     ChannelMapping1DInterface,

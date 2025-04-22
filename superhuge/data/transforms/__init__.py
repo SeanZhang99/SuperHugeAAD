@@ -6,6 +6,7 @@ from .pad_speech import PadSpeech
 from .resample import Resample
 from .time_shift import TimeShift
 from .composer import TransformComposer
+from .scale import Scale
 
 __all__ = [
     "ChannelMask",
@@ -13,6 +14,7 @@ __all__ = [
     "Filter",
     "PadSpeech",
     "Resample",
+    "Scale",
     "TimeShift",
     "Transform",
     "TransformComposer",

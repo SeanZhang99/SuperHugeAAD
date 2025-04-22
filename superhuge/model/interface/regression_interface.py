@@ -1,7 +1,6 @@
-import einops
 import torch
 
-from ..tools.post_model import regression_post_model
+from ..module.post_model import regression_post_model
 from .model_interface import MInterface
 from .channel_mapping_interface import (
     ChannelMapping1DInterface,

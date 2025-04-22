@@ -92,14 +92,14 @@ class DInterface(pl2.LightningDataModule):
         dataset_class: type[EegDataset],
         dataloader_args: dict,
         root_path: str,
+        window_length: float,
+        fs: float,
         meta_filter_func: MetadataFilter | Sequence[MetadataFilter] | None = None,
         meta_filter_func_args: list = [],
         meta_group_func: Callable | None = None,
         test_fold_idx: int = 0,
         val_fold_idx: int = 1,
         n_folds: int = 5,
-        window_length: int | float = 10,
-        fs: int | float = 128,
         overlap: int = 1,
         metadata_fields: list[MetaDataField] = [
             "dataset_id",
@@ -111,7 +111,6 @@ class DInterface(pl2.LightningDataModule):
         ],
         transform: Transform | Sequence[Transform] | None = None,
         preproc_stage: str | None = None,
-        summary: bool = True,
         **kwargs,
     ):
         super().__init__()
@@ -151,9 +150,7 @@ class DInterface(pl2.LightningDataModule):
         self.kwargs = kwargs
 
         self.create_datasets()
-
-        if summary:
-            self.print_summary()
+        self.print_summary()
 
     def meta_filter_func_parser(
         self,

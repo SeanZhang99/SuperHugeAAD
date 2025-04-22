@@ -10,7 +10,7 @@ import torch
 import torchinfo
 
 from ..module.lambda_layer import LambdaLayer
-from ..tools.model_template import ModelInputArgs
+from ..module.model_template import ModelInputArgs
 
 
 class MInterface(pl2.LightningModule, ABC):

@@ -12,15 +12,16 @@ def classify_post_model(
         nn.LazyLinear(
             hidden_dim,
         ),
-        nn.LayerNorm(hidden_dim),
-        nn.GELU(),
-        EinMix(
-            "b hidden_dim -> b num_class",
-            weight_shape="hidden_dim num_class",
-            bias_shape="num_class",
-            hidden_dim=hidden_dim,
-            num_class=num_class,
-        ),
+        # nn.LayerNorm(hidden_dim),
+        nn.LeakyReLU(),
+        nn.Linear(in_features=hidden_dim, out_features=num_class),
+        # EinMix(
+        #     "b hidden_dim -> b num_class",
+        #     weight_shape="hidden_dim num_class",
+        #     bias_shape="num_class",
+        #     hidden_dim=hidden_dim,
+        #     num_class=num_class,
+        # ),
     )
 
 

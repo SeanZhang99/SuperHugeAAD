@@ -11,8 +11,6 @@ class Filter(Transform):
 
     def __init__(
         self,
-        /,
-        *,
         Wn: float | Sequence[float],
         fs: float,
         btype: str,

@@ -8,6 +8,7 @@ init_args:
     persistent_workers: true
     pin_memory: true
     prefetch_factor: 8
+    shuffle: false
   dataset_class: superhuge.data.datasets.EegDataset
   fs: 128.0
   meta_filter_func:

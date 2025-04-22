@@ -16,7 +16,7 @@ init_args:
         attribute_name: dataset_id
         attribute_value:
           # - 1 # AHU
-          - 2 # DTU
+          # - 2 # DTU
           # - 3 # Estart
           - 4 # KUL
           # - 5 # KUL-AV-GC
@@ -33,10 +33,9 @@ init_args:
     - fs
     - channel_infos
   overlap: 2
-  root_path: E:\derivatives\SuperHuge
+  root_path: /data/nvme/ssd2/zhangyuanming/EEG/derivatives/SuperHuge/
   preproc_stage: preprocessed
   transform:
-    null
     # - class_path: superhuge.data.transforms.Filter
     #   init_args:
     #     apply_prob: 1.0
@@ -46,10 +45,10 @@ init_args:
     #     btype: bandpass
     #     order: 5
     #     fs: ${init_args.fs}
-    # - class_path: superhuge.data.transforms.Scale
-    #   init_args:
-    #     apply_prob: 1.0
-    # when: before_returning
-    # whom: eeg
-    # root_path: ${init_args.root_path}
+    - class_path: superhuge.data.transforms.Scale
+      init_args:
+        apply_prob: 1.0
+        when: before_returning
+        whom: eeg
+        root_path: ${init_args.root_path}
   window_length: 10

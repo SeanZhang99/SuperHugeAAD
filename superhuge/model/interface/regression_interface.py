@@ -1,4 +1,5 @@
 import torch
+import torchinfo
 
 from ..module.post_model import regression_post_model
 from .model_interface import MInterface
@@ -18,6 +19,7 @@ class RegressionInterface(MInterface):
         self._num_audio_features = num_audio_features
 
         self.post_model = regression_post_model(self.output_size, num_audio_features)
+        torchinfo.summary(self.post_model, input_size=self.output_size)
 
     def get_stats(
         self,

@@ -1,4 +1,5 @@
 import torch
+import torchinfo
 from torchmetrics import ConfusionMatrix
 
 from ..module.post_model import classify_post_model
@@ -18,13 +19,8 @@ class ClassifyInterface(MInterface):
             task="multiclass",
             num_classes=num_class,
         )
-        self.post_model = classify_post_model(self.input_size, num_class, hidden_dim)
-
-    # def training_closure(self, data):
-    #     outputs: torch.Tensor = self.forward(data)
-    #     targets = data["label"].to(torch.long)
-
-    #     return outputs, targets
+        self.post_model = classify_post_model(self.output_size, num_class, hidden_dim)
+        torchinfo.summary(self.post_model, input_size=self.output_size)
 
     def get_stats(self, pred: torch.Tensor, label: torch.Tensor, meta: dict):
         pred = pred.argmax(dim=1)

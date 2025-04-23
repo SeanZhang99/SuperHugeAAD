@@ -269,15 +269,33 @@ class MInterface(pl2.LightningModule, ABC):
     def on_after_backward(self):
         for name, param in self.named_parameters():
             if param.grad is not None:
-                grad_norm = param.grad.detach().data.norm(2).item()
                 self.log(
-                    f"grad_norm/{name}",
-                    grad_norm,
+                    f"grad_norm2/{name}",
+                    param.grad.detach().data.norm(2).item(),
                     on_epoch=False,
                     batch_size=1,
                     enable_graph=False,
                 )
-        return super().on_after_backward()
+                self.log(
+                    f"param_norm2/{name}",
+                    param.detach().data.norm(2).item(),
+                    on_epoch=False,
+                    batch_size=1,
+                    enable_graph=False,
+                )
+        super().on_after_backward()
+
+    def on_before_backward(self, loss):
+        for name, param in self.named_parameters():
+            if param.grad is not None:
+                self.log(
+                    f"param_norm2/{name}",
+                    param.detach().data.norm(2).item(),
+                    on_epoch=False,
+                    batch_size=1,
+                    enable_graph=False,
+                )
+        return super().on_before_backward(loss)
 
     @final
     def configure_input(self) -> list[str]:

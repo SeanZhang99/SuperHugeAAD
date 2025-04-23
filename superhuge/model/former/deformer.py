@@ -8,9 +8,10 @@ from einops.layers.torch import EinMix, Rearrange
 from pydantic import BaseModel
 from torch import nn
 
+from ..module.convnd_with_constraint import convNd_with_constraint
+from ..module.lazy_layernorm import LazyLayerNorm
 from ..module.multi_head_attention import MultiHeadAttention
 from ..module.residual_layer import ResidualLayer
-from ..module.lazy_layernorm import LazyLayerNorm
 
 
 # ===========================
@@ -188,23 +189,6 @@ def transformer_ws(
 
 
 # ===========================
-# Custom Layers
-# ===========================
-class Conv2dWithConstraint(nn.Conv2d):
-    def __init__(self, *args, doWeightNorm=True, max_norm=1, **kwargs):
-        self.max_norm = max_norm
-        self.doWeightNorm = doWeightNorm
-        super(Conv2dWithConstraint, self).__init__(*args, **kwargs)
-
-    def forward(self, input: torch.Tensor):
-        if self.doWeightNorm:
-            self.weight.data = torch.renorm(
-                self.weight.data, p=2, dim=0, maxnorm=self.max_norm
-            )
-        return super(Conv2dWithConstraint, self).forward(input)
-
-
-# ===========================
 # Model Components
 # ===========================
 def preconv(
@@ -220,18 +204,20 @@ def preconv(
     assert isinstance(out_chan, int)
     assert isinstance(kernel_size, int)
     return nn.Sequential(
-        Conv2dWithConstraint(
-            1,
-            out_chan,
-            (1, kernel_size),
+        convNd_with_constraint(
+            nd=2,
             max_norm=2,
+            in_features=1,
+            out_features=out_chan,
+            kernel_size=(1, kernel_size),
             padding="same",
         ),
-        Conv2dWithConstraint(
-            out_chan,
-            out_chan,
-            (num_electrodes, 1),
+        convNd_with_constraint(
+            nd=2,
             max_norm=2,
+            in_features=out_chan,
+            out_features=out_chan,
+            kernel_size=(num_electrodes, 1),
             padding="valid",
         ),
         nn.BatchNorm2d(out_chan),

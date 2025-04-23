@@ -108,7 +108,7 @@ class LSM_CNN(nn.Module):
         dropout: float = 0.0,
         **kwargs,
     ):
-        self.model = nn.Sequential(
+        self._lsm_cnn = nn.Sequential(
             learnable_mapping(kwargs["num_channels"], lsm_chan_dim, dropout),
             cnn_block(
                 in_features=1,
@@ -124,4 +124,4 @@ class LSM_CNN(nn.Module):
         )
 
     def forward(self, x, *args, **kwargs):
-        return self.model(x)
+        return self._lsm_cnn(x)

@@ -1,12 +1,12 @@
 import gc
-from torch import nn, Tensor
+from typing import Annotated, Sequence
+
 import einops
 from einops.layers.torch import EinMix
-from typing import Annotated, Sequence
-from pydantic import BaseModel, Field
-
-
 from pydantic import BaseModel, Field, model_validator
+from torch import Tensor, nn
+
+from ..module.convnd_with_constraint import convNd_with_constraint
 
 
 class ExtractorParams(BaseModel):
@@ -69,12 +69,15 @@ def extractor(
         layers.append(
             nn.Sequential(
                 nn.ZeroPad1d((0, kernel_size - 1)),
-                nn.Conv1d(
-                    input_channels if i == 0 else num_kernels[i - 1],
-                    num_kernel,
-                    kernel_size,
+                convNd_with_constraint(
+                    nd=1,
+                    max_norm=2,
+                    in_channels=input_channels if i == 0 else num_kernels[i - 1],
+                    out_channels=num_kernel,
+                    kernel_size=kernel_size,
                 ),
-                nn.LayerNorm([num_kernel, input_time_dim]),
+                # nn.LayerNorm([num_kernel, input_time_dim]),
+                nn.BatchNorm1d(num_kernel),
                 nn.ELU(),
                 nn.Dropout(drouput),
             )
@@ -90,8 +93,15 @@ def output_context(
 ):
     return nn.Sequential(
         nn.ZeroPad1d((kernel_size - 1, 0)),
-        nn.Conv1d(input_channels, input_channels, kernel_size),
-        nn.LayerNorm([input_channels, time_dim]),
+        convNd_with_constraint(
+            nd=1,
+            max_norm=2,
+            in_channels=input_channels,
+            out_channels=input_channels,
+            kernel_size=kernel_size,
+        ),
+        # nn.LayerNorm([input_channels, time_dim]),
+        nn.BatchNorm1d(input_channels),
         nn.ELU(),
         nn.Dropout(drouput),
     )

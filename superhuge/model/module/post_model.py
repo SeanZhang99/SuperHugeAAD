@@ -12,7 +12,7 @@ def classify_post_model(
         nn.LazyLinear(
             hidden_dim,
         ),
-        nn.LayerNorm(hidden_dim),
+        # nn.LayerNorm(hidden_dim),
         nn.GELU(),
         EinMix(
             "b hidden_dim -> b num_class",

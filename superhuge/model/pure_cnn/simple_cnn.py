@@ -15,7 +15,7 @@ class SimpleCNN(nn.Module):
     ):
         validate_kwargs(kwargs, ["num_channels"])
         super().__init__()
-        self.model = nn.Sequential(
+        self._simple_cnn = nn.Sequential(
             Rearrange("batch time channel -> batch 1 time channel"),
             # Padding order: last dimension, second last, ...
             nn.ZeroPad2d((0, temporal_kernel_size - 1, 0, 0)),
@@ -30,4 +30,4 @@ class SimpleCNN(nn.Module):
         )
 
     def forward(self, x):
-        return self.model(x)
+        return self._simple_cnn(x)

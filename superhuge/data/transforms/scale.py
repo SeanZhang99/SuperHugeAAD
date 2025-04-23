@@ -26,4 +26,4 @@ class Scale(Transform):
             warn(f"Scaling factor for {entry} not found. Skip applying scaling.")
             return x
         else:
-            return x * self._scale[entry]
+            return x / self._scale[entry]

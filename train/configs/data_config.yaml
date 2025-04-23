@@ -45,10 +45,10 @@ init_args:
         btype: bandpass
         order: 5
         fs: ${init_args.fs}
-    # - class_path: superhuge.data.transforms.Scale
-    #   init_args:
-    #     apply_prob: 1.0
-    #     when: before_returning
-    #     whom: eeg
-    #     root_path: ${init_args.root_path}
+    - class_path: superhuge.data.transforms.Scale
+      init_args:
+        apply_prob: 1.0
+        when: before_returning
+        whom: eeg
+        root_path: ${init_args.root_path}
   window_length: 10

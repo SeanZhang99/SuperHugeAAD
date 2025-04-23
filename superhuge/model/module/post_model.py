@@ -13,7 +13,8 @@ def classify_post_model(
             hidden_dim,
         ),
         # nn.LayerNorm(hidden_dim),
-        nn.GELU(),
+        # nn.GELU(),
+        nn.Sigmoid(),
         EinMix(
             "b hidden_dim -> b num_class",
             weight_shape="hidden_dim num_class",

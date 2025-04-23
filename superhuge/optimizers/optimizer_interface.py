@@ -26,8 +26,8 @@ class AutoDetachBiasDecay(Optimizer):
                 decay.append(param)
 
         grouped_params = [
-            {"params": decay, "weight_decay": weight_decay, "lr": lr},
-            {"params": no_decay, "weight_decay": 0.0, "lr": lr},
+            {"params": decay, "weight_decay": weight_decay, "lr": lr * 1.7},
+            {"params": no_decay, "weight_decay": 0.0, "lr": lr * 0.3},
         ]
 
         return optimizer_class(grouped_params, **kwargs)

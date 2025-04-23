@@ -1,12 +1,12 @@
 trainer:
-  accelerator: gpu
+  accelerator: auto
   accumulate_grad_batches: 1
   barebones: false
   benchmark: false
   callbacks:
-    - class_path: lightning.pytorch.callbacks.LearningRateMonitor
-      init_args:
-        logging_interval: epoch
+    # - class_path: lightning.pytorch.callbacks.LearningRateMonitor
+    #   init_args:
+    #     logging_interval: epoch
     - class_path: lightning.pytorch.callbacks.EarlyStopping
       init_args:
         min_delta: 0.01
@@ -33,7 +33,7 @@ trainer:
   enable_progress_bar: null
   fast_dev_run: false
   gradient_clip_algorithm: null
-  gradient_clip_val: 1.0
+  gradient_clip_val: null
   inference_mode: true
   limit_predict_batches: null
   limit_test_batches: null

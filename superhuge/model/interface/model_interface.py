@@ -106,7 +106,7 @@ class MInterface(pl2.LightningModule, ABC):
 
         self.input_size = input_sizes
 
-    def forward(self, data) -> tuple[torch.Tensor, ...]:
+    def forward(self, data: dict) -> tuple[torch.Tensor, ...]:
         """
         Forward pass of the model.
 
@@ -124,9 +124,15 @@ class MInterface(pl2.LightningModule, ABC):
                 # Process EEG/EXG input through pre_model
                 inputs.append(self.pre_model(data))
             elif input_type == "audio":
+                assert (
+                    "audio" in data
+                ), f"EEG_CLASSIFY_BASE_DATASET:FORWARD:ASSERTION:VALUE_ERROR: audio input is required, but not found in data. Available keys: {data.keys()}"
                 # Extract audio input directly from data
                 inputs.append(data["audio"])
             elif input_type == "label":
+                assert (
+                    "label" in data
+                ), f"EEG_CLASSIFY_BASE_DATASET:FORWARD:ASSERTION:VALUE_ERROR: label input is required, but not found in data. Available keys: {data.keys()}"
                 # Extract label input directly from data
                 inputs.append(data["label"])
 

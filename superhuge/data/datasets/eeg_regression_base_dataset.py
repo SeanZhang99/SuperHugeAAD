@@ -57,7 +57,7 @@ class EegRegressionBaseDataset(EegDataset):
             mmap_mode="r",
             allow_pickle=False,
         )
-        _, segment_idx = self._map_idx_to_file_and_segment(idx)
+        _, start_idx = self._map_idx_to_file_and_segment(idx)
 
         if self.transform:
             speech_feature = self.transform(
@@ -66,7 +66,6 @@ class EegRegressionBaseDataset(EegDataset):
 
         # 根据 segment_length 和 overlap 截取语音特征段
         stride = self.segment_length // self.overlap
-        start_idx = segment_idx * stride
         speech_segment = speech_feature[start_idx : start_idx + self.segment_length]
 
         if self.transform:

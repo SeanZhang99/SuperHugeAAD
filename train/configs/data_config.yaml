@@ -4,7 +4,7 @@ init_args:
   dataloader_args:
     batch_size: 64
     drop_last: false
-    num_workers: 4
+    num_workers: 0
     persistent_workers: true
     pin_memory: true
     prefetch_factor: 8
@@ -24,14 +24,6 @@ init_args:
           # - 7 # NUS
           # - 8 # PKU
           # - 9 # sparKULee
-  metadata_fields:
-    - dataset_id
-    - subject_id
-    - trial_id
-    - signal_length
-    - num_channel
-    - fs
-    - channel_infos
   overlap: 2
   root_path: /data/nvme/ssd2/zhangyuanming/EEG/derivatives/SuperHuge/
   preproc_stage: preprocessed
@@ -47,6 +39,7 @@ init_args:
         fs: ${init_args.fs}
     - class_path: superhuge.data.transforms.Scale
       init_args:
+        preproc_stage: ${init_args.preproc_stage}
         apply_prob: 1.0
         when: before_returning
         whom: eeg

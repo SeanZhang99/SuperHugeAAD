@@ -1,5 +1,7 @@
 class_path: superhuge.optimizers.optimizer_interface.AutoDetachBiasDecay
 init_args:
-  optimizer_class: torch.optim.AdamW
+  optimizer_class: torch.optim.SGD
   lr: 3.e-1
   weight_decay: 5.e-4
+  optimizer_args:
+    momentum: 0.9

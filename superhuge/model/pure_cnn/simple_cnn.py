@@ -26,7 +26,11 @@ class SimpleCNN(nn.Module):
             ),
             # nn.BatchNorm2d(num_kernels),
             nn.ReLU(),
-            Reduce("batch num_kernels time channel -> batch time num_kernels", "mean"),
+            Reduce(
+                "batch num_kernels time channel -> batch time num_kernels",
+                "mean",
+                channel=1,
+            ),
         )
 
     def forward(self, x):

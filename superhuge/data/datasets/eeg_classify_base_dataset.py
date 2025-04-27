@@ -4,21 +4,19 @@ from ..metadata_processing.data import ClassifyMetaDataElement
 
 class EegClassifyBaseDataset(EegDataset):
     metadata_cls = ClassifyMetaDataElement
-    label_hash: dict[str, int] = {}
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         required_meta_fields = ["label"]
         self._validate_kwargs(kwargs["metadata_fields"], required_meta_fields)
 
+    def getitem(self, idx):
+        return self.__getitem__(idx)
+
     def __getitem__(self, idx):
         meta, eeg = super().__getitem__(idx).values()
         label: str | int = meta["label"]
-        label = (
-            self.label_hash.setdefault(label, int(len(self.label_hash)))
-            if isinstance(label, str)
-            else label
-        )
+
         assert isinstance(
             label, int
         ), f"EEG_CLASSIFY_BASE_DATASET:GETITEM:ASSERTION:VALUE_ERROR: label must be an integer, got {type(label)}"

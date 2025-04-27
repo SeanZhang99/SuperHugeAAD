@@ -101,14 +101,7 @@ class DInterface(pl2.LightningDataModule):
         val_fold_idx: int = 1,
         n_folds: int = 5,
         overlap: int = 1,
-        metadata_fields: list[MetaDataField] = [
-            "dataset_id",
-            "subject_id",
-            "trial_id",
-            "signal_length",
-            "num_channel",
-            "fs",
-        ],
+        metadata_fields: list[MetaDataField] | None = None,
         transform: Transform | Sequence[Transform] | None = None,
         preproc_stage: str | None = None,
         **kwargs,
@@ -125,6 +118,21 @@ class DInterface(pl2.LightningDataModule):
 
         preproc_stage = preproc_stage or "preprocessed"
         meta_group_func = meta_group_func or loto
+
+        if metadata_fields is None:
+            metadata_fields = []
+
+        metadata_fields.extend(
+            [
+                "dataset_id",
+                "subject_id",
+                "trial_id",
+                "fs",
+                "num_channel",
+                "signal_length",
+                "channel_infos",
+            ]
+        )
 
         self.dataset_cfg = CreateDatasetsInputConfig(
             dataset_class=dataset_class,
@@ -147,7 +155,7 @@ class DInterface(pl2.LightningDataModule):
                 if transform
                 else None
             ),
-            metadata_fields=metadata_fields,
+            metadata_fields=list(set(metadata_fields)),
         )
 
         self.kwargs = kwargs
@@ -184,7 +192,7 @@ class DInterface(pl2.LightningDataModule):
             - If self.dataset_cfg.dataset_class is a type of EegRegressionBaseDataset and no RegressionMetadataFilter exists in the composer, add a filter using the regression_filter factory function.
         """
         if meta_filter_func is None:
-            return None
+            meta_filter_func = MetaDataFilterComposer()
         else:
             meta_filter_func = MetaDataFilterComposer(*meta_filter_func)
 
@@ -273,8 +281,9 @@ class DInterface(pl2.LightningDataModule):
                 metadata=metadata,
                 fs=self.dataset_cfg.fs,
                 window_length=self.dataset_cfg.window_length,
-                overlap=self.dataset_cfg.overlap if mode == "train" else 1,
-                transform=self.dataset_cfg.transform if mode == "train" else None,
+                # overlap=self.dataset_cfg.overlap if mode == "train" else 1,
+                overlap=self.dataset_cfg.overlap,
+                transform=self.dataset_cfg.transform,
                 metadata_fields=self.dataset_cfg.metadata_fields,
                 **self.kwargs,
             )

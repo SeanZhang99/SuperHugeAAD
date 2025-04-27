@@ -4,17 +4,7 @@ directional_focus_decoding:
     data:
       init_args:
         dataset_class: superhuge.data.datasets.EegClassifyBaseDataset
-        metadata_fields:
-          [
-            "dataset_id",
-            "subject_id",
-            "trial_id",
-            "signal_length",
-            "num_channel",
-            "fs",
-            "label",
-            "channel_infos",
-          ]
+        metadata_fields: ["label"]
         n_folds: 5
     model:
       class_path: superhuge.model.interface.ChannelMapping1DClassifyInterface

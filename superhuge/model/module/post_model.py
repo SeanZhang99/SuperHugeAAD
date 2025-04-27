@@ -9,7 +9,8 @@ def classify_post_model(
     return nn.Sequential(
         Reduce("b t c -> b c", "mean"),
         # dense the last dimension
-        nn.LazyLinear(
+        nn.Linear(
+            input_size[-1],
             hidden_dim,
         ),
         # nn.LayerNorm(hidden_dim),

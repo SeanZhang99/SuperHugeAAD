@@ -30,11 +30,9 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["CUDA_VISIBLE_DEVICES"] = "6"
 import torch
 
-import keras
 from superhuge.utils.multi_run_cli import MultiRunCLI
 from superhuge.utils.pick_model_config import pick_file
 
-keras.config.set_image_data_format("channels_first")
 torch.set_float32_matmul_precision("medium")
 
 
@@ -58,4 +56,6 @@ if __name__ == "__main__":
         os.path.join(config_path, "lr_scheduler_config.yaml"),
         "--model",
         model_config,
+        "--seed_everything",
+        "42",
     )

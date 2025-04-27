@@ -4,15 +4,15 @@ trainer:
   barebones: false
   benchmark: false
   callbacks:
-    # - class_path: lightning.pytorch.callbacks.LearningRateMonitor
-    #   init_args:
-    #     logging_interval: epoch
-    - class_path: lightning.pytorch.callbacks.EarlyStopping
+    - class_path: lightning.pytorch.callbacks.LearningRateMonitor
       init_args:
-        min_delta: 0.01
-        mode: max
-        monitor: val/acc_epoch
-        patience: 15
+        logging_interval: epoch
+    # - class_path: lightning.pytorch.callbacks.EarlyStopping
+    #   init_args:
+    #     min_delta: 0.01
+    #     mode: max
+    #     monitor: val/acc_epoch
+    #     patience: 15
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
         mode: max

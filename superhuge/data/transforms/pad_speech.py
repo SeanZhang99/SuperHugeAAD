@@ -12,4 +12,4 @@ class PadSpeech(Transform):
             x = np.stack([x, np.zeros_like(x)], axis=-1)
         elif x.shape[-1] == 1:
             x = np.concatenate([x, np.zeros_like(x)], axis=-1)
-        return x
+        return x, *args

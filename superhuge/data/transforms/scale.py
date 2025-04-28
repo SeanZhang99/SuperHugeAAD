@@ -24,6 +24,6 @@ class Scale(Transform):
         entry = f"dataset-{meta['dataset_id']:03d}-subject-{meta['subject_id']:03d}"
         if entry not in self._scale:
             warn(f"Scaling factor for {entry} not found. Skip applying scaling.")
-            return x
+            return x, *args
         else:
-            return x / self._scale[entry]
+            return x / self._scale[entry], *args

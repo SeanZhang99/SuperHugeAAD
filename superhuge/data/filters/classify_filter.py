@@ -1,6 +1,11 @@
 from ..metadata_processing.data import ClassifyMetaDataElement
 from .abc import ClassifyMetadataFilter
 
+# from typing import TYPE_CHECKING
+
+# if TYPE_CHECKING:
+# from ... import ...
+
 __all__ = ["get_classify_filter"]
 
 ALLOWED_NUM_CLASS_STRING = [
@@ -12,11 +17,14 @@ ALLOWED_NUM_CLASS_STRING = [
 ALLOWED_NUM_CLASS_INT = [2, 4, 8]
 
 
-def angle_wrapper(label: int) -> int:
+def angle_wrapper(label: "int") -> int:
     """
     Convert -180 to 0 degree to 180-360.
     """
-    if -180 <= label < 0:
+    assert (
+        -360 <= label < 360
+    ), f"ANGLE_WRAPPER:VALUE_ERROR: Invalid label value. The label value must be between -360 and 360. Got {label}."
+    if -360 <= label < 0:
         return label + 360
     return label
 
@@ -42,22 +50,20 @@ class BinaryLeftRightFilter(ClassifyMetadataFilter):
             if label.lower() in ["left", "right"]:
                 metadata_element.label = label.lower()
                 result = metadata_element
+                result.label = 0 if result.label == "left" else 1
             else:
                 try:
-                    label = int(label)
-                    metadata_element.label = angle_wrapper(label)
+                    metadata_element.label = int(label)
                     result = self(metadata_element)
                 except ValueError:
                     result = None
         elif isinstance(label, int):
             label = angle_wrapper(label)
             if 180 < label < 360:
-                metadata_element.label = "left"
+                metadata_element.label = 0
             elif 0 < label < 180:
-                metadata_element.label = "right"
+                metadata_element.label = 1
             result = metadata_element
-        if result is not None:
-            result.label = 0 if result.label == "left" else 1
         return result
 
 
@@ -68,11 +74,8 @@ class BinaryFrontRearFilter(ClassifyMetadataFilter):
         """
         This function filters the metadata elements based on the label value.
         If the label value is a string, it should be either "front" or "rear" (case insensitive).
-        If the label value is an integer, it should be between 0 and 180 or between 180 and 360.
-        If the label value is in the range of 0 to 180, the label value is set to "front".
-        If the label value is in the range of 180 to 360, the label value is set to "rear".
-        If the label value is not in the specified ranges, the function returns None.
-        Labels will be converted to int: `front`->`0`, `rear`->`1`
+        If the label value is an integer, it should be between 0 and 360.
+        For `front` (270~90), convert to `0`, for `rear` (90~270), convert to `1`.
         """
         if metadata_element is None:
             return None
@@ -82,22 +85,20 @@ class BinaryFrontRearFilter(ClassifyMetadataFilter):
             if label.lower() in ["front", "rear"]:
                 metadata_element.label = label.lower()
                 result = metadata_element
+                result.label = 0 if result.label == "front" else 1
             else:
                 try:
-                    label = int(label)
-                    metadata_element.label = angle_wrapper(label)
+                    metadata_element.label = int(label)
                     result = self(metadata_element)
                 except ValueError:
-                    pass
+                    result = None
         elif isinstance(label, int):
             label = angle_wrapper(label)
-            if 180 < label < 360:
-                metadata_element.label = "rear"
-            elif 0 < label < 180:
-                metadata_element.label = "front"
+            if 90 <= label < 270:
+                metadata_element.label = 1  # Rear
+            elif 270 <= label < 360 or 0 <= label < 90:
+                metadata_element.label = 0  # Front
             result = metadata_element
-        if result is not None:
-            result.label = 0 if result.label == "front" else 1
         return result
 
 
@@ -108,10 +109,7 @@ class FourClassFilter(ClassifyMetadataFilter):
         """
         This function filters the metadata elements into four classes based on the label value.
         The classes are: -45-45, 45-135, 135-225, 225-315.
-        If the label value is an integer, it should be between 0 and 360.
-        The label value is set to one of the four classes based on its range.
-        If the label value is not in the specified ranges, the function returns None.
-        Labels will be converted to int. `fr`->0,`fl`->1, `rl`->2, `rr`->3
+        Labels will be converted to int: `fr`->0, `fl`->1, `rl`->2, `rr`->3.
         """
         if metadata_element is None:
             return None
@@ -120,35 +118,20 @@ class FourClassFilter(ClassifyMetadataFilter):
         if isinstance(label, int):
             label = angle_wrapper(label)
             if 0 <= label < 45 or 315 <= label < 360:
-                metadata_element.label = "Front-Right"
+                metadata_element.label = 0
             elif 45 <= label < 135:
-                metadata_element.label = "Front-Left"
+                metadata_element.label = 1
             elif 135 <= label < 225:
-                metadata_element.label = "Rear-Left"
+                metadata_element.label = 2
             elif 225 <= label < 315:
-                metadata_element.label = "Rear-Right"
+                metadata_element.label = 3
             result = metadata_element
         elif isinstance(label, str):
             try:
-                label = int(label)
-                metadata_element.label = angle_wrapper(label)
+                metadata_element.label = int(label)
                 result = self(metadata_element)
             except ValueError:
-                pass
-
-        if result is not None:
-            if result.label == "Front-Right":
-                result.label = 0
-            elif result.label == "Front-Left":
-                result.label = 1
-            elif result.label == "Rear-Left":
-                result.label = 2
-            elif result.label == "Rear-Right":
-                result.label = 3
-            else:
-                raise ValueError(
-                    f"CLASSIFIER_FILTER:FOUR_CLASS_FILTER:VALUE_ERROR: Invalid label value. The label value can only be 'Front-Right', 'Front-Left', 'Rear-Left', or 'Rear-Right'."
-                )
+                result = None
         return result
 
 
@@ -160,9 +143,7 @@ class EightClassFilter(ClassifyMetadataFilter):
         This function filters the metadata elements into eight classes based on the label value.
         The classes are: -22.5 to 22.5, 22.5 to 67.5, 67.5 to 112.5, 112.5 to 157.5,
         157.5 to 202.5, 202.5 to 247.5, 247.5 to 292.5, 292.5 to 337.5, 337.5 to 360.
-        If the label value is an integer, it should be between 0 and 360.
-        The label value is set to one of the eight classes based on its range.
-        If the label value is not in the specified ranges, the function returns None.
+        Labels will be converted to int: `north`->0, `north-east`->1, ..., `north-west`->7.
         """
         if metadata_element is None:
             return None
@@ -171,51 +152,28 @@ class EightClassFilter(ClassifyMetadataFilter):
         if isinstance(label, int):
             label = angle_wrapper(label)
             if 337.5 <= label < 360 or 0 <= label < 22.5:
-                metadata_element.label = "North"
+                metadata_element.label = 0
             elif 22.5 <= label < 67.5:
-                metadata_element.label = "North-East"
+                metadata_element.label = 1
             elif 67.5 <= label < 112.5:
-                metadata_element.label = "East"
+                metadata_element.label = 2
             elif 112.5 <= label < 157.5:
-                metadata_element.label = "South-East"
+                metadata_element.label = 3
             elif 157.5 <= label < 202.5:
-                metadata_element.label = "South"
+                metadata_element.label = 4
             elif 202.5 <= label < 247.5:
-                metadata_element.label = "South-West"
+                metadata_element.label = 5
             elif 247.5 <= label < 292.5:
-                metadata_element.label = "West"
+                metadata_element.label = 6
             elif 292.5 <= label < 337.5:
-                metadata_element.label = "North-West"
+                metadata_element.label = 7
             result = metadata_element
         elif isinstance(label, str):
             try:
-                label = int(label)
-                metadata_element.label = angle_wrapper(label)
+                metadata_element.label = int(label)
                 result = self(metadata_element)
             except ValueError:
-                pass
-
-        if result is not None:
-            if result.label == "North":
-                result.label = 0
-            elif result.label == "North-East":
-                result.label = 1
-            elif result.label == "East":
-                result.label = 2
-            elif result.label == "South-East":
-                result.label = 3
-            elif result.label == "South":
-                result.label = 4
-            elif result.label == "South-West":
-                result.label = 5
-            elif result.label == "West":
-                result.label = 6
-            elif result.label == "North-West":
-                result.label = 7
-            else:
-                raise ValueError(
-                    f"CLASSIFIER_FILTER:EIGHT_CLASS_FILTER:VALUE_ERROR: Invalid label value. The label value can only be 'North', 'North-East', 'East', 'South-East', 'South', 'South-West', 'West', or 'North-West'."
-                )
+                result = None
         return result
 
 

@@ -64,6 +64,7 @@ class TransformConfig(BaseModel):
 class Transform(ABC):
     """Abstract base class for EEG transforms in superhuge package."""
 
+    @abstractmethod
     def __init__(
         self,
         /,
@@ -139,7 +140,7 @@ class Transform(ABC):
         Returns:
             np.ndarray: Transformed EEG data.
         """
-        assert x.ndim == 2, f"Input must be a 2D ndarray but got {x.ndim}"
+        assert x.ndim in (2, 3), f"Input must be a 2D/3D ndarray but got {x.ndim}D"
         assert (
             x.shape[1] < x.shape[0]
         ), f"Input must be time first, but seems to be channel first: {x.shape}."

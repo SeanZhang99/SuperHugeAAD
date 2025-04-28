@@ -35,4 +35,4 @@ class Filter(Transform):
         super().__call__(x)
         if self.roll():
             x = filtfilt(self.b, self.a, x, axis=0).copy()
-        return x
+        return x, *args

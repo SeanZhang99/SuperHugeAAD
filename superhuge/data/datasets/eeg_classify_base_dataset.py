@@ -1,3 +1,4 @@
+from .eeg_regression_base_dataset import EegRegressionBaseDataset
 from . import EegDataset
 from ..metadata_processing.data import ClassifyMetaDataElement
 
@@ -10,21 +11,36 @@ class EegClassifyBaseDataset(EegDataset):
         required_meta_fields = ["label"]
         self._validate_kwargs(kwargs["metadata_fields"], required_meta_fields)
 
-    def getitem(self, idx):
-        return self.__getitem__(idx)
+    def load_data(self, idx):
+        item = super().load_data(idx)
+        meta = item["meta"]
+        eeg = item["eeg"]
 
-    def __getitem__(self, idx):
-        meta, eeg = super().__getitem__(idx).values()
-        label: str | int = meta["label"]
+        # in normal conditions, `label` is in `meta`.
+        # If a diamond inheritage is used (e.g. class(EegClassifyBaseDataset, EegRegressionBaseDataset)),
+        # `label` may be delted during regression.__getitem__
+        # in this case, label is None.
+        label: int | None = meta.get("label", None)
 
-        assert isinstance(
-            label, int
-        ), f"EEG_CLASSIFY_BASE_DATASET:GETITEM:ASSERTION:VALUE_ERROR: label must be an integer, got {type(label)}"
+        assert isinstance(label, (int)) or isinstance(
+            super(), EegRegressionBaseDataset
+        ), f"EEG_CLASSIFY_BASE_DATASET:load_data:ASSERTION:VALUE_ERROR: label must be an integer, got {type(label)}"
 
         if self.transform:
-            label = self.transform(label, meta, whom="label", when="before_returning")
+            label = self.transform(
+                label, meta=meta, whom="label", when="before_returning"
+            )[0]
 
         meta["label"] = label
+
+        return {"meta": meta, "eeg": eeg, "label": label}
+
+    def __getitem__(self, idx):
+        item = self.load_data(idx)
+
+        meta = item["meta"]
+        eeg = item["eeg"]
+        label = item["label"]
 
         # Remove unnecessary fields
         for field in ["env", "mel", "wav"]:
@@ -34,3 +50,13 @@ class EegClassifyBaseDataset(EegDataset):
                 del meta[f"{field}_fs"]
 
         return {"meta": meta, "eeg": eeg, "label": label}
+
+        # def __getitem__(self,idx):
+        # .....
+
+        # def load_data(self,idx):
+        #     meta, eeg = super().load_data(idx).values()
+        #     ....
+
+        # def __getitem__(self,idx):
+        #     ...

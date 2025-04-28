@@ -3,7 +3,7 @@ import numpy as np
 from .abc import Transform
 
 
-class Clip(Transform):
+class Clipper(Transform):
     """Clips EEG values to remove extreme artifacts."""
 
     def __init__(
@@ -29,5 +29,5 @@ class Clip(Transform):
     def __call__(self, x: np.ndarray, /, *args, **kwargs) -> np.ndarray:
         super().__call__(x)
         if self.roll():
-            x = np.clip(x, self.lower_bound, self.upper_bound)
-        return x
+            x = np.Clipper(x, self.lower_bound, self.upper_bound)
+        return x, *args

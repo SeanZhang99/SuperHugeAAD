@@ -24,7 +24,14 @@ class TransformComposer:
         ]
 
     def __call__(
-        self, x: np.ndarray, /, meta: MetaDataElement, when: str, whom: str, **kwargs
+        self,
+        x: np.ndarray,
+        /,
+        *args,
+        meta: MetaDataElement,
+        when: str,
+        whom: str,
+        **kwargs,
     ) -> np.ndarray:
         """Filter metadata element."""
         assert (
@@ -33,11 +40,12 @@ class TransformComposer:
         assert (
             whom in self._whom_options
         ), f"Invalid whom option: {whom}. Expected one of {self._whom_options}."
+        x = (x, *args)
         for transform in self._transforms:
             if transform.when == when and (
                 whom in transform.whom or "all" in transform.whom
             ):
-                x = transform(x, meta)
+                x = transform(*x, meta)
         return x
 
     @classmethod

@@ -108,6 +108,7 @@ class LSM_CNN(nn.Module):
         dropout: float = 0.0,
         **kwargs,
     ):
+        super().__init__()
         self._lsm_cnn = nn.Sequential(
             learnable_mapping(kwargs["num_channels"], lsm_chan_dim, dropout),
             cnn_block(

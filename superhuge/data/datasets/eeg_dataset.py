@@ -24,8 +24,8 @@ class EegDataset(Dataset):
         overlap (int): Overlap ratio, determines the stride for segment slicing.
         transform (TransformComposer | None): Transformations applied to samples.
         metadata_fields (list[MetaDataField]): Metadata fields to record.
-        accept_ranges (tuple[float, float]): Range of valid signal segments (start, end).
-        reject_ranges (tuple[float, float] | None): Range of rejected signal segments (start, end).
+        accept_range (tuple[float, float] | None): Range of valid signal segments (start, end). If None, all segments are accepted.
+        reject_range (tuple[float, float] | None): Range of rejected signal segments (start, end). If None, no segments are rejected.
     """
 
     def __init__(self, **kwargs):
@@ -40,8 +40,8 @@ class EegDataset(Dataset):
             overlap (int): Overlap ratio, determines the stride for segment slicing.
             transform (TransformComposer | None): Transformations applied to samples.
             metadata_fields (list): Metadata fields to record.
-            accept_ranges (tuple[float, float] | None): Range of valid signal segments (start, end).
-            reject_ranges (tuple[float, float] | None): Range of rejected signal segments (start, end).
+            accept_range (tuple[float, float] | None): Range of valid signal segments (start, end).
+            reject_range (tuple[float, float] | None): Range of rejected signal segments (start, end).
         """
         required_keys = ["eeg_path", "files", "metadata", "metadata_fields"]
         self._validate_kwargs(kwargs.keys(), required_keys)
@@ -57,12 +57,11 @@ class EegDataset(Dataset):
         self.overlap: int = kwargs.get("overlap", 1)  # Default no overlap
         self.transform: TransformComposer | None = kwargs.get("transform", None)
         self.metadata_fields: list[MetaDataField] = kwargs["metadata_fields"]
-        self.accept_ranges: tuple[float, float] = kwargs.get(
-            "accept_ranges", (0.0, 1.0)
-        )
-        self.reject_ranges: tuple[float, float] | None = kwargs.get(
-            "reject_ranges", None
-        )
+        self.accept_range: tuple[float, float] = kwargs.get("accept_range", None)
+        self.reject_range: tuple[float, float] | None = kwargs.get("reject_range", None)
+
+        if self.accept_range is None:
+            self.accept_range = (0.0, 1.0)
 
         self._validate_ranges()
 
@@ -70,9 +69,6 @@ class EegDataset(Dataset):
         self._validate_files()
 
         # Cache valid segments using numpy arrays
-        self._file_names = None
-        self._file_to_segment_offsets = None  # Renamed from _segment_indices
-        self._valid_segments = None
         self._cache_and_prepare_segments()
 
         # Delete temporary files list to avoid memory leakage
@@ -90,15 +86,15 @@ class EegDataset(Dataset):
 
     def _validate_ranges(self):
         """
-        Validate the accept_ranges and reject_ranges attributes.
+        Validate the accept_range and reject_range attributes.
         """
         assert (
-            0.0 <= self.accept_ranges[0] < self.accept_ranges[1] <= 1.0
-        ), "accept_ranges must be a tuple of two floats in the range [0.0, 1.0] with start < end."
-        if self.reject_ranges:
+            0.0 <= self.accept_range[0] < self.accept_range[1] <= 1.0
+        ), "accept_range must be a tuple of two floats in the range [0.0, 1.0] with start < end."
+        if self.reject_range:
             assert (
-                0.0 <= self.reject_ranges[0] < self.reject_ranges[1] <= 1.0
-            ), "reject_ranges must be a tuple of two floats in the range [0.0, 1.0] with start < end."
+                0.0 <= self.reject_range[0] < self.reject_range[1] <= 1.0
+            ), "reject_range must be a tuple of two floats in the range [0.0, 1.0] with start < end."
 
     def _validate_files(self):
         """
@@ -119,39 +115,43 @@ class EegDataset(Dataset):
                 - np.ndarray: A numpy array of offsets mapping file indices to valid segments.
                 - np.ndarray: A single array of valid segment start indices.
         """
-        return self._file_names, self._file_to_segment_offsets, self._valid_segments
+        return (
+            self._file_names,
+            self._file_to_valid_start_indices_offsets,
+            self._valid_start_indices,
+        )
 
     def _cache_and_prepare_segments(self):
         """
         Cache valid segments for all files using numpy arrays.
         """
         file_names = []
-        file_to_segment_offsets = np.zeros(
+        file_to_valid_start_indices_offsets = np.zeros(
             len(self._input_files_list) + 1, dtype=np.int32
         )  # Preallocate offsets (+1 for boundary)
-        valid_segments = []
+        valid_start_indices = []
 
         current_index = 0
 
         for file_idx, file in enumerate(self._input_files_list):
             trial_length = self.metadata[file].signal_length
             assert trial_length, f"Metadata for file {file} is missing signal_length."
-            segments = self._find_valid_segments(trial_length)
+            start_indices = self._find_valid_start_idx(trial_length)
 
             # Store file name and update offsets
             file_names.append(file)
-            file_to_segment_offsets[file_idx] = current_index
-            valid_segments.extend(segments)
-            current_index += len(segments)
+            file_to_valid_start_indices_offsets[file_idx] = current_index
+            valid_start_indices.extend(start_indices)
+            current_index += len(start_indices)
 
         # Add the final boundary for offsets
-        file_to_segment_offsets[len(self._input_files_list)] = current_index
+        file_to_valid_start_indices_offsets[len(self._input_files_list)] = current_index
 
         self._file_names = np.array(file_names, dtype=np.dtypes.StrDType)
-        self._file_to_segment_offsets = file_to_segment_offsets
-        self._valid_segments = np.array(valid_segments, dtype=np.int32)
+        self._file_to_valid_start_indices_offsets = file_to_valid_start_indices_offsets
+        self._valid_start_indices = np.array(valid_start_indices, dtype=np.int32)
 
-    def _find_valid_segments(self, trial_length: int):
+    def _find_valid_start_idx(self, trial_length: int):
         """
         Compute valid segments for a given trial length.
 
@@ -162,33 +162,33 @@ class EegDataset(Dataset):
             list[int]: A list of valid segment start indices.
         """
         stride = self.segment_length // self.overlap
-        accept_start = int(self.accept_ranges[0] * trial_length)
-        accept_end = int(self.accept_ranges[1] * trial_length)
+        accept_start = int(self.accept_range[0] * trial_length)
+        accept_end = int(self.accept_range[1] * trial_length)
 
-        segments = []
+        start_indices = []
         for start_idx in range(accept_start, accept_end, stride):
             end_idx = start_idx + self.segment_length
             if end_idx > accept_end:
                 break
-            if self.reject_ranges:
-                reject_start = int(self.reject_ranges[0] * trial_length)
-                reject_end = int(self.reject_ranges[1] * trial_length)
+            if self.reject_range:
+                reject_start = int(self.reject_range[0] * trial_length)
+                reject_end = int(self.reject_range[1] * trial_length)
                 if (
                     reject_start <= start_idx < reject_end
                     or reject_start < end_idx <= reject_end
                 ):
                     continue
-            segments.append(start_idx)
-        return segments
+            start_indices.append(start_idx)
+        return start_indices
 
     def __len__(self):
-        return self._file_to_segment_offsets[-1]
+        return self._file_to_valid_start_indices_offsets[-1]
 
     @property
     def len(self):
         return len(self)
 
-    def __getitem__(self, idx):
+    def load_data(self, idx):
         """
         Retrieve a sample by index.
 
@@ -214,15 +214,20 @@ class EegDataset(Dataset):
         self._validate_eeg_shape(eeg, file_name)
 
         if self.transform:
-            eeg = self.transform(eeg, meta, when="before_slicing", whom="eeg")
+            eeg = self.transform(eeg, meta=meta, when="before_slicing", whom="eeg")[0]
 
         stride = self.segment_length // self.overlap
         eeg_seg = eeg[start_idx : start_idx + self.segment_length]
 
         if self.transform:
-            eeg_seg = self.transform(eeg_seg, meta, when="before_returning", whom="eeg")
+            eeg_seg = self.transform(
+                eeg_seg, meta=meta, when="before_returning", whom="eeg"
+            )[0]
 
         return {"meta": meta, "eeg": eeg_seg.astype(np.float32)}
+
+    def __getitem__(self, idx):
+        return self.load_data(idx)
 
     def _validate_eeg_shape(self, eeg: np.ndarray, file_name: str):
         """
@@ -258,25 +263,33 @@ class EegDataset(Dataset):
         Raises:
             IndexError: If the index is out of range.
         """
-        file_names, file_to_segment_offsets, valid_segments = self.valid_segments_cache
+        file_names, file_to_valid_start_indices_offsets, valid_segments = (
+            self.valid_segments_cache
+        )
 
         # Find the file corresponding to the global index
-        file_idx: int = np.searchsorted(file_to_segment_offsets, idx, side="right") - 1
+        file_idx: int = (
+            np.searchsorted(file_to_valid_start_indices_offsets, idx, side="right") - 1
+        )
         if file_idx < 0 or file_idx >= len(file_names):
             raise IndexError(
-                f"Index {idx} is out of range for the dataset. Total valid segments: {file_to_segment_offsets[-1]}."
+                f"Index {idx} is out of range for the dataset. Total valid segments: {file_to_valid_start_indices_offsets[-1]}."
             )
 
         # Compute the segment index within the file
-        local_idx = idx - file_to_segment_offsets[file_idx]
+        local_idx = idx - file_to_valid_start_indices_offsets[file_idx]
         if local_idx < 0 or local_idx >= (
-            file_to_segment_offsets[file_idx + 1] - file_to_segment_offsets[file_idx]
+            file_to_valid_start_indices_offsets[file_idx + 1]
+            - file_to_valid_start_indices_offsets[file_idx]
         ):
             raise IndexError(
                 f"Local index {local_idx} is out of range for file {file_names[file_idx]}."
             )
 
-        return file_idx, valid_segments[file_to_segment_offsets[file_idx] + local_idx]
+        return (
+            file_idx,
+            valid_segments[file_to_valid_start_indices_offsets[file_idx] + local_idx],
+        )
 
     def _validate_kwargs(self, kwargs: set[str], required_keys: list[str]):
         """

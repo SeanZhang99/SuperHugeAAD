@@ -41,11 +41,13 @@ class EegRegressionBaseDataset(EegDataset):
             self.eeg_path.replace("eeg", "stimuli"), self.speech_feature_type
         )
 
-    def __getitem__(self, idx):
+    def load_data(self, idx):
         """
         加载样本数据，并返回元数据、EEG段、语音特征段和标签。
         """
-        meta, eeg = super().__getitem__(idx).values()
+        item = super().load_data(idx)
+        meta = item["meta"]
+        eeg = item["eeg"]
 
         entry = meta["entry"]
         # 加载语音特征
@@ -61,8 +63,8 @@ class EegRegressionBaseDataset(EegDataset):
 
         if self.transform:
             speech_feature = self.transform(
-                speech_feature, meta, whom="audio", when="before_slicing"
-            )
+                speech_feature, meta=meta, whom="audio", when="before_slicing"
+            )[0]
 
         # 根据 segment_length 和 overlap 截取语音特征段
         stride = self.segment_length // self.overlap
@@ -70,9 +72,16 @@ class EegRegressionBaseDataset(EegDataset):
 
         if self.transform:
             speech_segment = self.transform(
-                speech_segment, meta, whom="audio", when="before_returning"
-            )
+                speech_segment, meta=meta, whom="audio", when="before_returning"
+            )[0]
 
+        return {"meta": meta, "eeg": eeg, "audio": speech_segment.astype(np.float32)}
+
+    def __getitem__(self, idx):
+        item = self.load_data(idx)
+        meta = item["meta"]
+        eeg = item["eeg"]
+        speech_segment = item["audio"]
         if "label" in meta:
             del meta["label"]
 
@@ -83,4 +92,4 @@ class EegRegressionBaseDataset(EegDataset):
                 if f"{field}_fs" in meta:
                     del meta[f"{field}_fs"]
 
-        return {"meta": meta, "eeg": eeg, "audio": speech_segment.astype(np.float32)}
+        return {"meta": meta, "eeg": eeg, "audio": speech_segment}

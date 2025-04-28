@@ -16,4 +16,4 @@ class ChannelMask(Transform):
         super().__call__(x)
         if self.roll():
             x *= self.dice.random(x.shape[-1]) > self.p_mask
-        return x
+        return x, *args

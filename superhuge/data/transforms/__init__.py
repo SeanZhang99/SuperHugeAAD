@@ -1,6 +1,6 @@
 from .abc import Transform
 from .channel_mask import ChannelMask
-from .clip import Clip
+from .clip import Clipper
 from .filter import Filter
 from .pad_speech import PadSpeech
 from .resample import Resample
@@ -10,7 +10,7 @@ from .scale import Scale
 
 __all__ = [
     "ChannelMask",
-    "Clip",
+    "Clipper",
     "Filter",
     "PadSpeech",
     "Resample",

@@ -30,7 +30,7 @@ class TimeShift(Transform):
         if self.roll():
             shift = np.random.randint(-self.max_shift, self.max_shift)
             if shift >= 0:
-                return np.pad(x[shift:], ((0, shift), (0, 0))).copy()
+                return np.pad(x[shift:], ((0, shift), (0, 0))).copy(), *args
             else:
-                return np.pad(x[:shift], ((-shift, 0), (0, 0))).copy()
+                return np.pad(x[:shift], ((-shift, 0), (0, 0))).copy(), *args
         return x

@@ -1,7 +1,7 @@
 import inspect
 import random
 from collections.abc import Callable
-from typing import Any, Protocol, TypeAlias
+from typing import Any, Protocol, Sequence, TypeAlias
 
 from pydantic import BaseModel
 from pydantic_core import core_schema
@@ -103,22 +103,26 @@ class GroupingFunction(Protocol):
         else:
             validate_key_is_str = False
         if validate_key_is_str:
-            validate_value_is_list = all(
-                [isinstance(value, list) for value in result.values()]
+            validate_value_is_seq = all(
+                [isinstance(value, Sequence) for value in result.values()]
             )
         else:
-            validate_value_is_list = False
-        if validate_value_is_list:
-            validate_value_element_is_str = all(
-                [isinstance(e, str) for l in result.values() for e in l]
+            validate_value_is_seq = False
+        if validate_value_is_seq:
+            validate_value_element_is_str_or_numeric = all(
+                [isinstance(e, (str, float, int)) for l in result.values() for e in l]
             )
         else:
-            validate_value_element_is_str = False
-        if validate_is_dict and validate_key_is_str and validate_value_element_is_str:
+            validate_value_element_is_str_or_numeric = False
+        if (
+            validate_is_dict
+            and validate_key_is_str
+            and validate_value_element_is_str_or_numeric
+        ):
             pass
         else:
             raise TypeError(
-                f"METADATA_PROCESSING:GROUPING_FUNCTION:VALIDATE:RETURN_VALIDATION:TYPE_ERROR: Return value must be a dictionary, but got {type(result)}"
+                f"METADATA_PROCESSING:GROUPING_FUNCTION:VALIDATE:RETURN_VALIDATION:Return value must be dict[str,Sequence], but got {type(result)}"
             )
 
         return value

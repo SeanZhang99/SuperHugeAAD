@@ -76,8 +76,8 @@ def extractor(
                     out_channels=num_kernel,
                     kernel_size=kernel_size,
                 ),
-                # nn.LayerNorm([num_kernel, input_time_dim]),
-                nn.BatchNorm1d(num_kernel),
+                nn.LayerNorm([num_kernel, input_time_dim]),
+                # nn.BatchNorm1d(num_kernel),
                 nn.ELU(),
                 nn.Dropout(drouput),
             )
@@ -100,8 +100,8 @@ def output_context(
             out_channels=input_channels,
             kernel_size=kernel_size,
         ),
-        # nn.LayerNorm([input_channels, time_dim]),
-        nn.BatchNorm1d(input_channels),
+        nn.LayerNorm([input_channels, time_dim]),
+        # nn.BatchNorm1d(input_channels),
         nn.ELU(),
         nn.Dropout(drouput),
     )

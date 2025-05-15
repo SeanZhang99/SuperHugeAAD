@@ -35,7 +35,7 @@ class MelFilter(RegressionMetadataFilter):
 
 
 def get_regression_filter(
-    speech_feature: str,
+    speech_feature: str, *args, **kwargs
 ) -> RegressionMetadataFilter:
     if speech_feature == "env":
         return EnvFilter()

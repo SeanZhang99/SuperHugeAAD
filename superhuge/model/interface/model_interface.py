@@ -51,12 +51,6 @@ class MInterface(pl2.LightningModule, ABC):
             model_common_args.num_channels = num_channels
         self.model = model_class(**model_args, **model_common_args.model_dump())
 
-        if ckpt_path is not None:
-            if isinstance(self.model, keras.Model):
-                self.model.load_weights(ckpt_path, skip_mismatch=True, by_name=True)
-            elif isinstance(self.model, torch.nn.Module):
-                self.model.load_state_dict(torch.load(ckpt_path), strict=False)
-
         # Instantiate pre_model and post_model
         self.stage = "train"
         self.pre_model: torch.nn.Module = LambdaLayer(lambda x: x["eeg"])
@@ -71,6 +65,8 @@ class MInterface(pl2.LightningModule, ABC):
             self.model, input_size=list(self.input_size.values())
         )
         self.output_size = summary.summary_list[0].output_size
+
+        self.ckpt_path = ckpt_path  # Store checkpoint path for later use
 
     @final
     def get_input_size(self, /, **kwargs) -> list[tuple[int | None, ...]]:

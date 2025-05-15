@@ -8,6 +8,7 @@ from .channel_mapping_interface import (
     ChannelMapping2DInterface,
 )
 from ..loss.regression.pearson_loss import pearson_corrcoef
+from ..loss.classify.f1_score import binary_f1_score
 
 
 class RegressionInterface(MInterface):
@@ -40,12 +41,22 @@ class RegressionInterface(MInterface):
             if pcc.shape[1] > 1:
                 for f in range(y_true.shape[1]):
                     stats[f"{self.stage}/{label}_pcc_band_{f}"] = pcc[..., f, j]
+            if j >= 1:
+                stats[f"{self.stage}/{label}_pcc_diff"] = (
+                    pcc[..., 0] - pcc[..., j]
+                ).mean(dim=1)
 
         pcc_mean = pcc.mean(dim=1)
 
-        stats[f"{self.stage}/acc"] = (torch.argmax(pcc_mean, dim=-1) == 0).type_as(
-            y_pred
-        )
+        if pcc_mean.shape[-1] > 1:
+            stats[f"{self.stage}/acc"] = (torch.argmax(pcc_mean, dim=-1) == 0).type_as(
+                y_pred
+            )
+            stats[f"{self.stage}/f1"] = binary_f1_score(
+                torch.argmax(pcc_mean, dim=-1),
+                0,
+                positive_label=0,
+            )
 
         self.log_dict(
             {k: v.mean() for k, v in stats.items()},

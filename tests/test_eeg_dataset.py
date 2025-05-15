@@ -47,19 +47,19 @@ def mock_eeg_path(tmp_path):
     return eeg_path
 
 
-def test_accept_ranges(mock_metadata, mock_files, mock_eeg_path):
+def test_accept_range(mock_metadata, mock_files, mock_eeg_path):
     dataset = EegDataset(
         eeg_path=str(mock_eeg_path),
         files=mock_files,
         metadata=mock_metadata,
         metadata_fields=[],
-        accept_ranges=(0.2, 0.8),
+        accept_range=(0.2, 0.8),
         window_length=1,
         fs=100,
         overlap=2,
     )
     stride = dataset.segment_length // dataset.overlap
-    assert len(dataset) > 0, "Dataset should have valid segments within accept_ranges."
+    assert len(dataset) > 0, "Dataset should have valid segments within accept_range."
     for idx in range(len(dataset)):
         sample = dataset[idx]
         file_name = f"dataset-{sample['meta']['dataset_id']:03d}-subject-{sample['meta']['subject_id']:03d}"
@@ -89,19 +89,19 @@ def test_accept_ranges(mock_metadata, mock_files, mock_eeg_path):
         ), f"End index is not within the accept range. Expected: (0.2 * signal_length, 0.8 * signal_length], Got: {end_idx}"
 
 
-def test_reject_ranges(mock_metadata, mock_files, mock_eeg_path):
+def test_reject_range(mock_metadata, mock_files, mock_eeg_path):
     dataset = EegDataset(
         eeg_path=str(mock_eeg_path),
         files=mock_files,
         metadata=mock_metadata,
         metadata_fields=[],
-        reject_ranges=(0.4, 0.6),
+        reject_range=(0.4, 0.6),
         window_length=1,
         fs=100,
         overlap=2,
     )
     stride = dataset.segment_length // dataset.overlap
-    assert len(dataset) > 0, "Dataset should have valid segments outside reject_ranges."
+    assert len(dataset) > 0, "Dataset should have valid segments outside reject_range."
     for idx in range(len(dataset)):
         sample = dataset[idx]
         file_name = f"dataset-{sample['meta']['dataset_id']:03d}-subject-{sample['meta']['subject_id']:03d}"
@@ -131,8 +131,8 @@ def test_combined_ranges(mock_metadata, mock_files, mock_eeg_path):
         files=mock_files,
         metadata=mock_metadata,
         metadata_fields=[],
-        accept_ranges=(0.2, 0.8),
-        reject_ranges=(0.4, 0.6),
+        accept_range=(0.2, 0.8),
+        reject_range=(0.4, 0.6),
         window_length=1,
         fs=100,
         overlap=2,
@@ -140,7 +140,7 @@ def test_combined_ranges(mock_metadata, mock_files, mock_eeg_path):
     stride = dataset.segment_length // dataset.overlap
     assert (
         len(dataset) > 0
-    ), "Dataset should have valid segments within accept_ranges and outside reject_ranges."
+    ), "Dataset should have valid segments within accept_range and outside reject_range."
     for idx in range(len(dataset)):
         sample = dataset[idx]
         file_name = f"dataset-{sample['meta']['dataset_id']:03d}-subject-{sample['meta']['subject_id']:03d}"

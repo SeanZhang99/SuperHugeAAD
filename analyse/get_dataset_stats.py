@@ -65,7 +65,6 @@ def plot_channel_histograms(data: np.ndarray, dataset_index):
             ax.axis("off")
 
         plt.tight_layout()
-    plt.show()
 
 
 if __name__ == "__main__":
@@ -77,33 +76,27 @@ if __name__ == "__main__":
         fs=128,
         meta_filter_func=[
             superhuge.data.filters.MetadataValueSelector(
-                attribute_name="dataset_id", attribute_value=2
+                attribute_name="dataset_id", attribute_value=9
             )
         ],
         meta_filter_func_args=["env"],
         metadata_fields=[
-            "dataset_id",
-            "subject_id",
-            "trial_id",
-            "signal_length",
-            "num_channel",
-            "fs",
             "env",
-            "channel_infos",
         ],
-        transform=superhuge.data.transforms.Scale(
-            root_path=r"E:/derivatives/SuperHuge"
-        ),
+        # transform=superhuge.data.transforms.Scale(
+        #     root_path=r"E:/derivatives/SuperHuge"
+        # ),
     )
 
     eeg_list = []
     env_list = []
-    for i in trange(len(datamodule.trainset)):
-        data = datamodule.trainset.__getitem__(i)
-        eeg_list.append(data["eeg"].copy())
-        env_list.append(data["audio"].copy())
-    data = np.concatenate(eeg_list, axis=0)  # Concatenate along the time dimension
-    plot_channel_histograms(data, 0)
-    data = np.concatenate(env_list, axis=0)  # Concatenate along the time dimension
-    plot_channel_histograms(data, 0)
-    pass
+    for dataset in datamodule.datasets:
+        for i in trange(len(dataset)):
+            data = dataset.__getitem__(i)
+            eeg_list.append(data["eeg"].copy())
+            env_list.append(data["audio"].copy())
+        # data = np.concatenate(eeg_list, axis=0)  # Concatenate along the time dimension
+        # plot_channel_histograms(data, 0)
+        data = np.concatenate(env_list, axis=0)  # Concatenate along the time dimension
+        plot_channel_histograms(data[:, :, 0], 0)
+    plt.show()

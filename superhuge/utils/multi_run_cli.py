@@ -1,3 +1,4 @@
+from lightning import LightningModule
 import torch
 from lightning.pytorch.cli import LightningCLI
 
@@ -8,11 +9,27 @@ class MultiRunCLI:
     def __init__(self, *args: str) -> None:
         self.cli_argv = list(args)
         self.task_config_path, self.cli_argv = self.__extract_task_config()
+        self.ckpt_path, self.cli_argv = self.__extract_ckpt_path()
         assert (
             self.task_config_path is not None
         ), "MULTI_RUN_CLI:__INIT__:TASK_CONFIG_ACQUIRING:ARGUMENT_MISSING: Task config is required by providing --task_config=<path> or --task_config <path>"
         self.task_config_parser = TaskConfigParser(self.task_config_path)
         self.__run_cli()
+
+    def __extract_ckpt_path(self) -> tuple[str | None, list[str]]:
+        cli_argv: list[str] = self.cli_argv
+        ckpt_path = None
+        for i, arg in enumerate(self.cli_argv):
+            if arg.startswith("--ckpt_path"):
+                if "=" in arg:
+                    ckpt_path = arg.split("=")[1]
+                    cli_argv.pop(i)
+                elif i + 1 < len(self.cli_argv):
+                    ckpt_path = self.cli_argv[i + 1]
+                    cli_argv.pop(i)
+                    cli_argv.pop(i)
+                break
+        return ckpt_path, cli_argv
 
     def __extract_task_config(self) -> tuple[str | None, list[str]]:
         cli_argv: list[str] = self.cli_argv
@@ -36,21 +53,21 @@ class MultiRunCLI:
                 args=self.cli_argv + config_list,
                 run=False,
             )
+
             cli.trainer.fit(
-                model=cli.model,
-                datamodule=cli.datamodule,
+                model=cli.model, datamodule=cli.datamodule, ckpt_path=self.ckpt_path
             )
             cli.trainer.test(
                 model=cli.model,
                 datamodule=cli.datamodule,
-                # dataloaders=cli.datamodule.val_dataloader(),
                 ckpt_path="best",
                 verbose=True,
             )
+            return
 
 
 class NamedParamsCLI(LightningCLI):
-    model: torch.nn.Module
+    model: LightningModule
 
     def _get_parameters(self):
         return self.model.named_parameters()

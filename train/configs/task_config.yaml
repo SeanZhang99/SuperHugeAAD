@@ -77,18 +77,8 @@ speech_reconstruction:
     data:
       init_args:
         dataset_class: superhuge.data.datasets.EegRegressionBaseDataset
-        n_folds: 6
-        metadata_fields:
-          [
-            "dataset_id",
-            "subject_id",
-            "trial_id",
-            "signal_length",
-            "num_channel",
-            "fs",
-            "env",
-            "channel_infos",
-          ]
+        n_folds: 4
+        metadata_fields: ["env"]
 
     model:
       class_path: superhuge.model.interface.ChannelMapping1DRegressionInterface

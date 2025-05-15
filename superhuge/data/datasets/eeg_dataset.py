@@ -216,8 +216,7 @@ class EegDataset(Dataset):
         if self.transform:
             eeg = self.transform(eeg, meta=meta, when="before_slicing", whom="eeg")[0]
 
-        stride = self.segment_length // self.overlap
-        eeg_seg = eeg[start_idx : start_idx + self.segment_length]
+        eeg_seg = eeg[start_idx : start_idx + self.segment_length].copy()
 
         if self.transform:
             eeg_seg = self.transform(

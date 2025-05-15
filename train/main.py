@@ -27,7 +27,8 @@ import os
 
 os.environ["KERAS_BACKEND"] = "torch"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-os.environ["CUDA_VISIBLE_DEVICES"] = "6"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 import torch
 
 from superhuge.utils.multi_run_cli import MultiRunCLI
@@ -39,10 +40,9 @@ torch.set_float32_matmul_precision("medium")
 if __name__ == "__main__":
     project_path = os.path.dirname(os.path.abspath(__file__))
     config_path = os.path.join(project_path, "configs")
-    # model_config = pick_file(project_path, timeout=30)
+    # model_config = pick_file(project_path, timeout=10)
     # if not model_config:
-    # model_config = os.path.join(config_path, "models", "deformer.yaml")
-    model_config = os.path.join(project_path, "configs", "models", "simple_cnn.yaml")
+    model_config = os.path.join(project_path, "configs", "models", "vlaai.yaml")
     cli = MultiRunCLI(
         "--task_config",
         os.path.join(config_path, "task_config.yaml"),

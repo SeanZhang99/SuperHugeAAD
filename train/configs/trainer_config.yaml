@@ -7,19 +7,18 @@ trainer:
     - class_path: lightning.pytorch.callbacks.LearningRateMonitor
       init_args:
         logging_interval: epoch
-    # - class_path: lightning.pytorch.callbacks.EarlyStopping
-    #   init_args:
-    #     min_delta: 0.01
-    #     mode: max
-    #     monitor: val/acc_epoch
-    #     patience: 15
+    - class_path: lightning.pytorch.callbacks.EarlyStopping
+      init_args:
+        min_delta: 0.01
+        mode: min
+        monitor: val/loss_epoch
+        patience: 20
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
-        mode: max
-        monitor: val/acc_epoch
+        mode: min
+        monitor: val/loss_epoch
         save_last: true
         save_top_k: 2
-        save_weights_only: true
     - class_path: superhuge.utils.fancy_progress_bar.FancyProgressBar
       init_args:
         refresh_rate: 5

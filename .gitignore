@@ -14,3 +14,4 @@ build/
 *egg-info/
 matlab-preprocessing-code/
 prepare_dataset/
+.pytest_cache/

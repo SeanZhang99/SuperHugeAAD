@@ -40,13 +40,20 @@ from ..filters.regress_filter import get_regression_filter
 from ..filters.composer import MetaDataFilterComposer
 from ..metadata_processing.data import (
     MetaData,
+    MetaDataElement,
     MetaDataField,
     GroupingFunction,
     DatasetSubjectTrialEntry,
 )
-from ..metadata_processing.group import leave_one_out_input_decorator, loto
+from ..metadata_processing.group import (
+    leave_one_out_input_decorator,
+    loto,
+    test_loto_kul,
+)
 from ..transforms.composer import TransformComposer
 from ..transforms.abc import Transform
+from ..transforms.scale import Scale
+from ..transforms.filter import Filter
 
 
 class CreateDatasetsInputConfig(BaseModel):
@@ -82,6 +89,31 @@ class CreateDatasetsInputConfig(BaseModel):
                 f"but got {self.val_fold_idx} and {self.test_fold_idx}"
             )
         return self
+
+
+def create_matlab_dinterface():
+    return DInterface(
+        dataset_class=EegClassifyBaseDataset,
+        dataloader_args={
+            "batch_size": 1,
+            "num_workers": 0,
+            "pin_memory": False,
+            "persistent_workers": False,
+        },
+        root_path=r"E:\derivatives\SuperHuge",
+        window_length=10.0,
+        fs=128,
+        meta_filter_func=None,
+        meta_filter_func_args=["binary_leftright"],
+        meta_group_func=test_loto_kul,
+        transform=[
+            Filter([1.0, 32.0], fs=128, btype="bandpass", order=5),
+            Scale(root_path=r"E:\derivatives\SuperHuge", preproc_stage="raw"),
+        ],
+        preproc_stage="raw",
+        metadata_fields=["label"],
+        overlap=2,
+    )
 
 
 class DInterface(pl2.LightningDataModule):
@@ -245,7 +277,11 @@ class DInterface(pl2.LightningDataModule):
                 meta_dict[entry] = dataset_class.metadata_cls(**data)
         return meta_dict
 
-    def filt_metadata(self, metadata: MetaData, meta_filter_func: Callable | None):
+    def filt_metadata(
+        self,
+        metadata: MetaData,
+        meta_filter_func: Callable[[MetaDataElement], MetaDataElement | None] | None,
+    ):
         if meta_filter_func:
             filtered_metadata: MetaData = {}
             for dataset_entry, metadata_element in metadata.items():
@@ -285,6 +321,8 @@ class DInterface(pl2.LightningDataModule):
                 overlap=self.dataset_cfg.overlap,
                 transform=self.dataset_cfg.transform,
                 metadata_fields=self.dataset_cfg.metadata_fields,
+                accept_range=splits.get(f"{mode}_accept_range", None),
+                reject_range=splits.get(f"{mode}_reject_range", None),
                 **self.kwargs,
             )
             for mode in dataset_modes
@@ -313,9 +351,7 @@ class DInterface(pl2.LightningDataModule):
 
         # Table for dataset statistics
         stats_table = Table(title="Dataset Summary")
-        stats_table.add_column(
-            "# Dataset", justify="center", style="cyan", no_wrap=True
-        )
+        stats_table.add_column("Set", justify="center", style="cyan", no_wrap=True)
         stats_table.add_column("# Subjects", justify="center", style="magenta")
         stats_table.add_column("# Trials", justify="center", style="green")
         stats_table.add_column("# Samples", justify="center", style="yellow")
@@ -331,8 +367,8 @@ class DInterface(pl2.LightningDataModule):
         for name, dataset in datasets.items():
             num_subjects = len(
                 set(
-                    f"{entry.dataset_id}-{entry.subject_id}"
-                    for entry in dataset.metadata.values()
+                    f"{meta.dataset_id}-{meta.subject_id}"
+                    for meta in dataset.metadata.values()
                 )
             )
             num_trials = len(dataset.files)
@@ -346,8 +382,6 @@ class DInterface(pl2.LightningDataModule):
                 entry.dataset_name for entry in dataset.metadata.values()
             )
 
-        console.print(stats_table)
-
         # Table for unique dataset names and IDs
         unique_table = Table(title="Unique Dataset Names")
         unique_table.add_column("Dataset Name", justify="center", style="cyan")
@@ -355,7 +389,7 @@ class DInterface(pl2.LightningDataModule):
         for entry in sorted(unique_datasets):
             unique_table.add_row(entry)
 
-        console.print(unique_table)
+        console.print(stats_table, unique_table)
 
     @property
     def batch_size(self):
@@ -368,3 +402,13 @@ class DInterface(pl2.LightningDataModule):
     @property
     def window_length(self):
         return self.dataset_cfg.window_length
+
+    @property
+    def datasets(self):
+        return self.trainset, self.valset, self.testset
+
+
+if __name__ == "__main__":
+    # Test the DInterface class
+    dinterface = create_matlab_dinterface()
+    print(dinterface.dataset_cfg)

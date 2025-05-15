@@ -44,4 +44,18 @@ init_args:
         when: before_returning
         whom: eeg
         root_path: ${init_args.root_path}
-  window_length: 10
+        scaling_factor_path: channelwise_scaling_factor.pkl
+    - class_path: superhuge.data.transforms.Scale
+      init_args:
+        preproc_stage: ${init_args.preproc_stage}
+        apply_prob: 1.0
+        when: before_returning
+        whom: audio
+        root_path: ${init_args.root_path}
+        scaling_factor_path: scaling_factor.pkl
+    # - class_path: superhuge.data.transforms.ZScore
+    #   init_args:
+    #     apply_prob: 1.0
+    #     when: before_returning
+    #     whom: audio
+  window_length: 5

@@ -395,6 +395,11 @@ class DInterface(pl2.LightningDataModule):
     def batch_size(self):
         return self.dataloader_args["batch_size"]
 
+    @batch_size.setter
+    def batch_size(self, value):
+        assert isinstance(value, int), "Batch size must be an integer."
+        self.dataloader_args["batch_size"] = value
+
     @property
     def fs(self):
         return self.dataset_cfg.fs

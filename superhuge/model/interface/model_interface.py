@@ -2,6 +2,7 @@ import inspect
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 from collections.abc import Callable, Sequence
+from re import M
 from typing import Any, final
 
 import keras
@@ -27,6 +28,10 @@ class MInterface(pl2.LightningModule, ABC):
         model_common_args: ModelInputArgs,
         loss: torch.nn.modules.loss._Loss | Sequence[torch.nn.modules.loss._Loss],
         loss_hparams: Sequence[float] | None = None,
+        optimizer_class: type[torch.optim.Optimizer] = torch.optim.AdamW,
+        optimizer_args: dict[str, Any] | None = None,
+        lr_scheduler_class: type[torch.optim.lr_scheduler.LRScheduler] = None,
+        lr_scheduler_args: dict[str, Any] | None = None,
         ckpt_path: str | None = None,
     ):
         super().__init__()
@@ -43,6 +48,11 @@ class MInterface(pl2.LightningModule, ABC):
         self.loss = loss
         self.loss_hparams = loss_hparams
         self.configure_loss()
+
+        self.optmizer_class = optimizer_class
+        self.optimizer_args = optimizer_args
+        self.lr_scheduler_class = lr_scheduler_class
+        self.lr_scheduler_args = lr_scheduler_args
 
         # Instantiate main model and possibly load checkpoint
         if model_common_args.num_channels is None:
@@ -202,7 +212,7 @@ class MInterface(pl2.LightningModule, ABC):
             loss,
             batch_size=batch_size,
             prog_bar=True,
-            on_step=True,
+            on_step=False,
             on_epoch=True,
             sync_dist=True,
             enable_graph=False,
@@ -269,22 +279,23 @@ class MInterface(pl2.LightningModule, ABC):
         self.loss_fn = loss_fn
 
     def on_after_backward(self):
-        for name, param in self.named_parameters():
-            if param.grad is not None:
-                self.log(
-                    f"grad_norm2/{name}",
-                    param.grad.detach().data.norm(2).item(),
-                    on_epoch=False,
-                    batch_size=1,
-                    enable_graph=False,
-                )
-                self.log(
-                    f"param_norm2/{name}",
-                    param.detach().data.norm(2).item(),
-                    on_epoch=False,
-                    batch_size=1,
-                    enable_graph=False,
-                )
+        if getattr(self, "log_norm", False):
+            for name, param in self.named_parameters():
+                if param.grad is not None:
+                    self.log(
+                        f"grad_norm2/{name}",
+                        param.grad.detach().data.norm(2).item(),
+                        on_epoch=False,
+                        batch_size=1,
+                        enable_graph=False,
+                    )
+                    self.log(
+                        f"param_norm2/{name}",
+                        param.detach().data.norm(2).item(),
+                        on_epoch=False,
+                        batch_size=1,
+                        enable_graph=False,
+                    )
         super().on_after_backward()
 
     def on_before_backward(self, loss):
@@ -355,3 +366,64 @@ class MInterface(pl2.LightningModule, ABC):
                         output_keys.append("label")
 
         return output_keys
+
+    @final
+    def configure_optimizers(self):
+
+        decay, no_decay = [], []
+        for name, param in self.named_parameters():
+            if not param.requires_grad:
+                continue
+            if "bias" in name or "Norm" in name:
+                no_decay.append(param)
+            else:
+                decay.append(param)
+
+        grouped_params = [
+            {"params": decay, "weight_decay": self.weight_decay, "lr": self.lr * 0.3},
+            {
+                "params": no_decay,
+                "weight_decay": self.weight_decay,
+                "lr": self.lr * 1.7,
+            },
+        ]
+
+        optimizer = self.optmizer_class(
+            grouped_params, lr=self.lr, weight_decay=self.weight_decay
+        )
+
+        return optimizer
+
+        scheduler = self.lr_scheduler_class(
+            optimizer, **self.lr_scheduler_args if self.lr_scheduler_args else {}
+        )
+        scheduler = {
+            "scheduler": self.lr_scheduler_class(
+                optimizer, **self.lr_scheduler_args if self.lr_scheduler_args else {}
+            ),
+            "monitor": "val/loss",  # ⚠️ 这里必须指定你验证时 log 的指标名
+            "interval": "epoch",
+            "frequency": 1,
+            # "strict": False,
+        }
+        return {"optimizer": optimizer, "lr_scheduler": scheduler}
+
+    @property
+    def lr(self) -> float:
+        return self.optimizer_args.get("lr", 1e-3)
+
+    @lr.setter
+    def lr(self, value: float) -> None:
+        assert isinstance(value, float), f"lr must be a float, but got {type(value)}"
+        self.optimizer_args["lr"] = value
+
+    @property
+    def weight_decay(self) -> float:
+        return self.optimizer_args.get("weight_decay", 1e-2)
+
+    @weight_decay.setter
+    def weight_decay(self, value: float) -> None:
+        assert isinstance(
+            value, float
+        ), f"weight_decay must be a float, but got {type(value)}"
+        self.optimizer_args["weight_decay"] = value

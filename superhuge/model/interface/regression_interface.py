@@ -61,8 +61,8 @@ class RegressionInterface(MInterface):
         self.log_dict(
             {k: v.mean() for k, v in stats.items()},
             prog_bar=True,
+            on_step=False,
             on_epoch=True,
-            on_step=True,
             batch_size=y_pred.shape[0],
             sync_dist=True,
         )

@@ -9,19 +9,26 @@ trainer:
         logging_interval: epoch
     - class_path: lightning.pytorch.callbacks.EarlyStopping
       init_args:
-        min_delta: 0.01
+        min_delta: 0.0
         mode: min
-        monitor: val/loss_epoch
+        monitor: val/loss
         patience: 20
+        check_on_train_epoch_end: false
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
         mode: min
-        monitor: val/loss_epoch
+        monitor: val/loss
         save_last: true
         save_top_k: 2
+        save_on_train_epoch_end: false
     - class_path: superhuge.utils.fancy_progress_bar.FancyProgressBar
       init_args:
         refresh_rate: 5
+    # - class_path: lightning.pytorch.callbacks.LearningRateFinder
+    #   init_args:
+    #     min_lr: 1.e-6
+    #     max_lr: 1.e3
+    #     early_stop_threshold: null
   check_val_every_n_epoch: 1
   default_root_dir: null
   detect_anomaly: false
@@ -46,16 +53,16 @@ trainer:
     - class_path: CSVLogger
       init_args:
         save_dir: ./logs/csv_logs
-  max_epochs: 100
+  max_epochs: 1000
   max_steps: -1
   max_time: null
-  min_epochs: 20
+  min_epochs: null
   min_steps: null
   num_nodes: 1
   num_sanity_val_steps: null
   overfit_batches: 0
   plugins: null
-  precision: null
+  precision: 32-true
   profiler: null
   reload_dataloaders_every_n_epochs: 0
   strategy: auto

@@ -68,7 +68,7 @@ class ClassifyInterface(MInterface):
             },
             prog_bar=True,
             batch_size=pred.shape[0],
-            on_step=True,
+            on_step=False,
             on_epoch=True,
             sync_dist=True,
             enable_graph=False,

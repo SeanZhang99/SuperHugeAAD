@@ -29,6 +29,7 @@ os.environ["KERAS_BACKEND"] = "torch"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+import lightning
 import torch
 
 from superhuge.utils.multi_run_cli import MultiRunCLI
@@ -50,12 +51,12 @@ if __name__ == "__main__":
         os.path.join(config_path, "trainer_config.yaml"),
         "--data",
         os.path.join(config_path, "data_config.yaml"),
-        "--optimizer",
-        os.path.join(config_path, "optimizer_config.yaml"),
         "--lr_scheduler",
         os.path.join(config_path, "lr_scheduler_config.yaml"),
         "--model",
         model_config,
+        "--model",
+        os.path.join(config_path, "optimizer_config.yaml"),
         "--seed_everything",
         "42",
     )

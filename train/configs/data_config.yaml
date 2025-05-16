@@ -2,7 +2,7 @@
 class_path: superhuge.data.interface.DInterface
 init_args:
   dataloader_args:
-    batch_size: 64
+    batch_size: 256
     drop_last: false
     num_workers: 0
     persistent_workers: true

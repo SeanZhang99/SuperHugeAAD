@@ -18,6 +18,7 @@ class Scale(Transform):
         preproc_stage: str = "preprocessed",
         scaling_factor_path: str = "scaling_factor.pkl",
         scaling_factor_key: str = "eeg",
+        eps=1.0e-8,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
@@ -27,6 +28,7 @@ class Scale(Transform):
             self._scale: dict[str, dict[str, np.array]] = pickle.load(f)
 
         self._scaling_factor_key = scaling_factor_key
+        self.eps = eps
 
     def __call__(self, x: np.ndarray, meta, /, *args, **kwargs) -> np.ndarray:
         super().__call__(x)
@@ -35,10 +37,7 @@ class Scale(Transform):
             warn(f"Scaling factor for {entry} not found. Skip applying scaling.")
             return x, *args
         else:
-            return (
-                x
-                / self._scale[entry][
-                    meta["speech_feature_type"] if self.whom == "audio" else "eeg"
-                ],
-                *args,
-            )
+            key = meta["speech_feature_type"] if self.whom == "audio" else "eeg"
+            scale_factor = self._scale[entry][key]
+
+            return (x / (scale_factor + self.eps), *args)

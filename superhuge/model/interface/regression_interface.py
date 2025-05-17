@@ -54,7 +54,7 @@ class RegressionInterface(MInterface):
             )
             stats[f"{self.stage}/f1"] = binary_f1_score(
                 torch.argmax(pcc_mean, dim=-1),
-                0,
+                torch.zeros((1,), device=pcc_mean.device, dtype=torch.long),
                 positive_label=0,
             )
 

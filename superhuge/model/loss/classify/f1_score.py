@@ -15,8 +15,8 @@ def prepare_targets(preds: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     Returns:
         torch.Tensor: Broadcasted/squeezed targets with shape matching preds
     """
-    if targets.ndim == 0:
-        targets = targets.expand_as(preds)
+    if targets.ndim == 1 and targets.shape[0] == 1:
+        targets = targets.repeat(preds.shape[0])
 
     if targets.ndim == 2 and targets.shape[1] == 1:
         targets = targets.squeeze(1)

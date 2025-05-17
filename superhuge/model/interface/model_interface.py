@@ -299,15 +299,16 @@ class MInterface(pl2.LightningModule, ABC):
         super().on_after_backward()
 
     def on_before_backward(self, loss):
-        for name, param in self.named_parameters():
-            if param.grad is not None:
-                self.log(
-                    f"param_norm2/{name}",
-                    param.detach().data.norm(2).item(),
-                    on_epoch=False,
-                    batch_size=1,
-                    enable_graph=False,
-                )
+        if getattr(self, "log_norm", False):
+            for name, param in self.named_parameters():
+                if param.grad is not None:
+                    self.log(
+                        f"param_norm2/{name}",
+                        param.detach().data.norm(2).item(),
+                        on_epoch=False,
+                        batch_size=1,
+                        enable_graph=False,
+                    )
         return super().on_before_backward(loss)
 
     @final
@@ -392,11 +393,8 @@ class MInterface(pl2.LightningModule, ABC):
             grouped_params, lr=self.lr, weight_decay=self.weight_decay
         )
 
-        return optimizer
+        # return optimizer
 
-        scheduler = self.lr_scheduler_class(
-            optimizer, **self.lr_scheduler_args if self.lr_scheduler_args else {}
-        )
         scheduler = {
             "scheduler": self.lr_scheduler_class(
                 optimizer, **self.lr_scheduler_args if self.lr_scheduler_args else {}
@@ -404,7 +402,7 @@ class MInterface(pl2.LightningModule, ABC):
             "monitor": "val/loss",  # ⚠️ 这里必须指定你验证时 log 的指标名
             "interval": "epoch",
             "frequency": 1,
-            # "strict": False,
+            "strict": False,
         }
         return {"optimizer": optimizer, "lr_scheduler": scheduler}
 

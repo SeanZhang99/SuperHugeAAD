@@ -338,7 +338,7 @@ class DInterface(pl2.LightningDataModule):
         )
 
     def train_dataloader(self):
-        return self.create_dataloader(self.trainset, shuffle=True)
+        return self.create_dataloader(self.trainset)
 
     def val_dataloader(self):
         return self.create_dataloader(self.valset)

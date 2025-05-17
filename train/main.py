@@ -51,8 +51,6 @@ if __name__ == "__main__":
         os.path.join(config_path, "trainer_config.yaml"),
         "--data",
         os.path.join(config_path, "data_config.yaml"),
-        "--lr_scheduler",
-        os.path.join(config_path, "lr_scheduler_config.yaml"),
         "--model",
         model_config,
         "--model",

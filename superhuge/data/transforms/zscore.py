@@ -15,5 +15,6 @@ class ZScore(Transform):
 
     def __call__(self, x: np.ndarray, /, *args, eps=1.0e-5, **kwargs) -> np.ndarray:
         super().__call__(x)
-        x -= x.mean()
-        return x / (x.std() + eps), *args
+        x -= x.mean(axis=0, keepdims=True)
+        x /= x.std(axis=0, keepdims=True) + eps
+        return x, *args

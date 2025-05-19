@@ -41,6 +41,7 @@ class RegressionInterface(MInterface):
             if pcc.shape[1] > 1:
                 for f in range(y_true.shape[1]):
                     stats[f"{self.stage}/{label}_pcc_band_{f}"] = pcc[..., f, j]
+            # Compute pcc difference between the first speaker and the rest
             if j >= 1:
                 stats[f"{self.stage}/{label}_pcc_diff"] = (
                     pcc[..., 0] - pcc[..., j]

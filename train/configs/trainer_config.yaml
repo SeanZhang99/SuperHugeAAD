@@ -37,7 +37,7 @@ trainer:
   enable_checkpointing: null
   enable_model_summary: false
   enable_progress_bar: null
-  fast_dev_run: false
+  fast_dev_run: null
   gradient_clip_algorithm: null
   gradient_clip_val: null
   inference_mode: true
@@ -62,10 +62,10 @@ trainer:
   num_sanity_val_steps: null
   overfit_batches: 0
   plugins: null
-  precision: 32-true
+  precision: null
   profiler: null
   reload_dataloaders_every_n_epochs: 0
   strategy: auto
   sync_batchnorm: false
-  use_distributed_sampler: true
+  use_distributed_sampler: null
   val_check_interval: null

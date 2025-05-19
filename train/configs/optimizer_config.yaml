@@ -1,5 +1,5 @@
 init_args:
-  optimizer_class: torch.optim.AdamW
+  optimizer_class: torch.optim.Adam
   optimizer_args:
     lr: 1.e-3
     weight_decay: 0

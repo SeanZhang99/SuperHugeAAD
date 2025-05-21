@@ -1,3 +1,4 @@
+import numpy as np
 from .eeg_regression_base_dataset import EegRegressionBaseDataset
 from . import EegDataset
 from ..metadata_processing.data import ClassifyMetaDataElement
@@ -13,8 +14,8 @@ class EegClassifyBaseDataset(EegDataset):
 
     def load_data(self, idx):
         item = super().load_data(idx)
-        meta = item["meta"]
-        eeg = item["eeg"]
+        meta: dict = item["meta"]
+        eeg: np.ndarray | np.memmap = item["eeg"]
 
         # in normal conditions, `label` is in `meta`.
         # If a diamond inheritage is used (e.g. class(EegClassifyBaseDataset, EegRegressionBaseDataset)),

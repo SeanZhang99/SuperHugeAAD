@@ -130,6 +130,7 @@ class EegDataset(Dataset):
             len(self._input_files_list) + 1, dtype=np.int32
         )  # Preallocate offsets (+1 for boundary)
         valid_start_indices = []
+        per_file_sample_count = []
 
         current_index = 0
 
@@ -143,6 +144,7 @@ class EegDataset(Dataset):
             file_to_valid_start_indices_offsets[file_idx] = current_index
             valid_start_indices.extend(start_indices)
             current_index += len(start_indices)
+            per_file_sample_count.append(len(start_indices))
 
         # Add the final boundary for offsets
         file_to_valid_start_indices_offsets[len(self._input_files_list)] = current_index
@@ -150,6 +152,7 @@ class EegDataset(Dataset):
         self._file_names = np.array(file_names, dtype=np.dtypes.StrDType)
         self._file_to_valid_start_indices_offsets = file_to_valid_start_indices_offsets
         self._valid_start_indices = np.array(valid_start_indices, dtype=np.int32)
+        self._per_file_sample_count = np.array(per_file_sample_count, dtype=np.int32)
 
     def _find_valid_start_idx(self, trial_length: int):
         """

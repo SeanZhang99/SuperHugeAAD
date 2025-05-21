@@ -33,6 +33,8 @@ class MInterface(pl2.LightningModule, ABC):
         lr_scheduler_class: type[torch.optim.lr_scheduler.LRScheduler] = None,
         lr_scheduler_args: dict[str, Any] | None = None,
         ckpt_path: str | None = None,
+        log_grad: bool | None = None,
+        log_norm: bool | None = None,
     ):
         super().__init__()
 
@@ -77,6 +79,8 @@ class MInterface(pl2.LightningModule, ABC):
         self.output_size = summary.summary_list[0].output_size
 
         self.ckpt_path = ckpt_path  # Store checkpoint path for later use
+        self.log_grad = log_grad
+        self.log_norm = log_norm
 
     @final
     def get_input_size(self, /, **kwargs) -> list[tuple[int | None, ...]]:
@@ -279,7 +283,7 @@ class MInterface(pl2.LightningModule, ABC):
         self.loss_fn = loss_fn
 
     def on_after_backward(self):
-        if getattr(self, "log_norm", False):
+        if getattr(self, "log_grad", False):
             for name, param in self.named_parameters():
                 if param.grad is not None:
                     self.log(
@@ -408,7 +412,7 @@ class MInterface(pl2.LightningModule, ABC):
 
     @property
     def lr(self) -> float:
-        return self.optimizer_args.get("lr", 1e-3)
+        return self.optimizer_args["lr"]
 
     @lr.setter
     def lr(self, value: float) -> None:

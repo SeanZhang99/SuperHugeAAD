@@ -28,36 +28,35 @@ class ClassifyInterface(MInterface):
         torchinfo.summary(self.post_model, input_size=self.output_size)
 
     def get_stats(self, pred: torch.Tensor, label: torch.Tensor, meta: dict):
-        prob = pred
-        pred = prob.argmax(dim=1)
-        for sample_idx in range(pred.shape[0]):
-            self.log_dict(
-                {
-                    # accuracy accumulated and reduced on each trial
-                    f'detail/{self.stage}/{meta["entry"][sample_idx]}_acc': torch.Tensor(
-                        pred[sample_idx] == label[sample_idx]
-                    ).float(),
-                    #         # accuracy accumulated and reduced on each subject
-                    #         f'detail/{self.stage}/dataset-{meta["dataset_id"][sample_idx]:03d}-subject-{meta["subject_id"][sample_idx]:03d}_acc': torch.Tensor(
-                    #             pred[sample_idx] == label[sample_idx]
-                    #         ).float(),
-                    # accuracy accumulated and reduced on each dataset
-                    f'detail/{self.stage}/dataset-{meta["dataset_id"][sample_idx]:03d}_acc': torch.Tensor(
-                        pred[sample_idx] == label[sample_idx]
-                    ).float(),
-                    # confusion matrix
-                    # accuracy accumulated and reduced on each class
-                    f"{self.stage}/{int(label[sample_idx])}_acc": torch.Tensor(
-                        pred[sample_idx] == label[sample_idx]
-                    ).float(),
-                },
-                batch_size=1,
-                prog_bar=False,
-                on_step=False,
-                on_epoch=True,
-                sync_dist=True,
-                enable_graph=False,
-            )
+        prob, pred = pred, pred.argmax(dim=1)
+        # for sample_idx in range(pred.shape[0]):
+        #     self.log_dict(
+        #         {
+        #             # accuracy accumulated and reduced on each trial
+        #             f'detail/{self.stage}/{meta["entry"][sample_idx]}_acc': torch.Tensor(
+        #                 pred[sample_idx] == label[sample_idx]
+        #             ).float(),
+        #             #         # accuracy accumulated and reduced on each subject
+        #             #         f'detail/{self.stage}/dataset-{meta["dataset_id"][sample_idx]:03d}-subject-{meta["subject_id"][sample_idx]:03d}_acc': torch.Tensor(
+        #             #             pred[sample_idx] == label[sample_idx]
+        #             #         ).float(),
+        #             # accuracy accumulated and reduced on each dataset
+        #             f'detail/{self.stage}/dataset-{meta["dataset_id"][sample_idx]:03d}_acc': torch.Tensor(
+        #                 pred[sample_idx] == label[sample_idx]
+        #             ).float(),
+        #             # confusion matrix
+        #             # accuracy accumulated and reduced on each class
+        #             f"{self.stage}/{int(label[sample_idx])}_acc": torch.Tensor(
+        #                 pred[sample_idx] == label[sample_idx]
+        #             ).float(),
+        #         },
+        #         batch_size=1,
+        #         prog_bar=False,
+        #         on_step=False,
+        #         on_epoch=True,
+        #         sync_dist=True,
+        #         enable_graph=False,
+        #     )
         self.log_dict(
             {
                 f"{self.stage}/acc": (pred == label).float().mean(),

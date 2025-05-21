@@ -46,7 +46,7 @@ def binary_roc_curve(
     targets: torch.Tensor,
     /,
     *,
-    positive_label: int = 1,
+    positive_label: int = 0,
     eps: float = 1e-8,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
@@ -87,24 +87,28 @@ def multiclass_auc_score(
     eps: float = 1e-8,
 ) -> torch.Tensor:
     """
-    Computes AUC for multi-class classification using One-vs-Rest (OvR).
+    Computes AUC for binary or multi-class classification using One-vs-Rest (OvR),
+    from raw logits (no softmax required externally).
 
     Args:
-        probs (torch.Tensor): Predicted probabilities, shape (N, C)
-        targets (torch.Tensor): True labels (0..C-1), shape (N,)
+        logits (torch.Tensor): Raw model outputs, shape (N, C)
+        targets (torch.Tensor): True class labels, shape (N,)
         average (str): "macro" or "weighted"
         eps (float): Small value to avoid division by zero
 
     Returns:
         torch.Tensor: Averaged AUC score over classes
     """
-
     assert average in ["macro", "weighted"], f"Invalid average: {average}"
-
-    probs, targets = prepare_targets(probs, targets)
+    assert probs.ndim == 2, "Expected logits shape (N, C)"
+    assert targets.ndim == 1, "Expected targets shape (N,)"
 
     num_classes = probs.shape[1]
     targets = targets.squeeze()
+    assert targets.max().item() < num_classes, "Target index out of bounds"
+
+    # Apply softmax to get class probabilities
+    probs = torch.softmax(probs, dim=1)
 
     aucs = []
     weights = []
@@ -113,11 +117,16 @@ def multiclass_auc_score(
         binary_targets = (targets == class_index).float()
         class_probs = probs[:, class_index]
 
+        # Skip class if it has no positive samples
+        if binary_targets.sum() < 1 or binary_targets.sum() >= len(binary_targets):
+            continue
+
+        # Sort by predicted score
         _, indices = torch.sort(class_probs, descending=True)
         sorted_targets = binary_targets[indices]
 
         pos = sorted_targets
-        neg = 1 - sorted_targets
+        neg = 1.0 - pos
 
         tp_cumsum = torch.cumsum(pos, dim=0)
         fp_cumsum = torch.cumsum(neg, dim=0)
@@ -128,6 +137,9 @@ def multiclass_auc_score(
         auc = torch.trapz(tpr, fpr)
         aucs.append(auc)
         weights.append((targets == class_index).sum())
+
+    if len(aucs) == 0:
+        return torch.tensor(0.0, device=probs.device)
 
     aucs_tensor = torch.stack(aucs)
     weights_tensor = torch.stack(weights).float()

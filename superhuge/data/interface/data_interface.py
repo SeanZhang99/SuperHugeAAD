@@ -39,6 +39,7 @@ from ..filters.classify_filter import get_classify_filter
 from ..filters.regress_filter import get_regression_filter
 from ..filters.composer import MetaDataFilterComposer
 from ..metadata_processing.data import (
+    ClassifyMetaDataElement,
     MetaData,
     MetaDataElement,
     MetaDataField,
@@ -317,7 +318,6 @@ class DInterface(pl2.LightningDataModule):
                 metadata=metadata,
                 fs=self.dataset_cfg.fs,
                 window_length=self.dataset_cfg.window_length,
-                # overlap=self.dataset_cfg.overlap if mode == "train" else 1,
                 overlap=self.dataset_cfg.overlap,
                 transform=self.dataset_cfg.transform,
                 metadata_fields=self.dataset_cfg.metadata_fields,
@@ -389,7 +389,34 @@ class DInterface(pl2.LightningDataModule):
         for entry in sorted(unique_datasets):
             unique_table.add_row(entry)
 
-        console.print(stats_table, unique_table)
+        # class-wise sample count for classification dataset
+        if issubclass(self.dataset_cfg.dataset_class, EegClassifyBaseDataset):
+            class_count_table = Table(title="Class-wise Sample Count")
+            class_count_table.add_column("Class", justify="center", style="cyan")
+            class_count_table.add_column("Samples", justify="center", style="magenta")
+            class_count_table.add_column("Percentage", justify="center", style="green")
+
+            for name, dataset in datasets.items():
+                class_counts = {}
+                for file_idx, sample_counts in enumerate(
+                    dataset._per_file_sample_count
+                ):
+                    metadata_element: ClassifyMetaDataElement = dataset.metadata[
+                        dataset.files[file_idx]
+                    ]
+                    label = metadata_element.label
+                    if label not in class_counts:
+                        class_counts[label] = 0
+                    class_counts[label] += sample_counts
+
+                total_samples = sum(class_counts.values())
+                for label, count in class_counts.items():
+                    percentage = (count / total_samples) * 100
+                    class_count_table.add_row(
+                        str(f"{name}-{label}"), str(count), f"{percentage:.2f}%"
+                    )
+
+        console.print(stats_table, unique_table, class_count_table)
 
     @property
     def batch_size(self):

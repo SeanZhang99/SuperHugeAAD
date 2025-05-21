@@ -24,12 +24,12 @@ def prepare_targets(preds: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     if preds.ndim == 2 and preds.shape[1] == 1:
         preds = preds.squeeze(1)
 
-    if preds.shape != targets.shape:
+    if preds.shape[0] != targets.shape[0]:
         raise ValueError(
             f"Shape mismatch: preds {preds.shape}, targets {targets.shape}"
         )
 
-    return targets
+    return preds, targets
 
 
 def binary_f1_score(
@@ -52,7 +52,7 @@ def binary_f1_score(
     Returns:
         torch.Tensor: F1-score as scalar.
     """
-    targets = prepare_targets(preds, targets)
+    preds, targets = prepare_targets(preds, targets)
 
     TP = ((preds == positive_label) & (targets == positive_label)).sum()
     FP = ((preds == positive_label) & (targets != positive_label)).sum()
@@ -78,7 +78,7 @@ def micro_f1_score(
     Returns:
         torch.Tensor: Micro F1-score as scalar.
     """
-    targets = prepare_targets(preds, targets)
+    preds, targets = prepare_targets(preds, targets)
 
     TP = (preds == targets).sum()
     total_pred = preds.numel()
@@ -109,7 +109,7 @@ def macro_f1_score(
     Returns:
         torch.Tensor: Macro F1-score as scalar.
     """
-    targets = prepare_targets(preds, targets)
+    preds, targets = prepare_targets(preds, targets)
 
     if num_classes is None:
         num_classes = int(torch.max(torch.cat([preds, targets]))) + 1

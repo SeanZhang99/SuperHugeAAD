@@ -67,7 +67,6 @@ def divide_sets(
     return train_set, val_set, test_set
 
 
-# @leave_one_out_input_decorator
 def loto(
     metadata: MetaData,
     test_fold_idx: int,

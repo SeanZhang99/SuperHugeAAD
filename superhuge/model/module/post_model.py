@@ -7,11 +7,15 @@ def classify_post_model(
     input_size: Sequence[int | None], num_class: int, hidden_dim: int
 ):
     return nn.Sequential(
-        Reduce("b t c -> b c", "mean"),
+        # Average pooling across the time dimension if exists
+        Reduce("b t c -> b c", "mean") if len(input_size) == 3 else nn.Identity(),
         # dense the last dimension
-        nn.Linear(
-            input_size[-1],
-            hidden_dim,
+        EinMix(
+            "b out_features -> b hidden_dim",
+            weight_shape="out_features hidden_dim",
+            bias_shape="hidden_dim",
+            hidden_dim=hidden_dim,
+            out_features=input_size[-1],
         ),
         # nn.LayerNorm(hidden_dim),
         # nn.GELU(),

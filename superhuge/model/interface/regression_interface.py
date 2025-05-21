@@ -37,10 +37,6 @@ class RegressionInterface(MInterface):
         pcc = pearson_corrcoef(y_pred, y_true, dim=1)
         for j, label in enumerate(speaker_labels):
             stats[f"{self.stage}/{label}_pcc"] = pcc[..., j].mean(dim=1)
-            # Compute per-band stats only if more than one band is present
-            if pcc.shape[1] > 1:
-                for f in range(y_true.shape[1]):
-                    stats[f"{self.stage}/{label}_pcc_band_{f}"] = pcc[..., f, j]
             # Compute pcc difference between the first speaker and the rest
             if j >= 1:
                 stats[f"{self.stage}/{label}_pcc_diff"] = (
@@ -58,6 +54,14 @@ class RegressionInterface(MInterface):
                 torch.zeros((1,), device=pcc_mean.device, dtype=torch.long),
                 positive_label=0,
             )
+
+        if self.stage in ["val", "test"] and pcc_mean.shape[-1] > 1:
+            # log the pcc and acc metric for each dataset
+            dataset_id = int(meta["dataset_id"][0])
+            stats[f"{self.stage}/{dataset_id=}_pcc"] = pcc_mean.mean(dim=1)
+            stats[f"{self.stage}/{dataset_id=}_acc"] = (
+                torch.argmax(pcc_mean, dim=-1) == 0
+            ).type_as(y_pred)
 
         self.log_dict(
             {k: v.mean() for k, v in stats.items()},

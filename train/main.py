@@ -29,9 +29,6 @@ import numpy as np
 
 os.environ["KERAS_BACKEND"] = "torch"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
-import lightning
 import torch
 
 from superhuge.utils.multi_run_cli import MultiRunCLI

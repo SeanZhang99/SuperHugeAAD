@@ -10,23 +10,11 @@ def classify_post_model(
         # Average pooling across the time dimension if exists
         Reduce("b t c -> b c", "mean") if len(input_size) == 3 else nn.Identity(),
         # dense the last dimension
-        EinMix(
-            "b out_features -> b hidden_dim",
-            weight_shape="out_features hidden_dim",
-            bias_shape="hidden_dim",
-            hidden_dim=hidden_dim,
-            out_features=input_size[-1],
-        ),
+        nn.Linear(input_size[-1], hidden_dim),
         # nn.LayerNorm(hidden_dim),
         # nn.GELU(),
         nn.Sigmoid(),
-        EinMix(
-            "b hidden_dim -> b num_class",
-            weight_shape="hidden_dim num_class",
-            bias_shape="num_class",
-            hidden_dim=hidden_dim,
-            num_class=num_class,
-        ),
+        nn.Linear(hidden_dim, num_class),
     )
 
 

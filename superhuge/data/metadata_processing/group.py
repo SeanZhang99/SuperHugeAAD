@@ -198,8 +198,8 @@ def test_kul_loto(
         for subject_id, trials in subjects.items():
             trials: list[tuple[DatasetSubjectTrialEntry, MetaData]]
 
-            train_set.extend([x[0] for x in trials[2:]])
-            val_set.extend([x[0] for x in trials[2:]])
+            train_set.extend([x[0] for x in trials[2:8]])
+            val_set.extend([x[0] for x in trials[2:8]])
             test_set.extend([x[0] for x in trials[:2]])
 
     return {

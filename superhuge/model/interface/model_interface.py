@@ -421,7 +421,7 @@ class MInterface(pl2.LightningModule, ABC):
 
     @property
     def weight_decay(self) -> float:
-        return self.optimizer_args.get("weight_decay", 1e-2)
+        return self.optimizer_args["weight_decay"]
 
     @weight_decay.setter
     def weight_decay(self, value: float) -> None:

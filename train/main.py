@@ -25,6 +25,8 @@ DInterface can be seen as transparent to all your args.
 """
 import os
 
+import numpy as np
+
 os.environ["KERAS_BACKEND"] = "torch"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -43,7 +45,7 @@ if __name__ == "__main__":
     config_path = os.path.join(project_path, "configs")
     # model_config = pick_file(project_path, timeout=10)
     # if not model_config:
-    model_config = os.path.join(project_path, "configs", "models", "vlaai.yaml")
+    model_config = os.path.join(project_path, "configs", "models", "simple_cnn.yaml")
     cli = MultiRunCLI(
         "--task_config",
         os.path.join(config_path, "task_config.yaml"),
@@ -56,5 +58,9 @@ if __name__ == "__main__":
         "--model",
         os.path.join(config_path, "optimizer_config.yaml"),
         "--seed_everything",
-        "42",
+        str(np.random.randint(0, 1000000)),
+        "--model.log_norm",
+        "true",
+        "--model.log_grad",
+        "true",
     )

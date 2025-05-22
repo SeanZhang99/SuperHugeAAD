@@ -25,7 +25,7 @@ init_args:
           # - 8 # PKU
           # - 9 # sparKULee
   overlap: 2
-  root_path: /data/nvme/ssd2/zhangyuanming/EEG/derivatives/SuperHuge/
+  root_path: E:/derivatives/SuperHuge
   preproc_stage: preprocessed
   transform:
     - class_path: superhuge.data.transforms.Filter

@@ -170,3 +170,71 @@ def lodo(
         all_folds, n_folds, test_fold_idx, val_fold_idx
     )
     return {"train": train_set, "val": val_set, "test": test_set}
+
+
+def test_kul_loto(
+    metadata: MetaData,
+    test_fold_idx: int,
+    val_fold_idx: int,
+    n_folds: int,
+    seed: int = 42,
+    **kwargs: Any,
+) -> CrossValidationEntry:
+    assert (
+        0 <= test_fold_idx < n_folds
+    ), f"test_fold_idx must be in the range [0, {n_folds})"
+    assert (
+        0 <= val_fold_idx < n_folds
+    ), f"val_fold_idx must be in the range [0, {n_folds})"
+    random.seed(seed)
+
+    dataset_subject_trials = collect_dataset_subject_trials(metadata)
+
+    train_set, val_set, test_set = [], [], []
+
+    for dataset_id, subjects in dataset_subject_trials.items():
+        if dataset_id != 4:
+            continue
+        for subject_id, trials in subjects.items():
+            trials: list[tuple[DatasetSubjectTrialEntry, MetaData]]
+
+            train_set.extend([x[0] for x in trials[2:]])
+            val_set.extend([x[0] for x in trials[2:]])
+            test_set.extend([x[0] for x in trials[:2]])
+
+    return {
+        "train": train_set,
+        "val": val_set,
+        "test": test_set,
+        "train_accept_range": [0, 0.85],
+        "val_reject_range": [0, 0.85],
+    }
+
+
+def loto_test(
+    metadata: MetaData,
+    test_fold_idx: int,
+    val_fold_idx: int,
+    n_folds: int,
+    seed: int = 42,
+    **kwargs: Any,
+) -> CrossValidationEntry:
+
+    result = loto(
+        metadata=metadata,
+        test_fold_idx=test_fold_idx,
+        val_fold_idx=val_fold_idx,
+        n_folds=n_folds,
+        seed=seed,
+    )
+    train_set = result["train"]
+    train_set.extend(result["val"])
+    test_set = result["test"]
+
+    return {
+        "train": train_set,
+        "val": train_set,
+        "test": test_set,
+        "train_reject_range": (0.85, 1.0),
+        "val_accept_range": (0.85, 1.0),
+    }

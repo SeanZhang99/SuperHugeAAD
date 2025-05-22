@@ -8,7 +8,14 @@ from .data import (
     MetaDataField,
     RegressionMetaDataElement,
 )
-from .group import leave_one_out_input_decorator, lodo, loso, loto, test_loto_kul
+from .group import (
+    leave_one_out_input_decorator,
+    lodo,
+    loso,
+    loto,
+    loto_test,
+    test_kul_loto,
+)
 
 __all__ = [
     "leave_one_out_input_decorator",

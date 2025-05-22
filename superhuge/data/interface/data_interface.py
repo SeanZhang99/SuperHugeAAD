@@ -49,7 +49,7 @@ from ..metadata_processing.data import (
 from ..metadata_processing.group import (
     leave_one_out_input_decorator,
     loto,
-    test_loto_kul,
+    test_kul_loto,
 )
 from ..transforms.composer import TransformComposer
 from ..transforms.abc import Transform
@@ -106,7 +106,7 @@ def create_matlab_dinterface():
         fs=128,
         meta_filter_func=None,
         meta_filter_func_args=["binary_leftright"],
-        meta_group_func=test_loto_kul,
+        meta_group_func=test_kul_loto,
         transform=[
             Filter([1.0, 32.0], fs=128, btype="bandpass", order=5),
             Scale(root_path=r"E:\derivatives\SuperHuge", preproc_stage="raw"),

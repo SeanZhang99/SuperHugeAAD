@@ -57,7 +57,7 @@ directional_focus_decoding:
       enable: 1
       data:
         init_args:
-          meta_group_func: superhuge.data.metadata_processing.loto
+          meta_group_func: superhuge.data.metadata_processing.test_kul_loto
           n_folds: 5
     leave_one_subject_out:
       enable: 0

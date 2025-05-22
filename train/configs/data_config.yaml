@@ -2,9 +2,9 @@
 class_path: superhuge.data.interface.DInterface
 init_args:
   dataloader_args:
-    batch_size: 256
+    batch_size: 20
     drop_last: false
-    num_workers: 4
+    num_workers: 2
     persistent_workers: true
     pin_memory: true
     prefetch_factor: 8
@@ -44,7 +44,7 @@ init_args:
         when: before_returning
         whom: eeg
         root_path: ${init_args.root_path}
-        scaling_factor_path: channelwise_scaling_factor.pkl
+        scaling_factor_path: scaling_factor.pkl
     - class_path: superhuge.data.transforms.Scale
       init_args:
         preproc_stage: ${init_args.preproc_stage}
@@ -58,4 +58,4 @@ init_args:
     #     apply_prob: 1.0
     #     when: before_returning
     #     whom: audio
-  window_length: 5
+  window_length: 10

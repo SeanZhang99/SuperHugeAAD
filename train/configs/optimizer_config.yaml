@@ -1,16 +1,21 @@
 init_args:
-  optimizer_class: torch.optim.Adam
+  optimizer_class: torch.optim.SGD
   optimizer_args:
-    lr: 1.e-3
-    weight_decay: 0
-    fused: true
-  lr_scheduler_class: torch.optim.lr_scheduler.ReduceLROnPlateau
+    lr: 3.e-1
+    weight_decay: 5.e-4
+    # fused: true
+    momentum: 0.9
+  lr_scheduler_class: torch.optim.lr_scheduler.MultiStepLR
   lr_scheduler_args:
-    mode: min
-    factor: 0.5
-    patience: 5
-    threshold: 0.0001
-    threshold_mode: rel
-    cooldown: 5
-    min_lr: 1.e-9
-    eps: 1.e-08
+    milestones: [10, 35]
+    gamma: 0.5
+  # lr_scheduler_class: torch.optim.lr_scheduler.ReduceLROnPlateau
+  # lr_scheduler_args:
+  #   mode: min
+  #   factor: 0.5
+  #   patience: 5
+  #   threshold: 0.0001
+  #   threshold_mode: rel
+  #   cooldown: 5
+  #   min_lr: 1.e-9
+  #   eps: 1.e-08

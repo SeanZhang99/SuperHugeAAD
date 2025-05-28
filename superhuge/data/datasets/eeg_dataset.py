@@ -51,8 +51,8 @@ class EegDataset(Dataset):
             "files"
         ]  # Renamed from _tmp_files_list
         self.metadata: MetaData = kwargs["metadata"]
-        self.segment_length: int = kwargs.get("fs", 128) * kwargs.get(
-            "window_length", 10
+        self.segment_length: int | float = kwargs.get("fs", 128.0) * kwargs.get(
+            "window_length", 10.0
         )  # Default segment length is 1280
         self.overlap: int = kwargs.get("overlap", 1)  # Default no overlap
         self.transform: TransformComposer | None = kwargs.get("transform", None)
@@ -164,7 +164,7 @@ class EegDataset(Dataset):
         Returns:
             list[int]: A list of valid segment start indices.
         """
-        stride = self.segment_length // self.overlap
+        stride = ceil(self.segment_length // self.overlap)
         accept_start = int(self.accept_range[0] * trial_length)
         accept_end = int(self.accept_range[1] * trial_length)
 

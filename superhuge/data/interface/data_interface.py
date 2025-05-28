@@ -18,14 +18,17 @@
 import os
 import pickle
 from collections.abc import Callable, Sequence
-from random import shuffle
 from typing import Any
+import warnings
 
 import lightning as pl2
 from pydantic import BaseModel, model_validator
 from rich.console import Console
 from rich.table import Table
+import torch
 from torch.utils.data import DataLoader
+
+from ..transforms.resample import Resample
 
 from ..datasets.eeg_dataset import EegDataset
 from ..datasets.eeg_regression_base_dataset import EegRegressionBaseDataset
@@ -67,7 +70,7 @@ class CreateDatasetsInputConfig(BaseModel):
     test_fold_idx: int
     val_fold_idx: int
     n_folds: int
-    window_length: int
+    window_length: int | float
     fs: int
     overlap: int
     transform: TransformComposer | None = None
@@ -126,10 +129,10 @@ class DInterface(pl2.LightningDataModule):
         dataset_class: type[EegDataset],
         dataloader_args: dict,
         root_path: str,
-        window_length: float,
-        fs: float,
+        window_length: int | float,
+        fs: int,
         meta_filter_func: MetadataFilter | Sequence[MetadataFilter] | None = None,
-        meta_filter_func_args: list = [],
+        meta_filter_func_args: list | None = None,
         meta_group_func: Callable | None = None,
         test_fold_idx: int = 0,
         val_fold_idx: int = 1,
@@ -173,7 +176,9 @@ class DInterface(pl2.LightningDataModule):
             meta_path=os.path.join(root_path, preproc_stage, "meta", "metadata.pkl"),
             eeg_path=os.path.join(root_path, preproc_stage, "eeg"),
             meta_filter_func=self.meta_filter_func_parser(
-                dataset_class, meta_filter_func, *meta_filter_func_args
+                dataset_class,
+                meta_filter_func,
+                *meta_filter_func_args if meta_filter_func_args else [],
             ),
             meta_group_func=leave_one_out_input_decorator(meta_group_func),
             test_fold_idx=test_fold_idx,

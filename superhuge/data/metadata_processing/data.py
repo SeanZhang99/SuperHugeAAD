@@ -14,6 +14,7 @@ class MetaDataElement(BaseModel, extra="allow"):
     num_channel: int | None = 0
     signal_length: int | None = 0
     fs: int | None = 0
+    dataset_name: str | None = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

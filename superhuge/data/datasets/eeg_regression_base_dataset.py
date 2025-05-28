@@ -84,8 +84,8 @@ class EegRegressionBaseDataset(EegDataset):
     def __getitem__(self, idx):
         item = self.load_data(idx)
         meta = item["meta"]
-        eeg = item["eeg"]
-        speech_segment = item["audio"]
+        eeg: np.ndarray | np.memmap = item["eeg"]
+        speech_segment: np.ndarray | np.memmap = item["audio"]
         if "label" in meta:
             del meta["label"]
 

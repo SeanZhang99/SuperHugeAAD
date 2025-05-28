@@ -3,7 +3,7 @@ from collections import defaultdict
 from torch.utils.data._utils.collate import default_collate
 
 
-def collect_multidataset(batch: dict):
+def collect_multidataset(batch: list[dict]):
     """
     Collects the outputs of multiple datasets into a single batch.
 

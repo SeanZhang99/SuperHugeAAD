@@ -19,11 +19,12 @@ class ContrastiveMSELoss(_Loss):
             y_pred = y_pred.unsqueeze(-1)
         elif y_pred.ndim == 4 and y_true.ndim == 3:
             y_true = y_true.unsqueeze(-1)
+        y_pred = torch.broadcast_to(y_pred, y_true.shape)
         mse: torch.Tensor = torch.nn.functional.mse_loss(
             y_pred, y_true, reduction="none"
-        ).mean(dim=range(1, 3))
+        ).mean(dim=tuple(range(1, 3)))
         # average across time and feature dimensions
         loss = mse[..., 0]
         for j in range(1, mse.shape[-1]):
-            loss += mse[..., j] / (mse.shape[-1] - 1)
+            loss -= mse[..., j] / (mse.shape[-1] - 1)
         return loss

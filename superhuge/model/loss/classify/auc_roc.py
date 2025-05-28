@@ -102,9 +102,9 @@ def multiclass_auc_score(
     assert average in ["macro", "weighted"], f"Invalid average: {average}"
     assert probs.ndim == 2, "Expected logits shape (N, C)"
     assert targets.ndim == 1, "Expected targets shape (N,)"
+    assert probs.shape[0] == targets.shape[0], "Batch size mismatch"
 
     num_classes = probs.shape[1]
-    targets = targets.squeeze()
     assert targets.max().item() < num_classes, "Target index out of bounds"
 
     # Apply softmax to get class probabilities
@@ -116,10 +116,6 @@ def multiclass_auc_score(
     for class_index in range(num_classes):
         binary_targets = (targets == class_index).float()
         class_probs = probs[:, class_index]
-
-        # Skip class if it has no positive samples
-        if binary_targets.sum() < 1 or binary_targets.sum() >= len(binary_targets):
-            continue
 
         # Sort by predicted score
         _, indices = torch.sort(class_probs, descending=True)

@@ -2,13 +2,12 @@ import inspect
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 from collections.abc import Callable, Sequence
-from re import M
 from typing import Any, final
 
-import keras
 import lightning as pl2
 import torch
 import torchinfo
+from torch import isnan, nn
 
 from ..module.lambda_layer import LambdaLayer
 from ..module.model_template import ModelInputArgs
@@ -27,7 +26,8 @@ class MInterface(pl2.LightningModule, ABC):
         model_args: dict[str, Any],
         model_common_args: ModelInputArgs,
         loss: torch.nn.modules.loss._Loss | Sequence[torch.nn.modules.loss._Loss],
-        loss_hparams: Sequence[float] | None = None,
+        loss_weights: Sequence[float] | None = None,
+        multiloss_weights: Sequence[float] | None = None,
         optimizer_class: type[torch.optim.Optimizer] = torch.optim.AdamW,
         optimizer_args: dict[str, Any] | None = None,
         lr_scheduler_class: type[torch.optim.lr_scheduler.LRScheduler] = None,
@@ -40,15 +40,21 @@ class MInterface(pl2.LightningModule, ABC):
 
         # Check and configure loss
         if isinstance(loss, Sequence):
-            assert loss_hparams is None or (
-                isinstance(loss_hparams, Sequence) and len(loss) == len(loss_hparams)
-            ), f"When specifying multiple losses, you must also specify the corresponding loss weights to be a sequence or None, but got {loss} and {loss_hparams}"
+            assert multiloss_weights is None or (
+                isinstance(multiloss_weights, Sequence)
+                and len(loss) == len(multiloss_weights)
+            ), f"When specifying multiple losses, you must also specify the corresponding loss weights to be a sequence or None, but got {loss} and {multiloss_weights}"
         elif isinstance(loss, torch.nn.modules.loss._Loss):
             assert (
-                loss_hparams is None
-            ), f"When specifying a single loss, you should not specify the loss weights, but got {loss} and {loss_hparams}"
+                multiloss_weights is None
+            ), f"When specifying a single loss, you should not specify the loss weights, but got {loss} and {multiloss_weights}"
         self.loss = loss
-        self.loss_hparams = loss_hparams
+        self.loss_weights = (
+            nn.Parameter(torch.tensor(loss_weights, device=self.device))
+            if loss_weights is not None
+            else None
+        )
+        self.multiloss_weights = multiloss_weights
         self.configure_loss()
 
         self.optmizer_class = optimizer_class
@@ -203,7 +209,7 @@ class MInterface(pl2.LightningModule, ABC):
         batch_size = 0
         for data in batch.values():
             outputs = self.training_closure(data)
-            loss += self.loss_fn(*outputs).sum()
+            loss += self.loss_fn(*outputs)
             batch_size += outputs[0].shape[0]
             self.get_stats(
                 *outputs,
@@ -260,23 +266,71 @@ class MInterface(pl2.LightningModule, ABC):
         """
         if isinstance(self.loss, Sequence):
             # add a closure variable to let static type checker know the type of loss_fn
-            if self.loss_hparams is None:
-                self.loss_hparams = [1] * len(self.loss)
+            if self.multiloss_weights is None:
+                self.multiloss_weights = [1] * len(self.loss)
 
-            self.loss_hparams = torch.tensor(self.loss_hparams, device=self.device)
+            self.multiloss_weights = torch.tensor(
+                self.multiloss_weights, device=self.device
+            )
 
-            def loss_fn(
-                *args: torch.Tensor | int | str | Sequence[torch.Tensor | int | str],
-            ):
-                loss = torch.zeros(1, device=self.device)
-                for loss_fn, weight in zip(self.loss, self.loss_hparams):
-                    loss += loss_fn(*args) * weight
-                return loss
+            if self.loss_weights is not None:
+
+                def loss_fn(
+                    *args: torch.Tensor
+                    | int
+                    | str
+                    | Sequence[torch.Tensor | int | str],
+                ):
+                    loss = torch.zeros(1, device=self.device)
+                    for loss_fn, weight in zip(self.loss, self.multiloss_weights):
+                        loss += loss_fn(*args, self.loss_weights).sum() * weight
+                    assert not isnan(loss), (
+                        "MODEL_INTERFACE:LOSS_FN:ASSERTION:VALUE_ERROR: Loss function returned NaN. "
+                        "This usually indicates a problem with the model or the data. "
+                        "Please check your model and data for any issues."
+                    )
+                    return loss
+
+            else:
+
+                def loss_fn(
+                    *args: torch.Tensor
+                    | int
+                    | str
+                    | Sequence[torch.Tensor | int | str],
+                ):
+                    loss = torch.zeros(1, device=self.device)
+                    for loss_fn, weight in zip(self.loss, self.multiloss_weights):
+                        loss += loss_fn(*args).sum() * weight
+                    assert not isnan(loss), (
+                        "MODEL_INTERFACE:LOSS_FN:ASSERTION:VALUE_ERROR: Loss function returned NaN. "
+                        "This usually indicates a problem with the model or the data. "
+                        "Please check your model and data for any issues."
+                    )
+                    return loss
 
         else:
+            if self.loss_weights is not None:
 
-            def loss_fn(*args: torch.Tensor | int | str):
-                return self.loss(*args)
+                def loss_fn(*args: torch.Tensor | int | str):
+                    loss = self.loss(*args, self.loss_weights).sum()
+                    assert not isnan(loss), (
+                        "MODEL_INTERFACE:LOSS_FN:ASSERTION:VALUE_ERROR: Loss function returned NaN. "
+                        "This usually indicates a problem with the model or the data. "
+                        "Please check your model and data for any issues."
+                    )
+                    return loss
+
+            else:
+
+                def loss_fn(*args: torch.Tensor | int | str):
+                    loss = self.loss(*args).sum()
+                    assert not isnan(loss), (
+                        "MODEL_INTERFACE:LOSS_FN:ASSERTION:VALUE_ERROR: Loss function returned NaN. "
+                        "This usually indicates a problem with the model or the data. "
+                        "Please check your model and data for any issues."
+                    )
+                    return loss
 
             loss_fn.__repr__ = f"{self.loss.__repr__().split('(')[0]}"
 
@@ -393,9 +447,7 @@ class MInterface(pl2.LightningModule, ABC):
             },
         ]
 
-        optimizer = self.optmizer_class(
-            grouped_params, lr=self.lr, weight_decay=self.weight_decay
-        )
+        optimizer = self.optmizer_class(grouped_params)
 
         # return optimizer
 

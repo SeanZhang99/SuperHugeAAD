@@ -65,7 +65,7 @@ class ContrastivePearsonLoss(_Loss):
         # pcc: (batch, speaker). feature dimension is averaded across.
         loss = -pcc[:, 0]
         for j in range(1, y_true.shape[3]):
-            loss += pcc[:, j] / (y_true.shape[2] - 1)
+            loss += pcc[:, j] / (y_true.shape[3] - 1)
         return loss
 
 
@@ -85,5 +85,5 @@ class ContrastiveAbsPearsonLoss(_Loss):
         # pcc: (batch, speaker). feature dimension is averaded across.
         loss = -pcc[:, 0]
         for j in range(1, y_true.shape[3]):
-            loss += pcc[:, j] / (y_true.shape[2] - 1)
+            loss += pcc[:, j] / (y_true.shape[3] - 1)
         return loss

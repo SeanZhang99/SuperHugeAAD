@@ -55,13 +55,17 @@ class TaskConfigParser:
 
     def generate_configs(self) -> Generator[list[str], None, None]:
         for task_type, task_details in self.tasks.items():
+            general_data: dict = self.config[task_type]["general"]["data"]
             for task_name, task_detail in task_details.items():
                 for cv_name, cv_details in self.cross_validations.get(
                     task_type, {}
                 ).items():
-                    n_folds: int = self.config[task_type]["general"]["data"][
-                        "init_args"
-                    ].get("n_folds", 5)
+                    n_folds = cv_details["data"]["init_args"].get("n_folds", None)
+                    if n_folds is None:
+                        n_folds = task_detail["data"]["init_args"].get("n_folds", None)
+                    if n_folds is None:
+                        n_folds = general_data["init_args"].get("n_folds", None)
+                    assert n_folds is not None, "n_folds not specified."
                     for test_fold_idx, val_fold_idx in product(
                         range(n_folds), range(n_folds)
                     ):
@@ -69,7 +73,6 @@ class TaskConfigParser:
                         # E.g. (test_fold_idx, val_fold_idx): (0,1), (0,2), (0,3), (0,4), (1,0), (1,2),...
                         if test_fold_idx == val_fold_idx:
                             continue
-                        general_data: dict = self.config[task_type]["general"]["data"]
                         task_data: dict = task_detail.get("data", {})
                         cv_data: dict = cv_details.get("data", {})
                         merged_data: dict = self._deep_merge_dicts(

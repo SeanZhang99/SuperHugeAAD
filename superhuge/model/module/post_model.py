@@ -11,8 +11,6 @@ def classify_post_model(
         Reduce("b t c -> b c", "mean") if len(input_size) == 3 else nn.Identity(),
         # dense the last dimension
         nn.Linear(input_size[-1], hidden_dim),
-        # nn.LayerNorm(hidden_dim),
-        # nn.GELU(),
         nn.Sigmoid(),
         nn.Linear(hidden_dim, num_class),
     )

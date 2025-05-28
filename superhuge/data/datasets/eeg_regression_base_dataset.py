@@ -96,4 +96,8 @@ class EegRegressionBaseDataset(EegDataset):
                 if f"{field}_fs" in meta:
                     del meta[f"{field}_fs"]
 
+        assert (
+            eeg.shape[0] == speech_segment.shape[0]
+        ), f"EEG and speech segment lengths do not match: {eeg.shape[0]} vs {speech_segment.shape[0]} in {meta['entry']}."
+
         return {"meta": meta, "eeg": eeg, "audio": speech_segment}

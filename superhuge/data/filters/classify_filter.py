@@ -177,6 +177,68 @@ class EightClassFilter(ClassifyMetadataFilter):
         return result
 
 
+class AsIsClassifyFilter(ClassifyMetadataFilter):
+    def __call__(
+        self, metadata_element: ClassifyMetaDataElement | None
+    ) -> ClassifyMetaDataElement | None:
+        """
+        This function returns the metadata element as is.
+        """
+        if hasattr(metadata_element, "label"):
+            if isinstance(metadata_element.label, str):
+                metadata_element.label = int(metadata_element.label.lower())
+            elif isinstance(metadata_element.label, int):
+                metadata_element.label = angle_wrapper(metadata_element.label)
+            else:
+                raise TypeError(
+                    f"CLASSIFIER_FILTER:AS_IS_CLASSIFY_FILTER:LABEL_TYPE_ERROR: Invalid type for label. The label must be an integer or a string. Got {str(type(metadata_element.label)).upper()}."
+                )
+            return metadata_element
+        else:
+            return None
+
+
+class cEEGridThreeClassFilter(ClassifyMetadataFilter):
+    def __call__(
+        self, metadata_element: ClassifyMetaDataElement | None
+    ) -> ClassifyMetaDataElement | None:
+        if metadata_element is None:
+            return None
+        result = None
+        label = metadata_element.label
+        if isinstance(label, str):
+            label = int(label)
+        assert isinstance(label, int)
+        if label < 0:
+            metadata_element.label = 0
+        elif label == 0:
+            metadata_element.label = 1
+        elif label > 0:
+            metadata_element.label = 2
+        result = metadata_element
+        return result
+
+
+label_hstb = {-60: 0, -120: 1, 0: 2, 60: 3, 120: 4}
+
+
+class cEEGridFiveClassFilter(ClassifyMetadataFilter):
+    def __call__(
+        self, metadata_element: ClassifyMetaDataElement | None
+    ) -> ClassifyMetaDataElement | None:
+        if metadata_element is None:
+            return None
+        result = None
+        label = metadata_element.label
+        if isinstance(label, str):
+            label = int(label)
+        assert isinstance(label, int)
+        if label in label_hstb:
+            metadata_element.label = label_hstb[label]
+            result = metadata_element
+        return result
+
+
 def get_classify_filter(
     num_class: int | str,
 ) -> ClassifyMetadataFilter:
@@ -197,6 +259,12 @@ def get_classify_filter(
             return FourClassFilter()
         elif num_class == "eight_class":
             return EightClassFilter()
+        elif num_class == "as_is":
+            return AsIsClassifyFilter()
+        elif num_class == "cEEGrid_three_class":
+            return cEEGridThreeClassFilter()
+        elif num_class == "cEEGrid_five_class":
+            return cEEGridFiveClassFilter()
         else:
             raise ValueError(
                 f"CLASSIFIER_FILTER:GET_CLASSIFICATION:FILTER:STR_INPUT:VALUE_ERROR: Invalid number of classes. The number of classes can be {ALLOWED_NUM_CLASS_STRING}."

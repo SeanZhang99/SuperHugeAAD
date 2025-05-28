@@ -18,11 +18,11 @@ init_args:
           # - 1 # AHU
           # - 2 # DTU
           # - 3 # Estart
-          - 4 # KUL
-          # - 5 # KUL-AV-GC
+          - 4 # KUL: lrtc?
+          # - 5 # KUL-AV-GC?
           # - 6 # NJU
           # - 7 # NUS
-          # - 8 # PKU
+          # - 8 # PKU?
           # - 9 # sparKULee
   overlap: 2
   root_path: E:/derivatives/SuperHuge

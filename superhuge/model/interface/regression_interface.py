@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 import torch
 import torchinfo
 
@@ -22,6 +23,43 @@ class RegressionInterface(MInterface):
         self.post_model = regression_post_model(self.output_size, num_audio_features)
         torchinfo.summary(self.post_model, input_size=self.output_size)
 
+    def log_metric_and_stats(
+        self,
+        stats: dict,
+        metrics: torch.Tensor,
+        metrics_name: str,
+        speaker_labels: Sequence[str],
+        meta: dict,
+    ):
+        for j, label in enumerate(speaker_labels):
+            stats[f"{self.stage}/{label}_{metrics_name}"] = metrics[..., j].mean(dim=1)
+            # Compute pcc difference between the first speaker and the rest
+            if j >= 1:
+                stats[f"{self.stage}/{label}_{metrics_name}_diff"] = (
+                    metrics[..., 0] - metrics[..., j]
+                ).mean(dim=1)
+
+        metrics_mean = metrics.mean(dim=1)
+
+        if metrics_mean.shape[-1] > 1:
+            pred = torch.argmax(metrics_mean, dim=-1)
+            stats[f"{self.stage}/acc_by_{metrics_name}"] = (pred == 0).type_as(metrics)
+            stats[f"{self.stage}/f1_by_{metrics_name}"] = binary_f1_score(
+                pred,
+                torch.zeros((1,), device=metrics_mean.device, dtype=torch.long),
+                positive_label=0,
+            )
+
+        if self.stage in ["val", "test"] and metrics_mean.shape[-1] > 1:
+            # log the pcc and acc metric for each dataset
+            dataset_id = int(meta["dataset_id"][0])
+            stats[f"{self.stage}/{dataset_id=}_pcc"] = metrics_mean.mean(dim=1)
+            stats[f"{self.stage}/{dataset_id=}_acc"] = (
+                torch.argmax(metrics_mean, dim=-1) == 0
+            ).type_as(metrics)
+
+        return stats
+
     def get_stats(
         self,
         y_pred: torch.Tensor,
@@ -35,33 +73,22 @@ class RegressionInterface(MInterface):
 
         # pcc: (batch, feature, speaker)
         pcc = pearson_corrcoef(y_pred, y_true, dim=1)
-        for j, label in enumerate(speaker_labels):
-            stats[f"{self.stage}/{label}_pcc"] = pcc[..., j].mean(dim=1)
-            # Compute pcc difference between the first speaker and the rest
-            if j >= 1:
-                stats[f"{self.stage}/{label}_pcc_diff"] = (
-                    pcc[..., 0] - pcc[..., j]
-                ).mean(dim=1)
+        stats = self.log_metric_and_stats(stats, pcc, "pcc", speaker_labels, meta)
 
-        pcc_mean = pcc.mean(dim=1)
-
-        if pcc_mean.shape[-1] > 1:
-            stats[f"{self.stage}/acc"] = (torch.argmax(pcc_mean, dim=-1) == 0).type_as(
-                y_pred
-            )
-            stats[f"{self.stage}/f1"] = binary_f1_score(
-                torch.argmax(pcc_mean, dim=-1),
-                torch.zeros((1,), device=pcc_mean.device, dtype=torch.long),
-                positive_label=0,
-            )
-
-        if self.stage in ["val", "test"] and pcc_mean.shape[-1] > 1:
-            # log the pcc and acc metric for each dataset
-            dataset_id = int(meta["dataset_id"][0])
-            stats[f"{self.stage}/{dataset_id=}_pcc"] = pcc_mean.mean(dim=1)
-            stats[f"{self.stage}/{dataset_id=}_acc"] = (
-                torch.argmax(pcc_mean, dim=-1) == 0
-            ).type_as(y_pred)
+        # if y_pred.ndim == 3 and y_true.ndim == 4:
+        #     y_pred = y_pred.unsqueeze(-1)
+        # elif y_pred.ndim == 4 and y_true.ndim == 3:
+        #     y_true = y_true.unsqueeze(-1)
+        # mse = torch.nn.functional.mse_loss(
+        #     torch.broadcast_to(y_pred, y_true.shape), y_true, reduction="none"
+        # ).mean(dim=1)
+        # stats = self.log_metric_and_stats(
+        #     stats,
+        #     -mse,
+        #     "mse",
+        #     speaker_labels,
+        #     meta,
+        # )
 
         self.log_dict(
             {k: v.mean() for k, v in stats.items()},

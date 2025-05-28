@@ -235,6 +235,6 @@ def loto_test(
         "train": train_set,
         "val": train_set,
         "test": test_set,
-        "train_reject_range": (0.85, 1.0),
-        "val_accept_range": (0.85, 1.0),
+        "train_reject_range": (0.70, 1.0),
+        "val_accept_range": (0.70, 1.0),
     }

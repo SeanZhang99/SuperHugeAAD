@@ -93,7 +93,11 @@ class Transform(ABC):
 
             **kwargs: Additional parameters for subclasses.
         """
-        self._cfg = TransformConfig(when=when, whom=whom, apply_prob=apply_prob)
+        self._cfg = TransformConfig(
+            when=when,
+            whom=whom if isinstance(whom, Sequence) else (whom,),
+            apply_prob=apply_prob,
+        )
         self.dice = np.random.Generator(np.random.PCG64(seed))
         super().__init__()
 

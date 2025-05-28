@@ -232,8 +232,10 @@ class DInterface(pl2.LightningDataModule):
         """
         if meta_filter_func is None:
             meta_filter_func = MetaDataFilterComposer()
-        else:
+        elif isinstance(meta_filter_func, Sequence):
             meta_filter_func = MetaDataFilterComposer(*meta_filter_func)
+        elif isinstance(meta_filter_func, MetadataFilter):
+            meta_filter_func = MetaDataFilterComposer(meta_filter_func)
 
         assert isinstance(meta_filter_func, MetaDataFilterComposer)
 
@@ -375,6 +377,7 @@ class DInterface(pl2.LightningDataModule):
                 set(
                     f"{meta.dataset_id}-{meta.subject_id}"
                     for meta in dataset.metadata.values()
+                    if meta.entry in dataset.files
                 )
             )
             num_trials = len(dataset.files)
@@ -394,6 +397,7 @@ class DInterface(pl2.LightningDataModule):
 
         for entry in sorted(unique_datasets):
             unique_table.add_row(entry)
+        console.print(stats_table, unique_table)
 
         # class-wise sample count for classification dataset
         if issubclass(self.dataset_cfg.dataset_class, EegClassifyBaseDataset):
@@ -401,6 +405,8 @@ class DInterface(pl2.LightningDataModule):
             class_count_table.add_column("Class", justify="center", style="cyan")
             class_count_table.add_column("Samples", justify="center", style="magenta")
             class_count_table.add_column("Percentage", justify="center", style="green")
+
+            global_class_counts = {}
 
             for name, dataset in datasets.items():
                 class_counts = {}
@@ -414,6 +420,9 @@ class DInterface(pl2.LightningDataModule):
                     if label not in class_counts:
                         class_counts[label] = 0
                     class_counts[label] += sample_counts
+                    if label not in global_class_counts:
+                        global_class_counts[label] = 0
+                    global_class_counts[label] += sample_counts
 
                 total_samples = sum(class_counts.values())
                 for label, count in class_counts.items():
@@ -422,7 +431,8 @@ class DInterface(pl2.LightningDataModule):
                         str(f"{name}-{label}"), str(count), f"{percentage:.2f}%"
                     )
 
-        console.print(stats_table, unique_table, class_count_table)
+            console.print(class_count_table)
+            self._global_class_counts = global_class_counts
 
     @property
     def batch_size(self):
@@ -435,6 +445,14 @@ class DInterface(pl2.LightningDataModule):
 
     @property
     def fs(self):
+        if self.dataset_cfg.transform is not None:
+            composer = self.dataset_cfg.transform
+            assert isinstance(
+                composer, TransformComposer
+            ), "Transform must be a TransformComposer instance."
+            for transform in composer.transforms:
+                if isinstance(transform, Resample):
+                    return transform.new_fs
         return self.dataset_cfg.fs
 
     @property
@@ -444,6 +462,22 @@ class DInterface(pl2.LightningDataModule):
     @property
     def datasets(self):
         return self.trainset, self.valset, self.testset
+
+    @property
+    def sample_weights(self):
+        if issubclass(self.dataset_cfg.dataset_class, EegClassifyBaseDataset):
+            samples_per_class = self._global_class_counts.values()
+            weights = [1.0 / num_samples for num_samples in samples_per_class]
+            weights = (
+                weights / sum(weights) * len(samples_per_class)
+            )  # 归一化，使权重总和 = 类别数
+            return weights
+        else:
+            warnings.warn(
+                "Sample weights are only available for classification datasets. Skip operation and return None. This is basically because someone want to use sample weights for regression datasets, which is not a common practice. Skip this warning if you know what you are doing.",
+                UserWarning,
+            )
+            return None
 
 
 if __name__ == "__main__":

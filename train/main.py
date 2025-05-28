@@ -54,8 +54,6 @@ if __name__ == "__main__":
         model_config,
         "--model",
         os.path.join(config_path, "optimizer_config.yaml"),
-        "--seed_everything",
-        str(np.random.randint(0, 1000000)),
         "--model.log_norm",
         "true",
         "--model.log_grad",

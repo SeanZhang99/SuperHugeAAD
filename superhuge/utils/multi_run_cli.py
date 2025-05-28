@@ -1,4 +1,5 @@
 from lightning import LightningModule
+import numpy as np
 import torch
 from lightning.pytorch.cli import LightningCLI
 
@@ -50,7 +51,14 @@ class MultiRunCLI:
         for config_list in self.task_config_parser.generate_configs():
             cli = NamedParamsCLI(
                 parser_kwargs={"parser_mode": "omegaconf"},
-                args=self.cli_argv + config_list,
+                args=(
+                    self.cli_argv
+                    + config_list
+                    + (["--seed_everything", str(np.random.randint(0, 1000000))]
+                    if "--seed_everything" not in self.cli_argv
+                    and "--seed_everything" not in self.cli_argv
+                    else [])
+                ),
                 run=False,
             )
 
@@ -63,7 +71,6 @@ class MultiRunCLI:
                 ckpt_path="best",
                 verbose=True,
             )
-            return
 
 
 class NamedParamsCLI(LightningCLI):
@@ -102,6 +109,11 @@ class NamedParamsCLI(LightningCLI):
         parser.link_arguments(
             "model.init_args.num_audio_features",
             "model.init_args.model_common_args.num_audio_features",
+        )
+        parser.link_arguments(
+            "data.sample_weights",
+            "model.init_args.loss_args.weight",
+            apply_on="instantiate",
         )
 
     # parser.link_arguments(

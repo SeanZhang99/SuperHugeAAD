@@ -1,3 +1,4 @@
+import os, hashlib, gc
 from lightning import LightningModule
 import numpy as np
 import torch
@@ -30,6 +31,11 @@ class MultiRunCLI:
                     cli_argv.pop(i)
                     cli_argv.pop(i)
                 break
+        if ckpt_path is not None and not os.path.isfile(self.ckpt_path):
+            raise FileNotFoundError(
+                f"MULTI_RUN_CLI:__INIT__:CKPT_VALIDATION:FILE_NOT_FOUND: "
+                f"Checkpoint file {self.ckpt_path} does not exist"
+            )
         return ckpt_path, cli_argv
 
     def __extract_task_config(self) -> tuple[str | None, list[str]]:
@@ -45,7 +51,20 @@ class MultiRunCLI:
                     cli_argv.pop(i)
                     cli_argv.pop(i)
                 break
+        assert (
+            task_config_path is not None
+        ), "MULTI_RUN_CLI:__INIT__:TASK_CONFIG_ACQUIRING:ARGUMENT_MISSING: Task config is required by providing --task_config=<path> or --task_config <path>"
+
         return task_config_path, cli_argv
+
+    def __generate_config_hash(self, config_list: list[str]) -> int:
+        """生成配置列表的确定性哈希种子"""
+        # 创建稳定字符串表示
+        config_str = "|".join(sorted(config_list)).encode("utf-8")
+        # 生成SHA256哈希
+        hash_digest = hashlib.sha256(config_str).digest()
+        # 转换为0-2^32范围内的整数
+        return int.from_bytes(hash_digest[:4], byteorder="big") % (2**32)
 
     def __run_cli(self):
         for config_list in self.task_config_parser.generate_configs():
@@ -54,10 +73,15 @@ class MultiRunCLI:
                 args=(
                     self.cli_argv
                     + config_list
-                    + (["--seed_everything", str(np.random.randint(0, 1000000))]
-                    if "--seed_everything" not in self.cli_argv
-                    and "--seed_everything" not in self.cli_argv
-                    else [])
+                    + (
+                        [
+                            "--seed_everything",
+                            str(self.__generate_config_hash(config_list)),
+                        ]
+                        if "--seed_everything" not in self.cli_argv
+                        and "--seed_everything" not in self.cli_argv
+                        else []
+                    )
                 ),
                 run=False,
             )
@@ -71,6 +95,23 @@ class MultiRunCLI:
                 ckpt_path="best",
                 verbose=True,
             )
+            self.__release_resources(cli)
+
+    def __release_resources(self, cli: "NamedParamsCLI"):
+        """资源释放策略"""
+        # 释放模型引用
+        del cli.model
+        del cli.datamodule
+        del cli.trainer
+
+        # 清理PyTorch缓存
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            # 双保险清理
+            torch.cuda.ipc_collect()
+
+        # 强制垃圾回收
+        gc.collect()
 
 
 class NamedParamsCLI(LightningCLI):

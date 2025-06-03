@@ -207,20 +207,21 @@ def preconv(
         convNd_with_constraint(
             nd=2,
             max_norm=2,
-            in_features=1,
-            out_features=out_chan,
+            in_channels=1,
+            out_channels=out_chan,
             kernel_size=(1, kernel_size),
             padding="same",
         ),
         convNd_with_constraint(
             nd=2,
             max_norm=2,
-            in_features=out_chan,
-            out_features=out_chan,
+            in_channels=out_chan,
+            out_channels=out_chan,
             kernel_size=(num_electrodes, 1),
             padding="valid",
         ),
-        nn.BatchNorm2d(out_chan),
+        # nn.BatchNorm2d(out_chan),
+        LazyLayerNorm(start_dim=1),
         nn.ELU(),
     )
 
@@ -264,15 +265,11 @@ class Deformer(nn.Module):
         ff_hidden_dim: int
         dropout: float, Optional, default 0.0
         """
+        super().__init__()
         self.model = nn.Sequential(
-            EinMix(
-                "b t c -> b 1 k t",
-                weight_shape="c k",
-                c=kwargs["num_channels"],
-                k=num_kernels,
-            ),
+            Rearrange("b t c -> b 1 c t"),  # (b, 1, num_channels, num_time),
             preconv(
-                num_kernels,
+                kwargs["num_channels"],
                 num_kernels,
                 temporal_kernel_size,
             ),  # (b, num_kernels, 1, num_time)

@@ -8,6 +8,8 @@ from .time_shift import TimeShift
 from .composer import TransformComposer
 from .scale import Scale
 from .zscore import ZScore
+from .riemannian_align import RiemannianAlign
+from .zscore_align import ZScoreAlign
 
 __all__ = [
     "ChannelMask",
@@ -20,4 +22,6 @@ __all__ = [
     "Transform",
     "TransformComposer",
     "ZScore",
+    "ZScoreAlign",
+    "RiemannianAlign",
 ]

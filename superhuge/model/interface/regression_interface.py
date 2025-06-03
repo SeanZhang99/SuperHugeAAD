@@ -50,13 +50,13 @@ class RegressionInterface(MInterface):
                 positive_label=0,
             )
 
-        if self.stage in ["val", "test"] and metrics_mean.shape[-1] > 1:
-            # log the pcc and acc metric for each dataset
-            dataset_id = int(meta["dataset_id"][0])
-            stats[f"{self.stage}/{dataset_id=}_pcc"] = metrics_mean.mean(dim=1)
-            stats[f"{self.stage}/{dataset_id=}_acc"] = (
-                torch.argmax(metrics_mean, dim=-1) == 0
-            ).type_as(metrics)
+        # if self.stage in ["val", "test"] and metrics_mean.shape[-1] > 1:
+        #     # log the pcc and acc metric for each dataset
+        #     dataset_id = int(meta["dataset_id"][0])
+        #     stats[f"{self.stage}/{dataset_id=}_pcc"] = metrics_mean.mean(dim=1)
+        #     stats[f"{self.stage}/{dataset_id=}_acc"] = (
+        #         torch.argmax(metrics_mean, dim=-1) == 0
+        #     ).type_as(metrics)
 
         return stats
 
@@ -74,21 +74,6 @@ class RegressionInterface(MInterface):
         # pcc: (batch, feature, speaker)
         pcc = pearson_corrcoef(y_pred, y_true, dim=1)
         stats = self.log_metric_and_stats(stats, pcc, "pcc", speaker_labels, meta)
-
-        # if y_pred.ndim == 3 and y_true.ndim == 4:
-        #     y_pred = y_pred.unsqueeze(-1)
-        # elif y_pred.ndim == 4 and y_true.ndim == 3:
-        #     y_true = y_true.unsqueeze(-1)
-        # mse = torch.nn.functional.mse_loss(
-        #     torch.broadcast_to(y_pred, y_true.shape), y_true, reduction="none"
-        # ).mean(dim=1)
-        # stats = self.log_metric_and_stats(
-        #     stats,
-        #     -mse,
-        #     "mse",
-        #     speaker_labels,
-        #     meta,
-        # )
 
         self.log_dict(
             {k: v.mean() for k, v in stats.items()},

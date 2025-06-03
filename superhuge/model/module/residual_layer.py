@@ -7,7 +7,9 @@ class ResidualLayer(torch.nn.Module):
         self.layers = torch.nn.ModuleList(args)
 
     def forward(self, x):
-        y = torch.zeros_like(x)
-        for layer in self.layers:
-            y += layer(x)
+        for i, layer in enumerate(self.layers):
+            if i == 0:
+                y = layer(x)
+            else:
+                y += layer(x)
         return y

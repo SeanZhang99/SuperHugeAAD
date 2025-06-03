@@ -439,11 +439,11 @@ class MInterface(pl2.LightningModule, ABC):
                 decay.append(param)
 
         grouped_params = [
-            {"params": decay, "weight_decay": self.weight_decay, "lr": self.lr * 0.3},
+            {"params": decay, "weight_decay": self.weight_decay, "lr": self.lr},
             {
                 "params": no_decay,
-                "weight_decay": self.weight_decay,
-                "lr": self.lr * 1.7,
+                "weight_decay": 0,
+                "lr": self.lr,
             },
         ]
 

@@ -40,12 +40,12 @@ class TransformComposer:
         assert (
             whom in self._whom_options
         ), f"Invalid whom option: {whom}. Expected one of {self._whom_options}."
-        x = (x, *args)
+        x = (x, meta, *args)
         for transform in self._transforms:
             if transform.when == when and (
                 whom in transform.whom or "all" in transform.whom
             ):
-                x = transform(*x, meta)
+                x = transform(*x)
         return x
 
     @classmethod

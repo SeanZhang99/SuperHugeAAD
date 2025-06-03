@@ -23,12 +23,14 @@ class MultiHeadAttention(nn.Module):
             d_in=input_dim,
             d_embed=num_heads * embed_dim_per_head * 3,
         )
+        self.qkv_dropout = nn.Dropout(dropout)
         self.output_project = EinMix(
             "b L d_embed -> b L d_in",
             weight_shape="d_embed d_in",
             d_embed=num_heads * embed_dim_per_head,
             d_in=input_dim,
         )
+        self.output_dropout = nn.Dropout(dropout)
 
         self.scale = self.embed_dim_per_head**0.5
 
@@ -37,11 +39,15 @@ class MultiHeadAttention(nn.Module):
     def forward(self, x):
         qkv: Iterable[Tensor] = self.qkv_project(x).chunk(3, dim=-1)
         q, k, v = map(
-            lambda t: rearrange(t, "b L (h d) -> b h L d", h=self.num_heads), qkv
+            lambda t: rearrange(
+                self.qkv_dropout(t), "b L (h d) -> b h L d", h=self.num_heads
+            ),
+            qkv,
         )
         out = nn.functional.scaled_dot_product_attention(
             q, k, v, attn_mask=None, dropout_p=self.dropout
         )
         out = rearrange(out, "b h L d -> b L (h d)")
         out = self.output_project(out)
+        out = self.output_dropout(out)
         return out

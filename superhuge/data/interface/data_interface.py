@@ -331,6 +331,7 @@ class DInterface(pl2.LightningDataModule):
                 metadata_fields=self.dataset_cfg.metadata_fields,
                 accept_range=splits.get(f"{mode}_accept_range", None),
                 reject_range=splits.get(f"{mode}_reject_range", None),
+                stage=mode,
                 **self.kwargs,
             )
             for mode in dataset_modes

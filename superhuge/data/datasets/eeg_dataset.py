@@ -2,9 +2,12 @@ from math import ceil, floor
 import os
 from typing import Sequence
 
+from matplotlib.transforms import Transform
 import numpy as np
 import tqdm
 from torch.utils.data import Dataset
+
+from ..transforms.stats_abc import StatisticalTransform
 
 from ...utils.validate import validate_kwargs
 from ..metadata_processing.data import MetaData, MetaDataElement, MetaDataField
@@ -73,6 +76,60 @@ class EegDataset(Dataset):
 
         # Delete temporary files list to avoid memory leakage
         del self._input_files_list
+
+        self._stage = kwargs.get("stage", None)
+        self._update_and_fit_stats_transform()
+
+    def _update_and_fit_stats_transform(self):
+        """
+        Update the transform to include metadata fields and fit it if necessary.
+        """
+        if (
+            isinstance(self.transform, TransformComposer)
+            and any(
+                [isinstance(t, StatisticalTransform) for t in self.transform.transforms]
+            )
+            and self._stage == "train"
+        ):
+            updatable_transforms = [
+                t
+                for t in self.transform.transforms
+                if isinstance(t, StatisticalTransform)
+            ]
+            for file_name in tqdm.tqdm(self.files):
+                eeg = np.load(os.path.join(self.eeg_path, file_name + ".npy"))
+                for t in updatable_transforms:
+                    t.update(eeg)
+            for t in updatable_transforms:
+                t.fit()
+
+    def sync_transform_stats(
+        self, source_transform: StatisticalTransform | TransformComposer
+    ):
+        """
+        Synchronize the statistics of the transform with another StatisticalTransform or TransformComposer.
+
+        Args:
+            source_transform (StatisticalTransform | TransformComposer): The source transform to synchronize with.
+        """
+        if isinstance(source_transform, StatisticalTransform):
+            for t in self.transform.transforms:
+                if (
+                    isinstance(t, type(source_transform))
+                    and t.whom == source_transform.whom
+                    and t.when == source_transform.when
+                ):
+                    t.stat = source_transform.stat
+        elif isinstance(source_transform, TransformComposer):
+            for source_t in source_transform.transforms:
+                if isinstance(source_t, StatisticalTransform):
+                    for t in self.transform.transforms:
+                        if (
+                            isinstance(t, type(source_t))
+                            and t.whom == source_t.whom
+                            and t.when == source_t.when
+                        ):
+                            t.stat = source_t.stat
 
     @property
     def files(self):

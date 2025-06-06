@@ -3,7 +3,7 @@ import os
 import numpy as np
 from pydantic import BaseModel
 
-from ..metadata_processing.data import RegressionMetaDataElement
+from ..metadata_processing.data import RegressionMetadataElement
 from .eeg_dataset import EegDataset
 
 ENV_ALIASE = ["env", "envelope", "env_path"]
@@ -15,7 +15,7 @@ class EEGDatasetWithSpeechFeatureCreationConfig(BaseModel, extra="allow"):
 
 
 class EegRegressionBaseDataset(EegDataset):
-    metadata_cls = RegressionMetaDataElement
+    metadata_cls = RegressionMetadataElement
 
     def __init__(self, /, **kwargs):
         """

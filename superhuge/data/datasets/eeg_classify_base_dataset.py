@@ -1,11 +1,11 @@
 import numpy as np
 from .eeg_regression_base_dataset import EegRegressionBaseDataset
 from . import EegDataset
-from ..metadata_processing.data import ClassifyMetaDataElement
+from ..metadata_processing.data import ClassifyMetadataElement
 
 
 class EegClassifyBaseDataset(EegDataset):
-    metadata_cls = ClassifyMetaDataElement
+    metadata_cls = ClassifyMetadataElement
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

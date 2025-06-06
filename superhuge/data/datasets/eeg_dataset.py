@@ -10,23 +10,23 @@ from torch.utils.data import Dataset
 from ..transforms.stats_abc import StatisticalTransform
 
 from ...utils.validate import validate_kwargs
-from ..metadata_processing.data import MetaData, MetaDataElement, MetaDataField
+from ..metadata_processing.data import Metadata, MetadataElement, MetadataField
 from ..transforms.composer import TransformComposer
 
 
 class EegDataset(Dataset):
-    metadata_cls = MetaDataElement
+    metadata_cls = MetadataElement
     """
     EEG Dataset for loading and processing EEG signal data.
 
     Attributes:
         eeg_path (str): Path to the dataset folder.
         files (Sequence[str]): List of file names.
-        metadata (MetaData): Metadata containing information for each trial.
+        metadata (Metadata): Metadata containing information for each trial.
         segment_length (int): Length of each signal segment.
         overlap (int): Overlap ratio, determines the stride for segment slicing.
         transform (TransformComposer | None): Transformations applied to samples.
-        metadata_fields (list[MetaDataField]): Metadata fields to record.
+        metadata_fields (list[MetadataField]): Metadata fields to record.
         accept_range (tuple[float, float] | None): Range of valid signal segments (start, end). If None, all segments are accepted.
         reject_range (tuple[float, float] | None): Range of rejected signal segments (start, end). If None, no segments are rejected.
     """
@@ -53,13 +53,13 @@ class EegDataset(Dataset):
         self._input_files_list: Sequence[str] = kwargs[
             "files"
         ]  # Renamed from _tmp_files_list
-        self.metadata: MetaData = kwargs["metadata"]
+        self.metadata: Metadata = kwargs["metadata"]
         self.segment_length: int | float = kwargs.get("fs", 128.0) * kwargs.get(
             "window_length", 10.0
         )  # Default segment length is 1280
         self.overlap: int = kwargs.get("overlap", 1)  # Default no overlap
         self.transform: TransformComposer | None = kwargs.get("transform", None)
-        self.metadata_fields: list[MetaDataField] = kwargs["metadata_fields"]
+        self.metadata_fields: list[MetadataField] = kwargs["metadata_fields"]
         self.accept_range: tuple[float, float] = kwargs.get("accept_range", None)
         self.reject_range: tuple[float, float] | None = kwargs.get("reject_range", None)
 

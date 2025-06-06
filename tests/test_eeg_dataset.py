@@ -2,19 +2,19 @@ from matplotlib.pylab import f
 import pytest
 import numpy as np
 from superhuge.data.datasets.eeg_dataset import EegDataset
-from superhuge.data.metadata_processing.data import MetaData, MetaDataElement
+from superhuge.data.metadata_processing.data import Metadata, MetadataElement
 
 
 @pytest.fixture
 def mock_metadata():
     metadata = {
-        "dataset-001-subject-001": MetaDataElement(
+        "dataset-001-subject-001": MetadataElement(
             signal_length=1000,
             dataset_id=1,
             subject_id=1,
             channel_infos=["C1", "C2"],
         ),
-        "dataset-001-subject-002": MetaDataElement(
+        "dataset-001-subject-002": MetadataElement(
             signal_length=800,
             dataset_id=1,
             subject_id=2,

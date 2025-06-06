@@ -1,4 +1,4 @@
-from ..metadata_processing.data import ClassifyMetaDataElement
+from ..metadata_processing.data import ClassifyMetadataElement
 from .abc import ClassifyMetadataFilter
 
 # from typing import TYPE_CHECKING
@@ -31,8 +31,8 @@ def angle_wrapper(label: "int") -> int:
 
 class BinaryLeftRightFilter(ClassifyMetadataFilter):
     def __call__(
-        self, metadata_element: ClassifyMetaDataElement | None
-    ) -> ClassifyMetaDataElement | None:
+        self, metadata_element: ClassifyMetadataElement | None
+    ) -> ClassifyMetadataElement | None:
         """
         This function filters the metadata elements based on the label value.
         If the label value is a string, it should be either "left" or "right" (case insensitive).
@@ -69,8 +69,8 @@ class BinaryLeftRightFilter(ClassifyMetadataFilter):
 
 class BinaryFrontRearFilter(ClassifyMetadataFilter):
     def __call__(
-        self, metadata_element: ClassifyMetaDataElement | None
-    ) -> ClassifyMetaDataElement | None:
+        self, metadata_element: ClassifyMetadataElement | None
+    ) -> ClassifyMetadataElement | None:
         """
         This function filters the metadata elements based on the label value.
         If the label value is a string, it should be either "front" or "rear" (case insensitive).
@@ -104,8 +104,8 @@ class BinaryFrontRearFilter(ClassifyMetadataFilter):
 
 class FourClassFilter(ClassifyMetadataFilter):
     def __call__(
-        self, metadata_element: ClassifyMetaDataElement | None
-    ) -> ClassifyMetaDataElement | None:
+        self, metadata_element: ClassifyMetadataElement | None
+    ) -> ClassifyMetadataElement | None:
         """
         This function filters the metadata elements into four classes based on the label value.
         The classes are: -45-45, 45-135, 135-225, 225-315.
@@ -137,8 +137,8 @@ class FourClassFilter(ClassifyMetadataFilter):
 
 class EightClassFilter(ClassifyMetadataFilter):
     def __call__(
-        self, metadata_element: ClassifyMetaDataElement | None
-    ) -> ClassifyMetaDataElement | None:
+        self, metadata_element: ClassifyMetadataElement | None
+    ) -> ClassifyMetadataElement | None:
         """
         This function filters the metadata elements into eight classes based on the label value.
         The classes are: -22.5 to 22.5, 22.5 to 67.5, 67.5 to 112.5, 112.5 to 157.5,
@@ -179,8 +179,8 @@ class EightClassFilter(ClassifyMetadataFilter):
 
 class AsIsClassifyFilter(ClassifyMetadataFilter):
     def __call__(
-        self, metadata_element: ClassifyMetaDataElement | None
-    ) -> ClassifyMetaDataElement | None:
+        self, metadata_element: ClassifyMetadataElement | None
+    ) -> ClassifyMetadataElement | None:
         """
         This function returns the metadata element as is.
         """
@@ -200,8 +200,8 @@ class AsIsClassifyFilter(ClassifyMetadataFilter):
 
 class cEEGridThreeClassFilter(ClassifyMetadataFilter):
     def __call__(
-        self, metadata_element: ClassifyMetaDataElement | None
-    ) -> ClassifyMetaDataElement | None:
+        self, metadata_element: ClassifyMetadataElement | None
+    ) -> ClassifyMetadataElement | None:
         if metadata_element is None:
             return None
         result = None
@@ -224,8 +224,8 @@ label_hstb = {-60: 0, -120: 1, 0: 2, 60: 3, 120: 4}
 
 class cEEGridFiveClassFilter(ClassifyMetadataFilter):
     def __call__(
-        self, metadata_element: ClassifyMetaDataElement | None
-    ) -> ClassifyMetaDataElement | None:
+        self, metadata_element: ClassifyMetadataElement | None
+    ) -> ClassifyMetadataElement | None:
         if metadata_element is None:
             return None
         result = None

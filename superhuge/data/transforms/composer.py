@@ -2,7 +2,7 @@ import numpy as np
 from pydantic import GetCoreSchemaHandler
 from pydantic_core.core_schema import CoreSchema, no_info_plain_validator_function
 
-from ..metadata_processing.data import MetaDataElement
+from ..metadata_processing.data import MetadataElement
 from .abc import Transform
 
 
@@ -28,7 +28,7 @@ class TransformComposer:
         x: np.ndarray,
         /,
         *args,
-        meta: MetaDataElement,
+        meta: MetadataElement,
         when: str,
         whom: str,
         **kwargs,

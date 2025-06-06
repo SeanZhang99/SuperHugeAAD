@@ -1,11 +1,11 @@
 from pydantic import GetCoreSchemaHandler
 from pydantic_core.core_schema import CoreSchema, no_info_plain_validator_function
 
-from ..metadata_processing.data import MetaDataElement
+from ..metadata_processing.data import MetadataElement
 from .general import MetadataFilter
 
 
-class MetaDataFilterComposer:
+class MetadataFilterComposer:
     """Base class for metadata filters."""
 
     def __init__(
@@ -19,8 +19,8 @@ class MetaDataFilterComposer:
         self._filters = list(filters)
 
     def __call__(
-        self, metadata_element: MetaDataElement | None
-    ) -> MetaDataElement | None:
+        self, metadata_element: MetadataElement | None
+    ) -> MetadataElement | None:
         """Filter metadata element."""
         for filter_func in self._filters:
             metadata_element = filter_func(metadata_element)
@@ -67,7 +67,7 @@ class MetaDataFilterComposer:
 
     @classmethod
     def _validate(cls, value: object) -> "MetadataFilter":
-        if not isinstance(value, MetaDataFilterComposer):
+        if not isinstance(value, MetadataFilterComposer):
             raise TypeError(
                 f"Expected an instance of Transform, got {type(value).__name__}"
             )

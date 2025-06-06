@@ -1,6 +1,6 @@
 from typing import Any, Sequence
 
-from ..metadata_processing.data import MetaDataElement
+from ..metadata_processing.data import MetadataElement
 from .abc import MetadataFilter
 
 
@@ -14,9 +14,9 @@ class MetadataValueSelector(MetadataFilter):
         else:
             self.attribute_value = list(attribute_value)
 
-    def __call__(self, metadata_element: MetaDataElement | None):
+    def __call__(self, metadata_element: MetadataElement | None):
         if (
-            isinstance(metadata_element, MetaDataElement)
+            isinstance(metadata_element, MetadataElement)
             and hasattr(metadata_element, self.attribute_name)
             and getattr(metadata_element, self.attribute_name) in self.attribute_value
         ):

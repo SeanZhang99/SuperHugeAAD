@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from pydantic_core import core_schema
 
 
-class MetaDataElement(BaseModel, extra="allow"):
+class MetadataElement(BaseModel, extra="allow"):
     dataset_id: int | None = 0
     subject_id: int | None = 0
     trial_id: int | None = 0
@@ -21,20 +21,20 @@ class MetaDataElement(BaseModel, extra="allow"):
         self.entry = f"dataset-{self.dataset_id:03d}-subject-{self.subject_id:03d}-trial-{self.trial_id:03d}"
 
 
-class RegressionMetaDataElement(MetaDataElement):
+class RegressionMetadataElement(MetadataElement):
     env: str | int | None
     mel: str | int | None
 
 
-class ClassifyMetaDataElement(MetaDataElement):
+class ClassifyMetadataElement(MetadataElement):
     label: str | int | None
 
 
 DatasetSubjectTrialEntry: TypeAlias = str
-MetaDataField: TypeAlias = str
+MetadataField: TypeAlias = str
 FoldIndicator: TypeAlias = str
-MetaDataValue: TypeAlias = Any
-MetaData: TypeAlias = dict[DatasetSubjectTrialEntry, MetaDataElement]
+MetadataValue: TypeAlias = Any
+Metadata: TypeAlias = dict[DatasetSubjectTrialEntry, MetadataElement]
 CrossValidationEntry: TypeAlias = dict[FoldIndicator, list[DatasetSubjectTrialEntry]]
 
 
@@ -57,7 +57,7 @@ class GroupingFunction(Protocol):
 
         # 定义期望的参数和类型
         expected_params = {
-            "metadata": MetaData,
+            "metadata": Metadata,
             "val_fold_idx": int,
             "test_fold_idx": int,
             "n_folds": int,
@@ -134,7 +134,7 @@ def generate_test_metadata(
     num_subjects_per_dataset=10,
     min_trials_per_subject=10,
     max_trials_per_subject=20,
-) -> MetaData:
+) -> Metadata:
     metadata = {}
     random.seed(42)
     for i in range(num_datasets):
@@ -142,7 +142,7 @@ def generate_test_metadata(
             num_trials = random.randint(min_trials_per_subject, max_trials_per_subject)
             for k in range(num_trials):
                 metadata[f"dataset-{i+1:03d}-subject-{j+1:03d}-trial-{k+1:03d}"] = (
-                    MetaDataElement(
+                    MetadataElement(
                         dataset_id=i + 1,
                         subject_id=j + 1,
                         trial_id=k + 1,

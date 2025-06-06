@@ -6,14 +6,14 @@ from .data import (
     CrossValidationEntry,
     DatasetSubjectTrialEntry,
     GroupingFunction,
-    MetaData,
+    Metadata,
 )
 
 
 def leave_one_out_input_decorator(func) -> GroupingFunction:
     @wraps(func)
     def wrapper(
-        metadata: MetaData,
+        metadata: Metadata,
         test_fold_idx: int,
         val_fold_idx: int,
         n_folds: int,
@@ -26,10 +26,10 @@ def leave_one_out_input_decorator(func) -> GroupingFunction:
 
 
 def collect_dataset_subject_trials(
-    metadata: MetaData,
+    metadata: Metadata,
 ):
     dataset_subject_trials: dict[
-        int, dict[int, list[tuple[DatasetSubjectTrialEntry, MetaData]]]
+        int, dict[int, list[tuple[DatasetSubjectTrialEntry, Metadata]]]
     ] = {}
     for trial_id, trial_metadata in metadata.items():
         dataset_id = trial_metadata.dataset_id
@@ -68,7 +68,7 @@ def divide_sets(
 
 
 def loto(
-    metadata: MetaData,
+    metadata: Metadata,
     test_fold_idx: int,
     val_fold_idx: int,
     n_folds: int,
@@ -90,7 +90,7 @@ def loto(
 
     for dataset_id, subjects in dataset_subject_trials.items():
         for subject_id, trials in subjects.items():
-            trials: list[tuple[DatasetSubjectTrialEntry, MetaData]]
+            trials: list[tuple[DatasetSubjectTrialEntry, Metadata]]
             random.shuffle(trials)
             trials_per_fold = len(trials) // n_folds
 
@@ -107,7 +107,7 @@ def loto(
 
 
 def loso(
-    metadata: MetaData,
+    metadata: Metadata,
     test_fold_idx: int,
     val_fold_idx: int,
     n_folds: int,
@@ -142,7 +142,7 @@ def loso(
 
 
 def lodo(
-    metadata: MetaData,
+    metadata: Metadata,
     test_fold_idx: int,
     val_fold_idx: int,
     n_folds: int,
@@ -173,7 +173,7 @@ def lodo(
 
 
 def test_kul_loto(
-    metadata: MetaData,
+    metadata: Metadata,
     test_fold_idx: int,
     val_fold_idx: int,
     n_folds: int,
@@ -196,7 +196,7 @@ def test_kul_loto(
         if dataset_id != 4:
             continue
         for subject_id, trials in subjects.items():
-            trials: list[tuple[DatasetSubjectTrialEntry, MetaData]]
+            trials: list[tuple[DatasetSubjectTrialEntry, Metadata]]
 
             train_set.extend([x[0] for x in trials[2:8]])
             val_set.extend([x[0] for x in trials[2:8]])
@@ -212,7 +212,7 @@ def test_kul_loto(
 
 
 def loto_test(
-    metadata: MetaData,
+    metadata: Metadata,
     test_fold_idx: int,
     val_fold_idx: int,
     n_folds: int,

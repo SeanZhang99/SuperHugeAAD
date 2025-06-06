@@ -1,4 +1,4 @@
-from ..metadata_processing.data import RegressionMetaDataElement
+from ..metadata_processing.data import RegressionMetadataElement
 from .abc import RegressionMetadataFilter
 
 __all__ = ["get_regression_filter"]
@@ -8,8 +8,8 @@ ALLOWED_SPEECH_FEATURES = ["env", "mel"]
 
 class EnvFilter(RegressionMetadataFilter):
     def __call__(
-        self, metadata_element: RegressionMetaDataElement | None
-    ) -> RegressionMetaDataElement | None:
+        self, metadata_element: RegressionMetadataElement | None
+    ) -> RegressionMetadataElement | None:
         """
         This function filters the metadata elements based on the presence of the 'env' attribute.
         If the 'env' attribute is present, the function returns the metadata element.
@@ -22,8 +22,8 @@ class EnvFilter(RegressionMetadataFilter):
 
 class MelFilter(RegressionMetadataFilter):
     def __call__(
-        self, metadata_element: RegressionMetaDataElement | None
-    ) -> RegressionMetaDataElement | None:
+        self, metadata_element: RegressionMetadataElement | None
+    ) -> RegressionMetadataElement | None:
         """
         This function filters the metadata elements based on the presence of the 'mel' attribute.
         If the 'mel' attribute is present, the function returns the metadata element.

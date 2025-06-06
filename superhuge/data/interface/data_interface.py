@@ -15,12 +15,15 @@
 # Copyright 2025 Yuanming Zhang
 # This package is adopted based on Pytorch Lightning Template project.
 
+from logging import log
+import logging
 import os
 import pickle
 from collections.abc import Callable, Sequence
 from typing import Any
 import warnings
 
+import colorlog
 import lightning as pl2
 from pydantic import BaseModel, model_validator
 from rich.console import Console
@@ -41,12 +44,12 @@ from ..filters.abc import (
 )
 from ..filters.classify_filter import get_classify_filter
 from ..filters.regress_filter import get_regression_filter
-from ..filters.composer import MetaDataFilterComposer
+from ..filters.composer import MetadataFilterComposer
 from ..metadata_processing.data import (
-    ClassifyMetaDataElement,
-    MetaData,
-    MetaDataElement,
-    MetaDataField,
+    ClassifyMetadataElement,
+    Metadata,
+    MetadataElement,
+    MetadataField,
     GroupingFunction,
     DatasetSubjectTrialEntry,
 )
@@ -65,7 +68,7 @@ class CreateDatasetsInputConfig(BaseModel):
     dataset_class: type[EegDataset]
     meta_path: str
     eeg_path: str
-    meta_filter_func: MetaDataFilterComposer | None = None
+    meta_filter_func: MetadataFilterComposer | None = None
     meta_group_func: GroupingFunction
     test_fold_idx: int
     val_fold_idx: int
@@ -74,7 +77,7 @@ class CreateDatasetsInputConfig(BaseModel):
     fs: int
     overlap: int
     transform: TransformComposer | None = None
-    metadata_fields: list[MetaDataField]
+    metadata_fields: list[MetadataField]
 
     @model_validator(mode="after")
     def check_fold_indices(self) -> "CreateDatasetsInputConfig":
@@ -138,9 +141,10 @@ class DInterface(pl2.LightningDataModule):
         val_fold_idx: int = 1,
         n_folds: int = 5,
         overlap: int = 1,
-        metadata_fields: list[MetaDataField] | None = None,
+        metadata_fields: list[MetadataField] | None = None,
         transform: Transform | Sequence[Transform] | None = None,
         preproc_stage: str | None = None,
+        summary_verbose: bool | None = None,
         **kwargs,
     ):
         super().__init__()
@@ -200,44 +204,46 @@ class DInterface(pl2.LightningDataModule):
         self.kwargs = kwargs
 
         self.create_datasets()
-        self.print_summary()
+        if summary_verbose:
+            self.print_summary()
+        self.summary_verbose = summary_verbose
 
     def meta_filter_func_parser(
         self,
         /,
         dataset_class: type[EegDataset],
-        meta_filter_func: MetadataFilter | Sequence[MetaDataField] | None,
+        meta_filter_func: MetadataFilter | Sequence[MetadataField] | None,
         *args,
         **kwargs,
-    ) -> MetaDataFilterComposer | None:
+    ) -> MetadataFilterComposer | None:
         """
         meta_filter_func_parser
 
         Args:
-            meta_filter_func (MetaDataFilterComposer | None): Metadata filter composer instance.
+            meta_filter_func (MetadataFilterComposer | None): Metadata filter composer instance.
             *args: Positional arguments.
             **kwargs: Keyword arguments.
 
         Returns:
-            MetaDataFilterComposer | None: Metadata filter composer instance.
+            MetadataFilterComposer | None: Metadata filter composer instance.
 
         Raises:
-            TypeError: If meta_filter_func is not an instance of MetaDataFilterComposer or None.
+            TypeError: If meta_filter_func is not an instance of MetadataFilterComposer or None.
 
         Running logics:
             - If meta_filter_func is None, return None.
-            - If meta_filter_func is not an instance of MetaDataFilterComposer, raise TypeError.
+            - If meta_filter_func is not an instance of MetadataFilterComposer, raise TypeError.
             - If self.dataset_cfg.dataset_class is a type of EegClassifyBaseDataset and no ClassifyMetadataFilter exists in the composer, add a filter using the classify_filter factory function.
             - If self.dataset_cfg.dataset_class is a type of EegRegressionBaseDataset and no RegressionMetadataFilter exists in the composer, add a filter using the regression_filter factory function.
         """
         if meta_filter_func is None:
-            meta_filter_func = MetaDataFilterComposer()
+            meta_filter_func = MetadataFilterComposer()
         elif isinstance(meta_filter_func, Sequence):
-            meta_filter_func = MetaDataFilterComposer(*meta_filter_func)
+            meta_filter_func = MetadataFilterComposer(*meta_filter_func)
         elif isinstance(meta_filter_func, MetadataFilter):
-            meta_filter_func = MetaDataFilterComposer(meta_filter_func)
+            meta_filter_func = MetadataFilterComposer(meta_filter_func)
 
-        assert isinstance(meta_filter_func, MetaDataFilterComposer)
+        assert isinstance(meta_filter_func, MetadataFilterComposer)
 
         # Check for classify dataset and add classify filter if missing
         if issubclass(dataset_class, EegClassifyBaseDataset):
@@ -265,7 +271,7 @@ class DInterface(pl2.LightningDataModule):
         dataset_class: type[EegDataset],
         metafile_path: str,
         metadata_fields: Sequence[str],
-    ) -> MetaData:
+    ) -> Metadata:
         """
         从 meta.mat 文件中加载元信息。
 
@@ -279,7 +285,7 @@ class DInterface(pl2.LightningDataModule):
         with open(metafile_path, "rb") as f:
             metadata: dict[DatasetSubjectTrialEntry, dict[str, Any]] = pickle.load(f)
 
-        # convert to MetaData object.
+        # convert to Metadata object.
         meta_dict = {}
         for entry, data in metadata.items():
             if set(metadata_fields).issubset(set(data.keys())):
@@ -288,11 +294,11 @@ class DInterface(pl2.LightningDataModule):
 
     def filt_metadata(
         self,
-        metadata: MetaData,
-        meta_filter_func: Callable[[MetaDataElement], MetaDataElement | None] | None,
+        metadata: Metadata,
+        meta_filter_func: Callable[[MetadataElement], MetadataElement | None] | None,
     ):
         if meta_filter_func:
-            filtered_metadata: MetaData = {}
+            filtered_metadata: Metadata = {}
             for dataset_entry, metadata_element in metadata.items():
                 metadata_element = meta_filter_func(metadata_element)
                 if metadata_element is not None:
@@ -414,7 +420,7 @@ class DInterface(pl2.LightningDataModule):
                 for file_idx, sample_counts in enumerate(
                     dataset._per_file_sample_count
                 ):
-                    metadata_element: ClassifyMetaDataElement = dataset.metadata[
+                    metadata_element: ClassifyMetadataElement = dataset.metadata[
                         dataset.files[file_idx]
                     ]
                     label = metadata_element.label
@@ -474,9 +480,9 @@ class DInterface(pl2.LightningDataModule):
             )  # 归一化，使权重总和 = 类别数
             return weights
         else:
-            warnings.warn(
-                "Sample weights are only available for classification datasets. Skip operation and return None. This is basically because someone want to use sample weights for regression datasets, which is not a common practice. Skip this warning if you know what you are doing.",
-                UserWarning,
+            log(
+                logging.WARNING if self.summary_verbose else logging.DEBUG,
+                "Sample weights are only available for classification datasets. Skip operation and return None. This is basically because someone want to use sample weights for regression datasets, which is not a common practice. Skip this message if you know what you are doing.",
             )
             return None
 

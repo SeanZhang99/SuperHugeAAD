@@ -35,6 +35,7 @@ class MInterface(pl2.LightningModule, ABC):
         ckpt_path: str | None = None,
         log_grad: bool | None = None,
         log_norm: bool | None = None,
+        summary_verbose: bool | None = None,
     ):
         super().__init__()
 
@@ -79,8 +80,11 @@ class MInterface(pl2.LightningModule, ABC):
         self.get_input_size(**model_common_args.model_dump())
         self._output_keys = self.configure_output()
 
+        self.summary_verbose = int(summary_verbose or False)
         summary: torchinfo.ModelStatistics = torchinfo.summary(
-            self.model, input_size=list(self.input_size.values())
+            self.model,
+            input_size=list(self.input_size.values()),
+            verbose=self.summary_verbose,
         )
         self.output_size = summary.summary_list[0].output_size
 
@@ -114,7 +118,12 @@ class MInterface(pl2.LightningModule, ABC):
 
             # Add audio input size if required
             if "audio" == required_input:
-                input_sizes["audio"] = (1, input_length, kwargs["num_audio_features"])
+                input_sizes["audio"] = (
+                    1,
+                    input_length,
+                    kwargs["num_audio_features"],
+                    1,
+                )
 
             # Add label input size if required
             if "label" == required_input:

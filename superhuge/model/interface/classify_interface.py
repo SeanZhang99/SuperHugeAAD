@@ -25,7 +25,9 @@ class ClassifyInterface(MInterface):
             num_classes=num_class,
         )
         self.post_model = classify_post_model(self.output_size, num_class, hidden_dim)
-        torchinfo.summary(self.post_model, input_size=self.output_size)
+        torchinfo.summary(
+            self.post_model, input_size=self.output_size, verbose=self.summary_verbose
+        )
 
     def get_stats(self, pred: torch.Tensor, label: torch.Tensor, meta: dict):
         prob, pred = pred, pred.argmax(dim=1)

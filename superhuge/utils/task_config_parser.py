@@ -34,13 +34,14 @@ class TaskConfigParser:
                     cross_validations.setdefault(task_type, {})[cv_name] = cv_details
         return cross_validations
 
-    def _deep_merge_dicts(self, base: dict, updates: dict) -> dict:
+    def _deep_merge_dicts(self, base: dict, *updates: dict) -> dict:
         merged = deepcopy(base)
-        for key, value in updates.items():
-            if isinstance(value, dict) and key in merged:
-                merged[key] = self._deep_merge_dicts(merged[key], value)
-            else:
-                merged[key] = value
+        for update in updates:
+            for key, value in update.items():
+                if isinstance(value, dict) and key in merged:
+                    merged[key] = self._deep_merge_dicts(merged[key], value)
+                else:
+                    merged[key] = value
         return merged
 
     def _dict_to_cli_args(self, prefix: str, data: dict) -> list[str]:
@@ -66,47 +67,35 @@ class TaskConfigParser:
                     if n_folds is None:
                         n_folds = general_data["init_args"].get("n_folds", None)
                     assert n_folds is not None, "n_folds not specified."
-                    for test_fold_idx, val_fold_idx in product(
-                        range(n_folds), range(n_folds)
-                    ):
-                        # Validation fold index changes fast.
-                        # E.g. (test_fold_idx, val_fold_idx): (0,1), (0,2), (0,3), (0,4), (1,0), (1,2),...
-                        if test_fold_idx == val_fold_idx:
-                            continue
-                        task_data: dict = task_detail.get("data", {})
-                        cv_data: dict = cv_details.get("data", {})
-                        merged_data: dict = self._deep_merge_dicts(
-                            general_data, task_data
-                        )
-                        merged_data = self._deep_merge_dicts(merged_data, cv_data)
+                    task_data: dict = task_detail.get("data", {})
+                    cv_data: dict = cv_details.get("data", {})
+                    merged_data: dict = self._deep_merge_dicts(
+                        general_data, task_data, cv_data
+                    )
 
-                        general_model: dict = self.config[task_type]["general"].get(
-                            "model", {}
-                        )
-                        task_model: dict = task_detail.get("model", {})
-                        cv_model: dict = cv_details.get("model", {})
-                        merged_model: dict = self._deep_merge_dicts(
-                            general_model, task_model
-                        )
-                        merged_model = self._deep_merge_dicts(merged_model, cv_model)
+                    general_model: dict = self.config[task_type]["general"].get(
+                        "model", {}
+                    )
+                    task_model: dict = task_detail.get("model", {})
+                    cv_model: dict = cv_details.get("model", {})
+                    merged_model: dict = self._deep_merge_dicts(
+                        general_model, task_model, cv_model
+                    )
 
-                        merged_data["init_args"]["test_fold_idx"] = test_fold_idx
-                        merged_data["init_args"]["val_fold_idx"] = val_fold_idx
+                    config_copy: dict = {
+                        "data": merged_data,
+                        "model": merged_model,
+                    }
 
-                        config_copy: dict = {
-                            "data": merged_data,
-                            "model": merged_model,
-                        }
+                    cli_args = []
+                    cli_args.extend(
+                        self._dict_to_cli_args("--data", config_copy["data"])
+                    )
+                    cli_args.extend(
+                        self._dict_to_cli_args("--model", config_copy["model"])
+                    )
 
-                        cli_args = []
-                        cli_args.extend(
-                            self._dict_to_cli_args("--data", config_copy["data"])
-                        )
-                        cli_args.extend(
-                            self._dict_to_cli_args("--model", config_copy["model"])
-                        )
-
-                        yield cli_args
+                    yield cli_args
 
 
 if __name__ == "__main__":

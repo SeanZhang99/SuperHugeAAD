@@ -14,7 +14,9 @@ from .regression_interface import (
     RegressionInterface,
     ChannelMapping1DRegressionInterface,
     ChannelMapping2DInterface,
+    LinearRegressionInterface,
 )
+from .linear_interface import LinearInterface
 
 __all__ = [
     "MInterface",

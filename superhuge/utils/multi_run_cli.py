@@ -23,7 +23,6 @@ class MultiRunCLI:
             self.task_config_path is not None
         ), "MULTI_RUN_CLI:__INIT__:TASK_CONFIG_ACQUIRING:ARGUMENT_MISSING: Task config is required by providing --task_config=<path> or --task_config <path>"
         self.task_config_parser = TaskConfigParser(self.task_config_path)
-        self.__run_cli()
 
     def __extract_ckpt_path(self) -> tuple[str | None, list[str]]:
         cli_argv: list[str] = self.cli_argv
@@ -73,36 +72,89 @@ class MultiRunCLI:
         # 转换为0-2^32范围内的整数
         return int.from_bytes(hash_digest[:4], byteorder="big") % (2**32)
 
-    def __run_cli(self):
-        for config_list in self.task_config_parser.generate_configs():
-            cli = NamedParamsCLI(
-                parser_kwargs={"parser_mode": "omegaconf"},
-                args=(
-                    self.cli_argv
-                    + config_list
-                    + (
-                        [
-                            "--seed_everything",
-                            str(self.__generate_config_hash(config_list)),
-                        ]
-                        if "--seed_everything" not in self.cli_argv
-                        and "--seed_everything" not in self.cli_argv
-                        else []
-                    )
-                ),
-                run=False,
-            )
+    def __prepare_fold_idx(self, config_list: list[str]):
+        assert "--data.init_args.n_folds" in config_list, (
+            "MULTI_RUN_CLI:__PREPARE_FOLD_IDX:ARGUMENT_MISSING: "
+            "Argument --data.init_args.n_folds is required to prepare fold indices"
+        )
+        n_folds = int(config_list[config_list.index("--data.init_args.n_folds") + 1])
+        if "--data.init_args.val_fold_idx" not in self.cli_argv:
+            val_fold_idx = [str(x) for x in range(n_folds)]
+        else:
+            val_fold_idx = self.cli_argv[
+                self.cli_argv.index("--data.init_args.val_fold_idx") + 1
+            ]
 
-            cli.trainer.fit(
-                model=cli.model, datamodule=cli.datamodule, ckpt_path=self.ckpt_path
-            )
-            cli.trainer.test(
-                model=cli.model,
-                datamodule=cli.datamodule,
-                ckpt_path="best",
-                verbose=True,
-            )
-            self.__release_resources(cli)
+        if "--data.init_args.test_fold_idx" not in self.cli_argv:
+            test_fold_idx = [str(x) for x in range(n_folds)]
+        else:
+            test_fold_idx = self.cli_argv[
+                self.cli_argv.index("--data.init_args.test_fold_idx") + 1
+            ]
+
+        yield from product(val_fold_idx, test_fold_idx)
+
+    def run(self, verbose: bool | None = True):
+        accumulated_results: dict[str, list] = {}
+        for config_list in self.task_config_parser.generate_configs():
+            for val_fold_idx, test_fold_idx in self.__prepare_fold_idx(config_list):
+                if val_fold_idx == test_fold_idx:
+                    # 如果验证集和测试集折叠索引相同，则跳过
+                    continue
+                # 替换配置列表中的折叠索引
+                cli = NamedParamsCLI(
+                    parser_kwargs={"parser_mode": "omegaconf"},
+                    args=(
+                        self.cli_argv
+                        + config_list
+                        + (
+                            [
+                                "--seed_everything",
+                                str(self.__generate_config_hash(config_list)),
+                            ]
+                            if "--seed_everything" not in self.cli_argv
+                            else []
+                        )
+                        + ["--data.init_args.val_fold_idx", val_fold_idx]
+                        + ["--data.init_args.test_fold_idx", test_fold_idx]
+                    ),
+                    run=False,
+                )
+
+                cli.trainer.fit(
+                    model=cli.model, datamodule=cli.datamodule, ckpt_path=self.ckpt_path
+                )
+                # We have only one dataloader, so we can directly access the first result
+                if hasattr(cli.model, "fake_parameter"):
+                    for func, loader in zip(
+                        (cli.trainer.validate, cli.trainer.test),
+                        (
+                            cli.datamodule.val_dataloader(),
+                            cli.datamodule.test_dataloader(),
+                        ),
+                    ):
+                        results = func(
+                            model=cli.model,
+                            dataloaders=loader,
+                            verbose=verbose,
+                        )
+                        for key, value in results[0].items():
+                            if key not in accumulated_results:
+                                accumulated_results[key] = []
+                            accumulated_results[key].append(value)
+                else:
+                    results = cli.trainer.test(
+                        model=cli.model,
+                        datamodule=cli.datamodule,
+                        ckpt_path="best",
+                        verbose=verbose,
+                    )
+                    for key, value in results[0].items():
+                        if key not in accumulated_results:
+                            accumulated_results[key] = []
+                        accumulated_results[key].append(value)
+                self.__release_resources(cli)
+        return {k: np.mean(v) for k, v in accumulated_results.items()}
 
     def __release_resources(self, cli: "NamedParamsCLI"):
         """资源释放策略"""

@@ -1,17 +1,17 @@
 from collections.abc import Sequence
+
 import torch
 import torchinfo
 
 from ..loss.classify.f1_score import binary_f1_score
 from ..loss.regression.pearson_loss import pearson_corrcoef
 from ..module.post_model import regression_post_model
-from .model_interface import MInterface
 from .channel_mapping_interface import (
     ChannelMapping1DInterface,
     ChannelMapping2DInterface,
 )
-from ..loss.regression.pearson_loss import pearson_corrcoef
-from ..loss.classify.f1_score import binary_f1_score
+from .linear_interface import LinearInterface
+from .model_interface import MInterface
 
 
 class RegressionInterface(MInterface):
@@ -100,4 +100,8 @@ class ChannelMapping1DRegressionInterface(
 class ChannelMapping2DRegressionInterface(
     RegressionInterface, ChannelMapping2DInterface
 ):
+    pass
+
+
+class LinearRegressionInterface(LinearInterface, RegressionInterface):
     pass

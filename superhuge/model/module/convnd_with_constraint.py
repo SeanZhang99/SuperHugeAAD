@@ -67,7 +67,7 @@ def convNd_with_constraint(
         nd,
         transpose,
     ) in ND_TRANSPOSE_TO_CONV_CLASS.keys(), (
-        f"Unsupported Conv{"Transpose" if transpose else ""}{int(nd)}d combination."
+        f"Unsupported Conv{'Transpose' if transpose else ''}{int(nd)}d combination."
     )
 
     return ConvNdWithConstraint(

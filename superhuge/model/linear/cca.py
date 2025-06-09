@@ -113,10 +113,16 @@ class CCA(LinearABC):
         assert self._n_samples > 0, "No data to fit"
 
         # Solve CCA on accumulated statistics
+
+        self.Rxyxy += (
+            torch.eye(self.Rxyxy.shape[0], device=self.Rxyxy.device) * self.cfg.l2
+        )
+
         self.weight_x, self.weight_y = canonical_correlation_analysis(
             cov_matrix=self.Rxyxy / self._n_samples,
             num_features_x=(self.cfg.x_lag_samples * 2 + 1) * self.cfg.num_features_x,
-            reg_strength=self.cfg.l2,
+            reg_strength=1.0e-5,
+            num_components=self.cfg.num_components,
         )
 
         # Mark model as fitted
@@ -146,8 +152,8 @@ class CCA(LinearABC):
             self.cfg.x_lag_samples,
         )
         y_lag_flat = self.lag_and_flatten(
-            audio[..., 0],
-            "batch lag time channel -> batch time (lag channel)",
+            audio,
+            "batch lag time channel speaker -> batch time channel speaker lag",
             self.cfg.y_lag_samples,
             self.cfg.y_lag_samples,
         )
@@ -155,6 +161,10 @@ class CCA(LinearABC):
         # Project using learned weights
         x_proj = x_lag_flat @ self.weight_x
         y_proj = y_lag_flat @ self.weight_y
+
+        y_proj = rearrange(
+            y_proj, "batch time channel speaker 1 -> batch time channel speaker"
+        )
 
         return x_proj, y_proj
 
@@ -202,7 +212,10 @@ def compute_sphering_matrix(
 
 
 def canonical_correlation_analysis(
-    cov_matrix: torch.Tensor, num_features_x: int, reg_strength: float = 1e-12
+    cov_matrix: torch.Tensor,
+    num_features_x: int,
+    reg_strength: float = 1e-12,
+    num_components: int = 1,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Perform Canonical Correlation Analysis (CCA)
@@ -220,7 +233,6 @@ def canonical_correlation_analysis(
     """
     # Split covariance matrix
     d_x = num_features_x
-    d_y = cov_matrix.shape[0] - d_x
 
     cov_xx = cov_matrix[:d_x, :d_x]
     cov_yy = cov_matrix[d_x:, d_x:]
@@ -236,6 +248,10 @@ def canonical_correlation_analysis(
     # SVD of cross-covariance matrix (max k = min(rank_x, rank_y))
     u, s, vh = torch.linalg.svd(transformed_cov, full_matrices=False)
     k = min(u.shape[1], vh.shape[0], s.shape[0])
+    assert (
+        k >= num_components
+    ), f"Number of components {num_components} exceeds rank {k} of covariance matrix"
+    k = num_components
 
     # Compute canonical vectors
     weights_x = w_x @ u[:, :k] * torch.sqrt(torch.tensor(2.0))

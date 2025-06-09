@@ -1,4 +1,5 @@
 from .wf import WienerFilter
 from .cca import CCA
-from .rie_wf import RiemannianWienerFilter
-from .csp import CommonSpatialMappingFilter
+from .log_wf import LogEuclideanWienerFilter
+from .eig_pcc_diff import EigenFilterPccDiff
+from .eig_pcc import EigenFilterPcc

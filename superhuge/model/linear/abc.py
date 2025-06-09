@@ -4,6 +4,8 @@ from typing import final
 import torch
 from einops import rearrange
 
+import superhuge
+
 
 class LinearABC(torch.nn.Module, ABC):
     _fitted: bool = False
@@ -21,13 +23,15 @@ class LinearABC(torch.nn.Module, ABC):
         self._n_samples += eeg.shape[0] * eeg.shape[1]
 
     @final
-    def forward(self, eeg: torch.Tensor, audio: torch.Tensor) -> Sequence[torch.Tensor]:
+    def forward(
+        self, eeg: torch.Tensor, audio: torch.Tensor
+    ) -> tuple["superhuge.model.types.EEG_TYPE", "superhuge.model.types.AUDIO_TYPE"]:
         """
         Forward pass of the model.
         """
         if self._fitted:
-            return self.predict(eeg, audio)
-        if self.training:
+            eeg, audio = self.predict(eeg, audio)
+        elif self.training:
             self.update(eeg, audio)
         return eeg, audio
 
@@ -70,7 +74,7 @@ class LinearABC(torch.nn.Module, ABC):
                 x_lag.append(
                     torch.cat(
                         [
-                            torch.zeros((x.shape[0], l, x.shape[-1])).type_as(x),
+                            torch.zeros((x.shape[0], l, *x.shape[2:])).type_as(x),
                             x[:, : x.shape[1] - l],
                         ],
                         dim=1,
@@ -81,7 +85,7 @@ class LinearABC(torch.nn.Module, ABC):
                     torch.cat(
                         [
                             x[:, -l:, :],
-                            torch.zeros(x.shape[0], -l, x.shape[-1]).type_as(x),
+                            torch.zeros(x.shape[0], -l, *x.shape[2:]).type_as(x),
                         ],
                         dim=1,
                     )

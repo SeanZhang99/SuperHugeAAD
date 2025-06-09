@@ -1,6 +1,7 @@
 import gc
 import hashlib
 from itertools import product
+from math import isnan
 import os
 from glob import glob
 from typing import Sequence
@@ -8,7 +9,7 @@ from typing import Sequence
 import numpy as np
 import torch
 from lightning import LightningModule
-from lightning.pytorch.cli import LightningCLI
+from lightning.pytorch.cli import LightningCLI, SaveConfigCallback
 import tqdm
 
 from .task_config_parser import TaskConfigParser
@@ -94,7 +95,7 @@ class MultiRunCLI:
 
         yield from product(val_fold_idx, test_fold_idx)
 
-    def run(self, verbose: bool | None = True):
+    def run(self, verbose: bool | None = True, save_config: bool | None = True):
         accumulated_results: dict[str, list] = {}
         for config_list in self.task_config_parser.generate_configs():
             for val_fold_idx, test_fold_idx in self.__prepare_fold_idx(config_list):
@@ -119,6 +120,7 @@ class MultiRunCLI:
                         + ["--data.init_args.test_fold_idx", test_fold_idx]
                     ),
                     run=False,
+                    save_config_callback=SaveConfigCallback if save_config else None,
                 )
 
                 cli.trainer.fit(
@@ -139,6 +141,9 @@ class MultiRunCLI:
                             verbose=verbose,
                         )
                         for key, value in results[0].items():
+                            assert not isnan(
+                                value
+                            ), f"Evaluation metrics got NaN for {key}"
                             if key not in accumulated_results:
                                 accumulated_results[key] = []
                             accumulated_results[key].append(value)
@@ -150,6 +155,7 @@ class MultiRunCLI:
                         verbose=verbose,
                     )
                     for key, value in results[0].items():
+                        assert not isnan(value), f"Evaluation metrics got NaN for {key}"
                         if key not in accumulated_results:
                             accumulated_results[key] = []
                         accumulated_results[key].append(value)

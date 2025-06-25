@@ -3,6 +3,7 @@ from functools import wraps
 from typing import Any
 
 from .data import (
+    ClassifyMetadataElement,
     CrossValidationEntry,
     DatasetSubjectTrialEntry,
     GroupingFunction,
@@ -172,7 +173,7 @@ def lodo(
     return {"train": train_set, "val": val_set, "test": test_set}
 
 
-def test_kul_loto(
+def unseen_test_chrnological(
     metadata: Metadata,
     test_fold_idx: int,
     val_fold_idx: int,
@@ -193,25 +194,28 @@ def test_kul_loto(
     train_set, val_set, test_set = [], [], []
 
     for dataset_id, subjects in dataset_subject_trials.items():
-        if dataset_id != 4:
-            continue
         for subject_id, trials in subjects.items():
             trials: list[tuple[DatasetSubjectTrialEntry, Metadata]]
 
-            train_set.extend([x[0] for x in trials[2:8]])
-            val_set.extend([x[0] for x in trials[2:8]])
-            test_set.extend([x[0] for x in trials[:2]])
+            for i, trial in enumerate(trials):
+                if i >= 8:
+                    break
+                # (1,2) -> fold 0, (3,4) -> fold 1, (5,6) -> fold 2, (7,8) -> fold 3
+                if i // 2 == test_fold_idx:
+                    test_set.append(trial[0])
+                else:
+                    train_set.append(trial[0])
 
     return {
         "train": train_set,
-        "val": val_set,
+        "val": train_set,
         "test": test_set,
         "train_accept_range": [0, 0.85],
         "val_reject_range": [0, 0.85],
     }
 
 
-def loto_test(
+def unseen_test_unbalanced_shuffled(
     metadata: Metadata,
     test_fold_idx: int,
     val_fold_idx: int,
@@ -235,6 +239,42 @@ def loto_test(
         "train": train_set,
         "val": train_set,
         "test": test_set,
-        "train_reject_range": (0.70, 1.0),
-        "val_accept_range": (0.70, 1.0),
+        "train_reject_range": (0.85, 1.0),
+        "val_accept_range": (0.85, 1.0),
+    }
+
+
+def unseen_test_balanced_shuffled(
+    metadata: Metadata,
+    test_fold_idx: int,
+    val_fold_idx: int,
+    n_folds: int,
+    seed: int = 42,
+    **kwargs: Any,
+) -> CrossValidationEntry:
+    random.seed(seed)
+    dataset_subject_trials = collect_dataset_subject_trials(metadata)
+    all_folds = {i: [] for i in range(n_folds)}
+
+    for dataset_id, subjects in dataset_subject_trials.items():
+        for subject_id, trials in subjects.items():
+            trials: list[tuple[DatasetSubjectTrialEntry, ClassifyMetadataElement]]
+            left_trials = [trial for trial in trials if trial[1].label == 0]
+            right_trials = [trial for trial in trials if trial[1].label == 1]
+            random.shuffle(left_trials)
+            random.shuffle(right_trials)
+
+            for i in range(n_folds):
+                all_folds[i].append(left_trials[i][0])
+                all_folds[i].append(right_trials[i][0])
+    train_set, val_set, test_set = divide_sets(
+        all_folds, n_folds, test_fold_idx, val_fold_idx
+    )
+    train_set.extend(val_set)
+    return {
+        "train": train_set,
+        "val": train_set,
+        "test": test_set,
+        "train_accept_range": [0, 0.85],
+        "val_reject_range": [0, 0.85],
     }

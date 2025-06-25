@@ -13,21 +13,7 @@ from .group import (
     lodo,
     loso,
     loto,
-    loto_test,
-    test_kul_loto,
+    unseen_test_balanced_shuffled,
+    unseen_test_chrnological,
+    unseen_test_unbalanced_shuffled,
 )
-
-__all__ = [
-    "leave_one_out_input_decorator",
-    "loto",
-    "loso",
-    "lodo",
-    "Metadata",
-    "MetadataElement",
-    "MetadataField",
-    "RegressionMetadataElement",
-    "ClassifyMetadataElement",
-    "CrossValidationEntry",
-    "DatasetSubjectTrialEntry",
-    "GroupingFunction",
-]

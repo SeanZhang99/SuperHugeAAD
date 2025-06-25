@@ -23,7 +23,6 @@ from collections.abc import Callable, Sequence
 from typing import Any
 import warnings
 
-import colorlog
 import lightning as pl2
 from pydantic import BaseModel, model_validator
 from rich.console import Console
@@ -56,7 +55,6 @@ from ..metadata_processing.data import (
 from ..metadata_processing.group import (
     leave_one_out_input_decorator,
     loto,
-    test_kul_loto,
 )
 from ..transforms.composer import TransformComposer
 from ..transforms.abc import Transform
@@ -69,7 +67,7 @@ class CreateDatasetsInputConfig(BaseModel):
     meta_path: str
     eeg_path: str
     meta_filter_func: MetadataFilterComposer | None = None
-    meta_group_func: GroupingFunction
+    meta_group_func: Callable
     test_fold_idx: int
     val_fold_idx: int
     n_folds: int
@@ -113,7 +111,6 @@ def create_matlab_dinterface():
         fs=128,
         meta_filter_func=None,
         meta_filter_func_args=["binary_leftright"],
-        meta_group_func=test_kul_loto,
         transform=[
             Filter([1.0, 32.0], fs=128, btype="bandpass", order=5),
             Scale(root_path=r"E:\derivatives\SuperHuge", preproc_stage="raw"),
@@ -184,7 +181,7 @@ class DInterface(pl2.LightningDataModule):
                 meta_filter_func,
                 *meta_filter_func_args if meta_filter_func_args else [],
             ),
-            meta_group_func=leave_one_out_input_decorator(meta_group_func),
+            meta_group_func=meta_group_func,
             test_fold_idx=test_fold_idx,
             val_fold_idx=val_fold_idx,
             n_folds=n_folds,

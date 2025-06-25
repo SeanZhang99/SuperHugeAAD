@@ -52,7 +52,7 @@ class TransformConfig(BaseModel):
             for v in value:
                 if v not in valid_options or v == "all":
                     raise ValueError(
-                        f"whom must be one of {valid_options.copy().remove("all")}, but got {v}."
+                        f"whom must be one of {valid_options}, but got {v}."
                     )
         else:
             raise ValueError(

@@ -89,7 +89,7 @@ class GroupingFunction(Protocol):
         test_metadata = generate_test_metadata()
         test_fold_idx = 0
         val_fold_idx = 1
-        n_folds = 6
+        n_folds = 4
         test_random_seed = None
         result = value(
             metadata=test_metadata,
@@ -149,7 +149,46 @@ def generate_test_metadata(
                         num_channel=32,
                         signal_length=10000,
                         fs=128,
+                        label=random.randint(0, 1),  # Random binary label
                     )
                 )
 
     return metadata
+
+
+def test_kul_metadata():
+    dataset_id = 4
+    num_subjects = 16
+    num_trials = 8
+    metadata = {}
+    for subject_id in range(1, num_subjects + 1):
+        for trial_id in range(1, num_trials + 1):
+            entry = f"dataset-{dataset_id:03d}-subject-{subject_id:03d}-trial-{trial_id:03d}"
+
+            metadata[entry] = MetadataElement(
+                dataset_id=dataset_id,
+                subject_id=subject_id,
+                trial_id=trial_id,
+                num_channel=64,
+                signal_length=47000,
+                fs=128,
+                label=trial_id % 2,  # Just an example label
+            )
+
+    from superhuge.data.metadata_processing.group import (
+        loto,
+        unseen_test_balanced_shuffled,
+        unseen_test_chrnological,
+        unseen_test_unbalanced_shuffled,
+    )
+
+    unseen_test_balanced_shuffled(metadata, test_fold_idx=0, val_fold_idx=1, n_folds=4)
+    unseen_test_chrnological(metadata, test_fold_idx=0, val_fold_idx=1, n_folds=4)
+    unseen_test_unbalanced_shuffled(
+        metadata, test_fold_idx=0, val_fold_idx=1, n_folds=4
+    )
+
+
+if __name__ == "__main__":
+    test_kul_metadata()
+    print("Metadata processing module is working correctly.")

@@ -7,7 +7,7 @@ from einops import rearrange
 import superhuge
 
 
-class LinearABC(torch.nn.Module, ABC):
+class ClassifyABC(torch.nn.Module, ABC):
     _fitted: bool = False
     _n_samples: int = 0
 
@@ -16,7 +16,7 @@ class LinearABC(torch.nn.Module, ABC):
         super().__init__()
 
     @abstractmethod
-    def update(self, eeg: torch.Tensor, audio: torch.Tensor) -> None:
+    def update(self, eeg: torch.Tensor, label: torch.Tensor) -> None:
         """
         Update the model with new data.
         """
@@ -24,16 +24,16 @@ class LinearABC(torch.nn.Module, ABC):
 
     @final
     def forward(
-        self, eeg: torch.Tensor, audio: torch.Tensor
-    ) -> tuple["superhuge.model.types.EEG_TYPE", "superhuge.model.types.AUDIO_TYPE"]:
+        self, eeg: torch.Tensor, label: torch.Tensor
+    ) -> tuple["superhuge.model.types.EEG_TYPE", "superhuge.model.types.LABEL_TYPE"]:
         """
         Forward pass of the model.
         """
         if self._fitted:
-            eeg, audio = self.predict(eeg, audio)
+            eeg, label = self.predict(eeg, label)
         elif self.training:
-            self.update(eeg, audio)
-        return eeg, audio
+            self.update(eeg, label)
+        return eeg, label
 
     @abstractmethod
     def fit(self) -> None:
@@ -43,7 +43,7 @@ class LinearABC(torch.nn.Module, ABC):
         ...
 
     @abstractmethod
-    def predict(self, eeg: torch.Tensor, audio: torch.Tensor) -> Sequence[torch.Tensor]:
+    def predict(self, eeg: torch.Tensor, label: torch.Tensor) -> Sequence[torch.Tensor]:
         """
         Predict the output based on the input data.
         """

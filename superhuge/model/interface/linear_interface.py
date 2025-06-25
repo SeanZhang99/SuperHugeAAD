@@ -3,7 +3,7 @@ import torch
 
 
 from .model_interface import MInterface
-from ..linear.abc import LinearABC
+from ..linear import LinearABC
 
 
 class LinearInterface(MInterface):

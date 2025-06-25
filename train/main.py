@@ -54,8 +54,7 @@ if __name__ == "__main__":
         model_config,
         "--model",
         os.path.join(config_path, "optimizer_config.yaml"),
-        "--model.log_norm",
-        "true",
-        "--model.log_grad",
+        "--data.init_args.summary_verbose",
         "true",
     )
+    cli.run()

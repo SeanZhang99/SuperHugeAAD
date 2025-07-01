@@ -10,18 +10,11 @@ ENV_ALIASE = ["env", "envelope", "env_path"]
 MEL_ALIASE = ["mel", "mel spectrum", "mfcc", "mel_path"]
 
 
-class EEGDatasetWithSpeechFeatureCreationConfig(BaseModel, extra="allow"):
-    speech_feature_key: str
-
-
 class EegRegressionBaseDataset(EegDataset):
     metadata_cls = RegressionMetadataElement
 
     def __init__(self, /, **kwargs):
-        """
-        Args:
-            speech_feature_key (str): 元数据中存储语音特征文件名的键。
-        """
+        """ """
         for metadata_field in kwargs["metadata_fields"]:
             # 处理支持的语音特征别名
             if metadata_field in ENV_ALIASE:

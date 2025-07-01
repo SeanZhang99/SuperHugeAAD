@@ -22,6 +22,10 @@ class Filter(Transform):
             self.Wn = Wn / (fs / 2)
         elif isinstance(Wn, Sequence):
             self.Wn = [wn / (fs / 2) for wn in Wn]
+        else:
+            raise TypeError(
+                f"Wn must be a float or a sequence of floats, got {type(Wn)}."
+            )
         self.fs = fs
         self.order = order
         self.btype = btype

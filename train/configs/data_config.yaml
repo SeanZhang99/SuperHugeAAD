@@ -9,7 +9,7 @@ init_args:
     pin_memory: true
     prefetch_factor: 8
   dataset_class: superhuge.data.datasets.EegDataset
-  fs: 128.0
+  fs: 128
   meta_filter_func:
     - class_path: superhuge.data.filters.MetadataValueSelector
       init_args:

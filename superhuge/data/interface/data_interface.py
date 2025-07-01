@@ -36,14 +36,14 @@ from ..datasets.eeg_dataset import EegDataset
 from ..datasets.eeg_regression_base_dataset import EegRegressionBaseDataset
 from ..datasets.eeg_classify_base_dataset import EegClassifyBaseDataset
 from ..datasets.collect_multidataset import collect_multidataset
-from ..filters.abc import (
+from ..metadata_filters.abc import (
     MetadataFilter,
     ClassifyMetadataFilter,
     RegressionMetadataFilter,
 )
-from ..filters.classify_filter import get_classify_filter
-from ..filters.regress_filter import get_regression_filter
-from ..filters.composer import MetadataFilterComposer
+from ..metadata_filters.classify_filter import get_classify_filter
+from ..metadata_filters.regress_filter import get_regression_filter
+from ..metadata_filters.composer import MetadataFilterComposer
 from ..metadata_processing.data import (
     ClassifyMetadataElement,
     Metadata,
@@ -95,30 +95,6 @@ class CreateDatasetsInputConfig(BaseModel):
                 f"but got {self.val_fold_idx} and {self.test_fold_idx}"
             )
         return self
-
-
-def create_matlab_dinterface():
-    return DInterface(
-        dataset_class=EegClassifyBaseDataset,
-        dataloader_args={
-            "batch_size": 1,
-            "num_workers": 0,
-            "pin_memory": False,
-            "persistent_workers": False,
-        },
-        root_path=r"E:\derivatives\SuperHuge",
-        window_length=10.0,
-        fs=128,
-        meta_filter_func=None,
-        meta_filter_func_args=["binary_leftright"],
-        transform=[
-            Filter([1.0, 32.0], fs=128, btype="bandpass", order=5),
-            Scale(root_path=r"E:\derivatives\SuperHuge", preproc_stage="raw"),
-        ],
-        preproc_stage="raw",
-        metadata_fields=["label"],
-        overlap=2,
-    )
 
 
 class DInterface(pl2.LightningDataModule):
@@ -482,9 +458,3 @@ class DInterface(pl2.LightningDataModule):
                 "Sample weights are only available for classification datasets. Skip operation and return None. This is basically because someone want to use sample weights for regression datasets, which is not a common practice. Skip this message if you know what you are doing.",
             )
             return None
-
-
-if __name__ == "__main__":
-    # Test the DInterface class
-    dinterface = create_matlab_dinterface()
-    print(dinterface.dataset_cfg)

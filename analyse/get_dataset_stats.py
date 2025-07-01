@@ -75,7 +75,7 @@ if __name__ == "__main__":
         window_length=10,
         fs=128,
         meta_filter_func=[
-            superhuge.data.filters.MetadataValueSelector(
+            superhuge.data.metadata_filters.MetadataValueSelector(
                 attribute_name="dataset_id", attribute_value=9
             )
         ],

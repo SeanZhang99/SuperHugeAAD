@@ -52,11 +52,29 @@ directional_focus_decoding:
           num_class: 8
 
   cross_validation:
+    unseen_test_shuffled:
+      enable: 1
+      data:
+        init_args:
+          meta_group_func: superhuge.data.metadata_processing.unseen_test_unbalanced_shuffled
+          n_folds: 4
     leave_one_trial_out:
       enable: 1
       data:
         init_args:
-          meta_group_func: superhuge.data.metadata_processing.loto_test
+          meta_group_func: superhuge.data.metadata_processing.loto
+          n_folds: 4
+    unseen_test_balanced_shuffled:
+      enable: 1
+      data:
+        init_args:
+          meta_group_func: superhuge.data.metadata_processing.unseen_test_balanced_shuffled
+          n_folds: 4
+    unseen_test_chronological:
+      enable: 1
+      data:
+        init_args:
+          meta_group_func: superhuge.data.metadata_processing.unseen_test_chrnological
           n_folds: 4
     leave_one_subject_out:
       enable: 0
@@ -95,7 +113,7 @@ speech_reconstruction:
 
   cross_validation:
     leave_one_trial_out:
-      enable: 1
+      enable: 0
       data:
         init_args:
           meta_group_func: superhuge.data.metadata_processing.loto

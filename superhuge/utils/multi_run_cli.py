@@ -126,7 +126,6 @@ class MultiRunCLI:
                 cli.trainer.fit(
                     model=cli.model, datamodule=cli.datamodule, ckpt_path=self.ckpt_path
                 )
-                # We have only one dataloader, so we can directly access the first result
                 if hasattr(cli.model, "fake_parameter"):
                     for func, loader in zip(
                         (cli.trainer.validate, cli.trainer.test),
@@ -144,9 +143,7 @@ class MultiRunCLI:
                             assert not isnan(
                                 value
                             ), f"Evaluation metrics got NaN for {key}"
-                            if key not in accumulated_results:
-                                accumulated_results[key] = []
-                            accumulated_results[key].append(value)
+                            accumulated_results.setdefault(f"{key}", []).append(value)
                 else:
                     results = cli.trainer.test(
                         model=cli.model,
@@ -159,24 +156,7 @@ class MultiRunCLI:
                         if key not in accumulated_results:
                             accumulated_results[key] = []
                         accumulated_results[key].append(value)
-                self.__release_resources(cli)
         return {k: np.mean(v) for k, v in accumulated_results.items()}
-
-    def __release_resources(self, cli: "NamedParamsCLI"):
-        """资源释放策略"""
-        # 释放模型引用
-        del cli.model
-        del cli.datamodule
-        del cli.trainer
-
-        # 清理PyTorch缓存
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            # 双保险清理
-            torch.cuda.ipc_collect()
-
-        # 强制垃圾回收
-        gc.collect()
 
 
 class NamedParamsCLI(LightningCLI):

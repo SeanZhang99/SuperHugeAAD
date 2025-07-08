@@ -15,13 +15,18 @@ from ..module.model_template import ModelInputArgs
 
 class MInterface(pl2.LightningModule, ABC):
     required_output_keys: list[str]
+    get_stats_fn: (
+        Callable[
+            ["MInterface", torch.Tensor, torch.Tensor, dict],
+            dict[str, torch.Tensor],
+        ]
+        | None
+    )
 
     def __init__(
         self,
         /,
         *,
-        # Must declare using ModelTemplate to get the linked arguments. e.g., fs and window_length in our case. Otherwise, jsonargparse will ignore this argument. If you want other arguments to be linked, please declare them in the ModelTemplate class.
-        # module: ModelTemplate,
         model_class: type[torch.nn.Module] | Callable[..., torch.nn.Module],
         model_args: dict[str, Any],
         model_common_args: ModelInputArgs,
@@ -36,6 +41,7 @@ class MInterface(pl2.LightningModule, ABC):
         log_grad: bool | None = None,
         log_norm: bool | None = None,
         summary_verbose: bool | None = None,
+        get_stats_fn: Callable | None = None,
     ):
         super().__init__()
 
@@ -91,6 +97,8 @@ class MInterface(pl2.LightningModule, ABC):
         self.ckpt_path = ckpt_path  # Store checkpoint path for later use
         self.log_grad = log_grad
         self.log_norm = log_norm
+
+        self.get_stats_fn = get_stats_fn
 
     @final
     def get_input_size(self, /, **kwargs) -> list[tuple[int | None, ...]]:
@@ -188,7 +196,7 @@ class MInterface(pl2.LightningModule, ABC):
     @abstractmethod
     def get_stats(
         self, outputs: torch.Tensor, targets: torch.Tensor, /, *, meta: dict
-    ) -> None:
+    ) -> dict[str, torch.Tensor]:
         """get_stats. This method will be called during `training_step`, `validation_step` and `test_step`. It should calculate the statistics of the model's output and the target.
 
         Args:
@@ -196,12 +204,13 @@ class MInterface(pl2.LightningModule, ABC):
             target (torch.Tensor): the target/label
 
         Returns:
-            None
+            dict[str, torch.Tensor]: A dictionary containing the calculated statistics.
 
         Example:
             ```python
-            def get_stats(self, output: torch.Tensor, target: torch.Tensor) -> None:
+            def get_stats(self, output: torch.Tensor, target: torch.Tensor) -> dict[str, torch.Tensor]:
                 self.log('accuracy', (output == target).float().mean())
+                return {'accuracy': (output == target).float().mean()}
             ```
         """
         pass
@@ -224,6 +233,8 @@ class MInterface(pl2.LightningModule, ABC):
                 *outputs,
                 meta=data["meta"],
             )
+            if self.get_stats_fn:
+                self.get_stats_fn(self, *outputs, meta=data["meta"])
 
         loss /= batch_size
         self.log(

@@ -16,7 +16,7 @@ def pearson_corrcoef(
     :type y_pred: torch.Tensor
     :param y_true: _description_
     :type y_true: torch.Tensor
-    :param dim: _description_
+    :param dim: which dimension to compute the correlation coefficient over. (usually the time dimension)
     :type dim: int
     :return: _description_
     :rtype: torch.Tensor

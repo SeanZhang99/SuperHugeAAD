@@ -1,53 +1,133 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import final
+from typing import final, TYPE_CHECKING
 import torch
 from einops import rearrange
 
-import superhuge
+
+if TYPE_CHECKING:
+    from superhuge.model.types import EEG_TYPE, LABEL_TYPE
+    from sklearn.base import ClassifierMixin
+    from typing import Literal
+
+    CODING_STRATEGY = Literal["onevsone", "onevsall", "onevsrest" "ovo", "ova", "ovr"]
 
 
-class ClassifyABC(torch.nn.Module, ABC):
+class ClassifierABC(torch.nn.Module, ABC):
     _fitted: bool = False
     _n_samples: int = 0
+    classifier: "ClassifierMixin"
 
     @abstractmethod
-    def __init__(self, /, **kwargs):
+    def __init__(
+        self,
+        /,
+        classifier: "ClassifierMixin",
+        coding_strategy: "CODING_STRATEGY",
+        **kwargs,
+    ):
         super().__init__()
+        self.classifier = classifier
+        self.coding_strategy = coding_strategy
 
     @abstractmethod
-    def update(self, eeg: torch.Tensor, label: torch.Tensor) -> None:
+    def estimate_feature(
+        self,
+        eeg: "EEG_TYPE",
+        label: "LABEL_TYPE",
+    ) -> torch.Tensor:
         """
-        Update the model with new data.
-        """
-        self._n_samples += eeg.shape[0] * eeg.shape[1]
+        Estimate features from EEG data.
+        Might have different logics for unfitted (self._fitted=False) and fitted (self._fitted=True) classifiers.
+        E.g. unfitted: compute covariance matrix, store the matrix, convert data to features. fitted: convert to features
 
-    @final
+        Parameters:
+        eeg: torch.Tensor, input EEG data. Shape: (batch_size, time_steps, channels).
+
+        Returns:
+        torch.Tensor, estimated features. Shape: (batch_size, feature_dim).
+        """
+        ...
+
+    def update(self, eeg: "EEG_TYPE", labels: "LABEL_TYPE") -> None:
+        """
+        Update the classifier with new data.
+
+        Parameters:
+        eeg: torch.Tensor, input EEG data. Shape: (batch_size, time_steps, channels).
+        labels: torch.Tensor, labels for the input data. Shape: (batch_size,).
+
+        Returns:
+        None
+        """
+        if not hasattr(self, "eeg"):
+            self.eeg = eeg
+            self.labels = labels
+        else:
+            self.eeg = torch.cat((self.eeg, eeg), dim=0)
+            self.labels = torch.cat((self.labels, labels), dim=0)
+        self._n_samples += eeg.shape[0]
+
+    def fit(self):
+        """
+        Fit the classifier with the accumulated features and labels.
+
+        Returns:
+        self: The fitted classifier.
+        """
+        assert (
+            self._n_samples > 0
+        ), "No samples to fit the classifier. Please call update() first."
+        assert (
+            not self._fitted
+        ), "Classifier has already been fitted. Please call update() to add more data."
+        assert hasattr(self, "eeg") and hasattr(
+            self, "labels"
+        ), "EEG and labels must be set before fitting."
+        assert hasattr(self.classifier, "fit"), "Classifier must have a fit method."
+        features = self.estimate_feature(self.eeg, self.labels)
+        self.classifier.fit(features, self.labels.cpu().numpy())
+        self._fitted = True
+
+    def predict(
+        self, eeg: "EEG_TYPE", label: "LABEL_TYPE"
+    ) -> tuple["EEG_TYPE", "LABEL_TYPE"]:
+        """
+        Predict labels for the input EEG data.
+
+        Parameters:
+        eeg: torch.Tensor, input EEG data. Shape: (batch_size, time_steps, channels).
+        label: torch.Tensor, labels for the input data. Shape: (batch_size,).
+
+        Returns:
+        LABEL_TYPE, predicted labels. Shape: (batch_size,).
+        """
+        assert self._fitted, "Classifier must be fitted before predicting."
+        assert hasattr(
+            self.classifier, "predict"
+        ), "Classifier must have a predict method."
+        features = self.estimate_feature(eeg)
+        predictions = self.classifier.predict(features.cpu().numpy())
+        return features, torch.tensor(predictions, dtype=label.dtype).to(label.device)
+
     def forward(
-        self, eeg: torch.Tensor, label: torch.Tensor
-    ) -> tuple["superhuge.model.types.EEG_TYPE", "superhuge.model.types.LABEL_TYPE"]:
+        self, eeg: "EEG_TYPE", label: "LABEL_TYPE"
+    ) -> tuple["EEG_TYPE", "LABEL_TYPE"]:
         """
         Forward pass of the model.
+
+        Parameters:
+        eeg: torch.Tensor, input EEG data. Shape: (batch_size, time_steps, channels).
+        label: torch.Tensor, labels for the input data. Shape: (batch_size,).
+
+        Returns:
+        tuple of EEG and predicted labels.
         """
         if self._fitted:
             eeg, label = self.predict(eeg, label)
-        elif self.training:
+        else:
             self.update(eeg, label)
         return eeg, label
-
-    @abstractmethod
-    def fit(self) -> None:
-        """
-        Fit the model to the data.
-        """
-        ...
-
-    @abstractmethod
-    def predict(self, eeg: torch.Tensor, label: torch.Tensor) -> Sequence[torch.Tensor]:
-        """
-        Predict the output based on the input data.
-        """
-        ...
 
     @final
     def get_lag_mtx(self, x: torch.Tensor, *lag: int, **kwargs):

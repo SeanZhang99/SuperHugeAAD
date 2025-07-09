@@ -135,7 +135,7 @@ class MInterface(pl2.LightningModule, ABC):
 
             # Add label input size if required
             if "label" == required_input:
-                input_sizes["label"] = (1, 1)
+                input_sizes["label"] = (1,)
 
         self.input_size = input_sizes
 

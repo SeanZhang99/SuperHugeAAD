@@ -219,6 +219,15 @@ class cEEGridThreeClassFilter(ClassifyMetadataFilter):
         return result
 
 
+class cEEGridBinaryFilter(cEEGridThreeClassFilter):
+    def __call__(self, metadata_element):
+        result = super().__call__(metadata_element)
+        if result is not None and result.label == 1:
+            result = None
+
+        return result
+
+
 label_hstb = {-60: 0, -120: 1, 0: 2, 60: 3, 120: 4}
 
 
@@ -265,6 +274,8 @@ def get_classify_filter(
             return cEEGridThreeClassFilter()
         elif num_class == "cEEGrid_five_class":
             return cEEGridFiveClassFilter()
+        elif num_class == "cEEGrid_binary_leftright":
+            return cEEGridBinaryFilter()
         else:
             raise ValueError(
                 f"CLASSIFIER_FILTER:GET_CLASSIFICATION:FILTER:STR_INPUT:VALUE_ERROR: Invalid number of classes. The number of classes can be {ALLOWED_NUM_CLASS_STRING}."

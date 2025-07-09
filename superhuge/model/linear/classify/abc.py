@@ -1,40 +1,59 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import final, TYPE_CHECKING
+from importlib import import_module
+from typing import Literal, final
+
 import torch
 from einops import rearrange
+from sklearn.base import ClassifierMixin
 
+from ...types import EEG_TYPE, LABEL_TYPE
 
-if TYPE_CHECKING:
-    from superhuge.model.types import EEG_TYPE, LABEL_TYPE
-    from sklearn.base import ClassifierMixin
-    from typing import Literal
-
-    CODING_STRATEGY = Literal["onevsone", "onevsall", "onevsrest" "ovo", "ova", "ovr"]
+CODING_STRATEGY = Literal["onevsone", "onevsall", "onevsrest" "ovo", "ova", "ovr"]
 
 
 class ClassifierABC(torch.nn.Module, ABC):
     _fitted: bool = False
     _n_samples: int = 0
-    classifier: "ClassifierMixin"
+    classifier: ClassifierMixin
 
-    @abstractmethod
     def __init__(
         self,
         /,
-        classifier: "ClassifierMixin",
-        coding_strategy: "CODING_STRATEGY",
+        *,
+        classifier: str,
+        coding_strategy: CODING_STRATEGY = "onevsall",
         **kwargs,
     ):
         super().__init__()
-        self.classifier = classifier
+        try:
+            classifier_type = import_module(
+                ".".join(classifier["class_path"].split(".")[:-1])
+            )
+            classifier_type = getattr(
+                classifier_type, classifier["class_path"].split(".")[-1]
+            )
+            assert issubclass(
+                classifier_type, ClassifierMixin
+            ), f"Classifier {classifier['class_path']} must be a subclass of sklearn.base.ClassifierMixin."
+        except ImportError as e:
+            raise ImportError(
+                f"Classifier {classifier['class_path']} not found. Please check the classifier path."
+            ) from e
+        self.classifier = (
+            classifier_type(**classifier["init_args"])
+            if classifier["init_args"] is not None
+            else classifier_type()
+        )
         self.coding_strategy = coding_strategy
+        self.eeg = None
+        self.labels = None
 
     @abstractmethod
     def estimate_feature(
         self,
-        eeg: "EEG_TYPE",
-        label: "LABEL_TYPE",
+        eeg: EEG_TYPE,
+        label: LABEL_TYPE,
     ) -> torch.Tensor:
         """
         Estimate features from EEG data.
@@ -49,7 +68,7 @@ class ClassifierABC(torch.nn.Module, ABC):
         """
         ...
 
-    def update(self, eeg: "EEG_TYPE", labels: "LABEL_TYPE") -> None:
+    def update(self, eeg: EEG_TYPE, labels: LABEL_TYPE) -> None:
         """
         Update the classifier with new data.
 
@@ -60,12 +79,13 @@ class ClassifierABC(torch.nn.Module, ABC):
         Returns:
         None
         """
-        if not hasattr(self, "eeg"):
-            self.eeg = eeg
-            self.labels = labels
-        else:
+        if hasattr(self, "eeg") and self.eeg is not None:
             self.eeg = torch.cat((self.eeg, eeg), dim=0)
             self.labels = torch.cat((self.labels, labels), dim=0)
+        else:
+            self.eeg = eeg
+            self.labels = labels
+
         self._n_samples += eeg.shape[0]
 
     def fit(self):
@@ -89,9 +109,7 @@ class ClassifierABC(torch.nn.Module, ABC):
         self.classifier.fit(features, self.labels.cpu().numpy())
         self._fitted = True
 
-    def predict(
-        self, eeg: "EEG_TYPE", label: "LABEL_TYPE"
-    ) -> tuple["EEG_TYPE", "LABEL_TYPE"]:
+    def predict(self, eeg: EEG_TYPE, label: LABEL_TYPE) -> tuple[EEG_TYPE, LABEL_TYPE]:
         """
         Predict labels for the input EEG data.
 
@@ -106,13 +124,11 @@ class ClassifierABC(torch.nn.Module, ABC):
         assert hasattr(
             self.classifier, "predict"
         ), "Classifier must have a predict method."
-        features = self.estimate_feature(eeg)
+        features = self.estimate_feature(eeg, label)
         predictions = self.classifier.predict(features.cpu().numpy())
         return features, torch.tensor(predictions, dtype=label.dtype).to(label.device)
 
-    def forward(
-        self, eeg: "EEG_TYPE", label: "LABEL_TYPE"
-    ) -> tuple["EEG_TYPE", "LABEL_TYPE"]:
+    def forward(self, eeg: EEG_TYPE, label: LABEL_TYPE) -> tuple[EEG_TYPE, LABEL_TYPE]:
         """
         Forward pass of the model.
 
@@ -124,10 +140,16 @@ class ClassifierABC(torch.nn.Module, ABC):
         tuple of EEG and predicted labels.
         """
         if self._fitted:
-            eeg, label = self.predict(eeg, label)
+            pred = self.predict(eeg, label)[1]
         else:
             self.update(eeg, label)
-        return eeg, label
+            pred = label
+        return pred, label
+
+    def flush(self):
+        self.eeg = None
+        self.labels = None
+        self._n_samples = 0
 
     @final
     def get_lag_mtx(self, x: torch.Tensor, *lag: int, **kwargs):

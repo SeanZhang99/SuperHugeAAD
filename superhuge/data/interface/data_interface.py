@@ -177,8 +177,7 @@ class DInterface(pl2.LightningDataModule):
         self.kwargs = kwargs
 
         self.create_datasets()
-        if summary_verbose:
-            self.print_summary()
+        self.summary(verbose=summary_verbose)
         self.summary_verbose = summary_verbose
 
     def meta_filter_func_parser(
@@ -334,7 +333,7 @@ class DInterface(pl2.LightningDataModule):
     def test_dataloader(self):
         return self.create_dataloader(self.testset)
 
-    def print_summary(self):
+    def summary(self, verbose: bool = False):
         console = Console()
 
         # Table for dataset statistics
@@ -377,7 +376,8 @@ class DInterface(pl2.LightningDataModule):
 
         for entry in sorted(unique_datasets):
             unique_table.add_row(entry)
-        console.print(stats_table, unique_table)
+        if verbose:
+            console.print(stats_table, unique_table)
 
         # class-wise sample count for classification dataset
         if issubclass(self.dataset_cfg.dataset_class, EegClassifyBaseDataset):
@@ -411,7 +411,8 @@ class DInterface(pl2.LightningDataModule):
                         str(f"{name}-{label}"), str(count), f"{percentage:.2f}%"
                     )
 
-            console.print(class_count_table)
+            if verbose:
+                console.print(class_count_table)
             self._global_class_counts = global_class_counts
 
     @property

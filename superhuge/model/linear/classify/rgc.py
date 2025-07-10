@@ -43,8 +43,8 @@ class RGCClassifer(ClassifierABC):
             torch.einsum("bti,btj->bij", eeg, eeg) / eeg.shape[1]
         )  # Compute covariance matrices
         trace_scaling = (
-            torch.trace(cov_matrices, dim1=-2, dim2=-1) / eeg.shape[2]
-        )  # Compute trace scaling factor
+            cov_matrices.diagonal(dim1=-2, dim2=-1).sum(-1) / eeg.shape[2]
+        )  # Compute trace scaling factor for batched tensors
         cov_matrices += (
             self.cov_reg_param
             * trace_scaling.unsqueeze(-1).unsqueeze(-1)

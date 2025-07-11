@@ -16,4 +16,5 @@ from .group import (
     unseen_test_balanced_shuffled,
     unseen_test_chrnological,
     unseen_test_unbalanced_shuffled,
+    cgrid_attention_switch_loto,
 )

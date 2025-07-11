@@ -1,6 +1,6 @@
 import random
 from functools import wraps
-from typing import Any
+from typing import Any, TypeAlias
 
 from .data import (
     ClassifyMetadataElement,
@@ -9,6 +9,9 @@ from .data import (
     GroupingFunction,
     Metadata,
 )
+
+DatasetID: TypeAlias = int
+SubjectID: TypeAlias = int
 
 
 def leave_one_out_input_decorator(func) -> GroupingFunction:
@@ -30,16 +33,16 @@ def collect_dataset_subject_trials(
     metadata: Metadata,
 ):
     dataset_subject_trials: dict[
-        int, dict[int, list[tuple[DatasetSubjectTrialEntry, Metadata]]]
+        DatasetID, dict[SubjectID, list[tuple[DatasetSubjectTrialEntry, Metadata]]]
     ] = {}
-    for trial_id, trial_metadata in metadata.items():
+    for entry, trial_metadata in metadata.items():
         dataset_id = trial_metadata.dataset_id
         subject_id = trial_metadata.subject_id
         assert dataset_id is not None, "Dataset ID cannot be None"
         assert subject_id is not None, "Subject ID cannot be None"
         dataset_subject_trials.setdefault(dataset_id, {}).setdefault(
             subject_id, []
-        ).append((trial_id, trial_metadata))
+        ).append((entry, trial_metadata))
     return dataset_subject_trials
 
 
@@ -278,3 +281,68 @@ def unseen_test_balanced_shuffled(
         "train_accept_range": [0, 0.85],
         "val_reject_range": [0, 0.85],
     }
+
+
+def cgrid_attention_switch_loto(
+    metadata: Metadata,
+    test_fold_idx: int,
+    val_fold_idx: int,
+    n_folds: int,
+    seed: int = 42,
+    **kwargs: Any,
+) -> CrossValidationEntry:
+    """
+    This function implements a leave-one-out cross-validation strategy for the CGrid Attention Switch dataset.
+    Divide training/validation/test set based on the 'true_trial_id' field in the metadata.
+
+    For other implementations, see: `loto`
+    """
+
+    assert (
+        0 <= test_fold_idx < n_folds
+    ), f"test_fold_idx must be in the range [0, {n_folds})"
+    assert (
+        0 <= val_fold_idx < n_folds
+    ), f"val_fold_idx must be in the range [0, {n_folds})"
+    random.seed(seed)
+
+    # check all metadata entries have true_trial_id
+    for entry, trial_metadata in metadata.items():
+        if not trial_metadata.true_trial_id:
+            raise ValueError(
+                f"Metadata entry {entry} does not have a true_trial_id. "
+                "This function requires all entries to have a true_trial_id."
+            )
+
+    dataset_subject_trials = collect_dataset_subject_trials(metadata)
+
+    all_folds = {i: [] for i in range(n_folds)}
+
+    for dataset_id, subjects in dataset_subject_trials.items():
+        for subject_id, trials in subjects.items():
+            trials: list[tuple[DatasetSubjectTrialEntry, Metadata]]
+            # get unique true_trial_ids
+            true_trial_ids = list(
+                set(
+                    trial[1].true_trial_id for trial in trials if trial[1].true_trial_id
+                )
+            )
+            # shuffle the true_trial_ids, and divide sets based on true_trial_ids.
+            random.shuffle(true_trial_ids)
+            true_trial_ids_per_fold = len(true_trial_ids) // n_folds
+            for i in range(n_folds):
+                start_idx = i * true_trial_ids_per_fold
+                end_idx = (
+                    (i + 1) * true_trial_ids_per_fold
+                    if i != n_folds - 1
+                    else len(true_trial_ids)
+                )
+                for trial in trials:
+                    if trial[1].true_trial_id in true_trial_ids[start_idx:end_idx]:
+                        all_folds[i].append(trial[0])
+
+    train_set, val_set, test_set = divide_sets(
+        all_folds, n_folds, test_fold_idx, val_fold_idx
+    )
+
+    return {"train": train_set, "val": val_set, "test": test_set}

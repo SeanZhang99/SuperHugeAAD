@@ -228,10 +228,9 @@ class cEEGridBinaryFilter(cEEGridThreeClassFilter):
         return result
 
 
-label_hstb = {-60: 0, -120: 1, 0: 2, 60: 3, 120: 4}
-
-
 class cEEGridFiveClassFilter(ClassifyMetadataFilter):
+    label_hstb = {-120: 0, -90: 0, -60: 1, -30: 1, 0: 2, 30: 3, 60: 3, 90: 4, 120: 4}
+
     def __call__(
         self, metadata_element: ClassifyMetadataElement | None
     ) -> ClassifyMetadataElement | None:
@@ -242,8 +241,8 @@ class cEEGridFiveClassFilter(ClassifyMetadataFilter):
         if isinstance(label, str):
             label = int(label)
         assert isinstance(label, int)
-        if label in label_hstb:
-            metadata_element.label = label_hstb[label]
+        if label in self.label_hstb:
+            metadata_element.label = self.label_hstb[label]
             result = metadata_element
         return result
 

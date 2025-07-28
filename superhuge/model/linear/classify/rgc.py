@@ -1,26 +1,41 @@
 from .abc import ClassifierABC
 import torch
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from superhuge.model.types import EEG_TYPE, LABEL_TYPE
+from ...types import EEG_TYPE, LABEL_TYPE
 
 
-def logm(matrix):
+def logm(matrix: torch.Tensor) -> torch.Tensor:
+    # check matrix is symmetric
     eigvals, eigvecs = torch.linalg.eigh(matrix)  # Batched eigen decomposition
+    eigvals = torch.clamp(eigvals, min=1e-10)  # Avoid log(0) issues
     log_eigvals = torch.log(eigvals)  # Logarithm of eigenvalues
-    return (
-        eigvecs @ torch.diag_embed(log_eigvals) @ eigvecs.transpose(-1, -2)
-    )  # Batched reconstruction
+    out = eigvecs @ torch.diag_embed(log_eigvals) @ eigvecs.mT
+    # out = construct_symmetric(out)  # Ensure symmetry
+    return out  # Batched reconstruction
 
 
-def expm(matrix):
+def expm(matrix: torch.Tensor) -> torch.Tensor:
+    # check matrix is symmetric
     eigvals, eigvecs = torch.linalg.eigh(matrix)  # Batched eigen decomposition
     exp_eigvals = torch.exp(eigvals)  # Exponential of eigenvalues
-    return (
-        eigvecs @ torch.diag_embed(exp_eigvals) @ eigvecs.transpose(-1, -2)
-    )  # Batched reconstruction
+    out = eigvecs @ torch.diag_embed(exp_eigvals) @ eigvecs.mT
+    # out = construct_symmetric(out)
+    return out  # Batched reconstruction
+
+
+def matrix_power(matrix: torch.Tensor, power: float) -> torch.Tensor:
+    # check matrix is symmetric
+    eigvals, eigvecs = torch.linalg.eigh(matrix)  # Batched eigen decomposition
+    eigvals = torch.clamp(eigvals, min=1e-10)  # Avoid zero eigenvalues
+    powered_eigvals = eigvals**power  # Power of eigenvalues
+    out = eigvecs @ torch.diag_embed(powered_eigvals) @ eigvecs.mT
+    # out = construct_symmetric(out)  # Ensure symmetry
+    return out  # Batched reconstruction
+
+
+def construct_symmetric(matrix: torch.Tensor) -> torch.Tensor:
+    """Construct a symmetric matrix from a square matrix."""
+    return (matrix + matrix.mT) / 2.0
 
 
 class RGCClassifer(ClassifierABC):
@@ -28,7 +43,7 @@ class RGCClassifer(ClassifierABC):
         super().__init__(**kwargs)
         self.cov_reg_param = cov_reg_param
 
-    def estimate_feature(self, eeg: "EEG_TYPE", label: "LABEL_TYPE") -> torch.Tensor:
+    def estimate_feature(self, eeg: EEG_TYPE, label: LABEL_TYPE) -> torch.Tensor:
         # if not fitted, start from step 1. otherwise, perform step 1, and then skip to step 3
         # step 1: compute the regularized covariance matrix cov = (sample.cov() + sample.cov().T)/2 + cov_reg_param * torch.eye(...)
         # step 2: compute the riemannian mean of the covariance matrices using log-eucliean approx.: R_rie_mean = exp(mean(log(cov)))
@@ -42,6 +57,7 @@ class RGCClassifer(ClassifierABC):
         cov_matrices = (
             torch.einsum("bti,btj->bij", eeg, eeg) / eeg.shape[1]
         )  # Compute covariance matrices
+        cov_matrices = construct_symmetric(cov_matrices)
         trace_scaling = (
             cov_matrices.diagonal(dim1=-2, dim2=-1).sum(-1) / eeg.shape[2]
         )  # Compute trace scaling factor for batched tensors
@@ -58,20 +74,16 @@ class RGCClassifer(ClassifierABC):
             rie_mean = expm(mean_log_cov)  # Expm on reduced mean_log_cov
 
             # Compute R_rie_mean^(-1/2)
-            eigvals, eigvecs = torch.linalg.eigh(rie_mean)
-            self.rie_mean_inv_sqrt: torch.Tensor = (
-                eigvecs
-                @ torch.diag_embed(1.0 / torch.sqrt(eigvals))
-                @ eigvecs.transpose(-1, -2)
-            )
+            self.rie_mean_inv_sqrt: torch.Tensor = matrix_power(rie_mean, -1 / 2)
+            # check if the matrix is SPD
 
         # Step 3: Compute tangent space mapping for each sample
-        tangent_space_matrices = logm(
-            self.rie_mean_inv_sqrt @ cov_matrices @ self.rie_mean_inv_sqrt
-        )  # Batched logm
+        m = self.rie_mean_inv_sqrt @ cov_matrices @ self.rie_mean_inv_sqrt
+        # m = construct_symmetric(m)
+        tangent_space_matrices = logm(m)
 
         # Step 4: Extract upper triangular part and flatten to vector
         mask = torch.triu(torch.ones_like(tangent_space_matrices[0]), diagonal=1).bool()
-        features = tangent_space_matrices[:, mask].flatten(start_dim=1)
+        features: torch.Tensor = tangent_space_matrices[:, mask].flatten(start_dim=1)
 
         return features

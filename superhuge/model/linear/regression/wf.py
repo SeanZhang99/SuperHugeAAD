@@ -2,9 +2,10 @@ from einops import rearrange
 import torch
 import pydantic
 from .abc import LinearABC
+from ...types import EEG_TYPE, AUDIO_TYPE
 
 
-class WienerFilterConfig(pydantic.BaseModel):
+class WienerFilterConfig(pydantic.BaseModel, extra="allow"):
     pre_lag: float
     post_lag: float
     l2: float
@@ -58,7 +59,7 @@ class WienerFilter(LinearABC):
             torch.zeros(self.cfg.nlag * self.cfg.num_channels, 1),
         )
 
-    def update(self, eeg: torch.Tensor, audio: torch.Tensor) -> None:
+    def update(self, eeg: EEG_TYPE, audio: AUDIO_TYPE) -> None:
         """
         Update the model with new data.
         """
@@ -91,7 +92,7 @@ class WienerFilter(LinearABC):
         self.weights = torch.linalg.solve(self.Rxx, self.rxy).detach()
         self._fitted = True
 
-    def predict(self, eeg, audio):
+    def predict(self, eeg: EEG_TYPE, audio: AUDIO_TYPE) -> tuple[EEG_TYPE, AUDIO_TYPE]:
         """
         Predict the output based on the input data.
         """

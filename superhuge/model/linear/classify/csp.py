@@ -88,6 +88,9 @@ class CSPClassifier(ClassifierABC):
                     cov_matrices[int(lbl)] = np.einsum(
                         "bti,btj->ij", filtered_data, filtered_data
                     ) / (filtered_data.shape[0] - 1)
+                    cov_matrices[int(lbl)] = (
+                        cov_matrices[int(lbl)] + cov_matrices[int(lbl)].T
+                    ) / 2  # Ensure symmetry
 
                 # Solve the generalized eigenvalue problem for the current passband
                 for lbl, cov_matrix in cov_matrices.items():

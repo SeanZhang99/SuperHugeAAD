@@ -1,22 +1,37 @@
 from einops import rearrange
 import torch
-from pydantic import BaseModel, Field
+import pydantic
 from typing import Any
 from .abc import LinearABC  # Importing the abstract base class
+from ...types import EEG_TYPE, AUDIO_TYPE
 
 
-class CCAConfig(BaseModel):
-    x_lag_sec: float = Field(..., gt=0)
-    y_lag_sec: float = Field(..., gt=0)
-    fs: int = Field(..., gt=0)
-    l2: float = Field(0.0, ge=0)
-    num_features_x: int = Field(..., gt=0)
-    num_features_y: int = Field(..., gt=0)
-    num_components: int = Field(..., gt=0)
+class CCAConfig(pydantic.BaseModel):
+    x_lag_sec: float
+    y_lag_sec: float
+    fs: int
+    l2: float
+    num_features_x: int
+    num_features_y: int
+    num_components: int
 
     # These will be calculated internally
     x_lag_samples: int | None = None
     y_lag_samples: int | None = None
+
+    @pydantic.field_validator(
+        "x_lag_sec",
+        "y_lag_sec",
+        "l2",
+        "fs",
+        "num_features_x",
+        "num_features_y",
+        "num_components",
+    )
+    def positive_float(cls, v):
+        if v < 0:
+            raise ValueError("Value must be non-negative")
+        return v
 
     def model_post_init(self, __context: Any) -> None:
         """Convert time lags to samples using sampling frequency"""
@@ -129,31 +144,31 @@ class CCA(LinearABC):
         self._fitted = True
 
     def predict(
-        self, x: torch.Tensor, audio: torch.Tensor  # Preserve base class interface
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+        self, x: EEG_TYPE, audio: AUDIO_TYPE  # Preserve base class interface
+    ) -> tuple[EEG_TYPE, AUDIO_TYPE]:
         """
         Project input onto CCA space
 
         Args:
-            x: Input features [batch, time, features_x]
-            audio: Placeholder for base class compatibility
+            x: EEG features [batch, time, features_x]
+            audio: [batch, time, features_y, speaker]
 
         Returns:
             x_proj: Projected input features [batch, time, num_components]
-            y_proj: Projected target features [batch, time, num_components]
+            y_proj: Projected target features [batch, time, num_components, speaker]
         """
         assert self._fitted, "Model not fitted yet"
 
         # Create and flatten lagged matrices for both inputs
         x_lag_flat = self.lag_and_flatten(
             x,
-            "batch lag time channel -> batch time (lag channel)",
+            "batch lag time features_x -> batch time (lag features_x)",
             self.cfg.x_lag_samples,
             self.cfg.x_lag_samples,
         )
         y_lag_flat = self.lag_and_flatten(
             audio,
-            "batch lag time channel speaker -> batch time channel speaker lag",
+            "batch lag time features_y speaker -> batch time speaker (lag features_y)",
             self.cfg.y_lag_samples,
             self.cfg.y_lag_samples,
         )
@@ -163,7 +178,7 @@ class CCA(LinearABC):
         y_proj = y_lag_flat @ self.weight_y
 
         y_proj = rearrange(
-            y_proj, "batch time channel speaker 1 -> batch time channel speaker"
+            y_proj, "batch time speaker features_y -> batch time features_y speaker"
         )
 
         return x_proj, y_proj

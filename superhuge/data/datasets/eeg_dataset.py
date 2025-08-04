@@ -60,8 +60,12 @@ class EegDataset(Dataset):
         self.overlap: int = kwargs.get("overlap", 1)  # Default no overlap
         self.transform: TransformComposer | None = kwargs.get("transform", None)
         self.metadata_fields: list[MetadataField] = kwargs["metadata_fields"]
-        self.accept_range: tuple[float, float] = kwargs.get("accept_range", None)
-        self.reject_range: tuple[float, float] | None = kwargs.get("reject_range", None)
+        self.accept_range: tuple[float, float] | Sequence[tuple[float, float]] = (
+            kwargs.get("accept_range", None)
+        )
+        self.reject_range: (
+            tuple[float, float] | Sequence[tuple[float, float]] | None
+        ) = kwargs.get("reject_range", None)
 
         if self.accept_range is None:
             self.accept_range = (0.0, 1.0)
@@ -145,13 +149,25 @@ class EegDataset(Dataset):
         """
         Validate the accept_range and reject_range attributes.
         """
-        assert (
-            0.0 <= self.accept_range[0] < self.accept_range[1] <= 1.0
-        ), "accept_range must be a tuple of two floats in the range [0.0, 1.0] with start < end."
+
+        def validate_range(range_seq):
+            for r in range_seq:
+                assert (
+                    0.0 <= r[0] < r[1] <= 1.0
+                ), "Each range must be a tuple of two floats in the range [0.0, 1.0] with start < end."
+
+        if isinstance(self.accept_range, tuple) and isinstance(
+            self.accept_range[0], float
+        ):
+            self.accept_range = (self.accept_range,)
+        validate_range(self.accept_range)
+
         if self.reject_range:
-            assert (
-                0.0 <= self.reject_range[0] < self.reject_range[1] <= 1.0
-            ), "reject_range must be a tuple of two floats in the range [0.0, 1.0] with start < end."
+            if isinstance(self.reject_range, tuple) and isinstance(
+                self.reject_range[0], float
+            ):
+                self.reject_range = (self.reject_range,)
+            validate_range(self.reject_range)
 
     def _validate_files(self):
         """
@@ -222,23 +238,30 @@ class EegDataset(Dataset):
             list[int]: A list of valid segment start indices.
         """
         stride = ceil(self.segment_length // self.overlap)
-        accept_start = int(self.accept_range[0] * trial_length)
-        accept_end = int(self.accept_range[1] * trial_length)
-
         start_indices = []
-        for start_idx in range(accept_start, accept_end, stride):
-            end_idx = start_idx + self.segment_length
-            if end_idx > accept_end:
-                break
-            if self.reject_range:
-                reject_start = int(self.reject_range[0] * trial_length)
-                reject_end = int(self.reject_range[1] * trial_length)
-                if (
-                    reject_start <= start_idx < reject_end
-                    or reject_start < end_idx <= reject_end
-                ):
-                    continue
-            start_indices.append(start_idx)
+
+        for accept_range in self.accept_range:
+            accept_start = int(accept_range[0] * trial_length)
+            accept_end = int(accept_range[1] * trial_length)
+
+            for start_idx in range(accept_start, accept_end, stride):
+                end_idx = start_idx + self.segment_length
+                if end_idx > accept_end:
+                    break
+                if self.reject_range:
+                    reject_flag = False
+                    for reject_range in self.reject_range:
+                        reject_start = int(reject_range[0] * trial_length)
+                        reject_end = int(reject_range[1] * trial_length)
+                        if (
+                            reject_start <= start_idx < reject_end
+                            or reject_start < end_idx <= reject_end
+                        ):
+                            reject_flag = True
+                            break
+                    if reject_flag:
+                        continue
+                start_indices.append(start_idx)
         return start_indices
 
     def __len__(self):

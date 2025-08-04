@@ -346,3 +346,115 @@ def cgrid_attention_switch_loto(
     )
 
     return {"train": train_set, "val": val_set, "test": test_set}
+
+
+def cgrid_leave_one_speaker_out(
+    metadata: Metadata,
+    test_fold_idx: int,
+    val_fold_idx: int,
+    n_folds: int = 3,
+    seed: int = 42,
+    **kwargs: Any,
+) -> CrossValidationEntry:
+    """
+    This function implements a leave-one-speaker-out cross-validation strategy for the CGrid dataset.
+    Divide training/validation/test set based on the 'speaker_id' field in the metadata.
+
+    For other implementations, see: `loto`
+    """
+
+    assert n_folds == 3, "n_folds must be 3 for leave-one-speaker-out cross-validation"
+    assert (
+        0 <= test_fold_idx < n_folds
+    ), f"test_fold_idx must be in the range [0, {n_folds})"
+    assert (
+        0 <= val_fold_idx < n_folds
+    ), f"val_fold_idx must be in the range [0, {n_folds})"
+    random.seed(seed)
+
+    dataset_subject_trials = collect_dataset_subject_trials(metadata)
+
+    train_trials = []
+    val_trials = []
+    test_trials = []
+
+    # test_fold = 0 -> speaker_id = 4 -> validation, speaker_id = 5,6 -> test
+    # test_fold = 1 -> speaker_id = 5 -> validation, speaker_id = 4,6 -> test
+    # test_fold = 2 -> speaker_id = 6 -> validation, speaker_id = 4,5 -> test
+    # training: speaker_id = 1,2,3
+    # total speaker_id : [1,2,3,4,5,6]
+
+    for dataset_id, subjects in dataset_subject_trials.items():
+        for subject_id, trials in subjects.items():
+            trials: list[tuple[DatasetSubjectTrialEntry, Metadata]]
+
+            #  get test_trials based on test_fold_idx
+            subject_test_trials = [
+                trial[0] for trial in trials if trial[1].speaker_id == test_fold_idx + 4
+            ]
+            #  get val_trials based on val_fold_idx
+            subject_val_trials = [
+                trial[0]
+                for trial in trials
+                if trial[1].speaker_id == (val_fold_idx + 4) % 3 + 4
+            ]
+            #  get train_trials based on the rest of the speakers
+            subject_train_trials = [
+                trial[0] for trial in trials if trial[1].speaker_id in [1, 2, 3]
+            ]
+
+            train_trials.extend(subject_train_trials)
+            val_trials.extend(subject_val_trials)
+            test_trials.extend(subject_test_trials)
+
+    return {
+        "train": train_trials,
+        "val": val_trials,
+        "test": test_trials,
+    }
+
+
+def cgrid_within_trial(
+    metadata: Metadata,
+    test_fold_idx: int,
+    val_fold_idx: int,
+    n_folds: int,
+    seed: int = 42,
+    **kwargs: Any,
+) -> CrossValidationEntry:
+    """
+    This function implements a within-trial cross-validation strategy for the CGrid dataset.
+    """
+
+    assert (
+        0 <= test_fold_idx < n_folds
+    ), f"test_fold_idx must be in the range [0, {n_folds})"
+    assert (
+        0 <= val_fold_idx < n_folds
+    ), f"val_fold_idx must be in the range [0, {n_folds})"
+    random.seed(seed)
+
+    dataset_subject_trials = collect_dataset_subject_trials(metadata)
+
+    all_trials = []
+
+    for dataset_id, subjects in dataset_subject_trials.items():
+        for subject_id, trials in subjects.items():
+            trials: list[tuple[DatasetSubjectTrialEntry, Metadata]]
+
+            all_trials.extend(trial[0] for trial in trials)
+
+    # val_partition: divide (0.0, 1.0) into n_folds parts, take the val_fold_idx-th part as validation set, and the test_fold_old_idx-th part as test set.
+    all_partitions = [(i / n_folds, (i + 1) / n_folds) for i in range(n_folds)]
+
+    val_partition = all_partitions[val_fold_idx]
+    test_partition = all_partitions[test_fold_idx]
+
+    return {
+        "train": all_trials,
+        "val": all_trials,
+        "test": all_trials,
+        "train_reject_range": (val_partition, test_partition),
+        "val_accept_range": val_partition,
+        "test_accept_range": test_partition,
+    }

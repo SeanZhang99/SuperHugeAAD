@@ -17,4 +17,6 @@ from .group import (
     unseen_test_chrnological,
     unseen_test_unbalanced_shuffled,
     cgrid_attention_switch_loto,
+    cgrid_within_trial,
+    cgrid_leave_one_speaker_out,
 )

@@ -47,7 +47,7 @@ class RGCClassifer(ClassifierABC):
         # if not fitted, start from step 1. otherwise, perform step 1, and then skip to step 3
         # step 1: compute the regularized covariance matrix cov = (sample.cov() + sample.cov().T)/2 + cov_reg_param * torch.eye(...)
         # step 2: compute the riemannian mean of the covariance matrices using log-eucliean approx.: R_rie_mean = exp(mean(log(cov)))
-        # matrix exponential and logarithm is defined as exp(A) = V * exp(Lambda) * V^-1, where v Lambda is eigenvalue and eigenvector
+        # matrix exponential and logarithm is defined as exp(A) = V * exp(Lambda) * V^T, where v Lambda is eigenvalue and eigenvector
         # store this matrix: R_rie_mean^(-1/2). the matrix power is also defined in eigendecomposition context.
 
         # step 3: for each sample, compute the tangent space mapping of its regularized covariance matrix: T = log(R_rie_mean_inv_sqrt * rgl_cov_mtx * R_rie_mean_inv_sqrt).

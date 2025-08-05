@@ -1,3 +1,4 @@
+from typing import Any
 import numpy as np
 
 from .abc import Transform
@@ -26,8 +27,8 @@ class Clipper(Transform):
             self.lower_bound = lower_bound
             self.upper_bound = upper_bound
 
-    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> np.ndarray:
+    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> tuple[np.ndarray, Any]:
         super().__call__(x)
         if self.roll():
-            x = np.Clipper(x, self.lower_bound, self.upper_bound)
+            x = np.clip(x, a_min=self.lower_bound, a_max=self.upper_bound)
         return x, *args

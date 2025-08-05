@@ -1,14 +1,17 @@
 from abc import ABC, abstractmethod
+from typing import Generic, TypeVar
 
 from ..metadata_processing.data import MetadataElement
 
+MetadataElementType = TypeVar("MetadataElementType", bound=MetadataElement)
 
-class MetadataFilter(ABC):
+
+class MetadataFilter(ABC, Generic[MetadataElementType]):
     @abstractmethod
     def __call__(
         self,
-        metadata_element: MetadataElement | None,
-    ) -> MetadataElement | None:
+        metadata_element: MetadataElementType | None,
+    ) -> MetadataElementType | None:
         """
         __call__ call method of a metadata filter.
 

@@ -1,3 +1,4 @@
+from typing import Any
 import numpy as np
 from scipy.signal import resample
 
@@ -14,6 +15,7 @@ class Resample(Transform):
         self.old_fs = old_fs
         self.new_fs = new_fs
 
-    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> np.ndarray:
+    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> tuple[np.ndarray, Any]:
+        super().__call__(x, *args)
         num_samples = int(x.shape[0] * self.new_fs / self.old_fs)
         return resample(x, num_samples, axis=0), *args  # type: ignore

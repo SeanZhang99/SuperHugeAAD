@@ -12,7 +12,7 @@ def create_data_interface(
     fs,
     classify: bool = False,
     regression: bool = False,
-    metadata_fields: Sequence[str] | None = None,
+    metadata_fields: list[str] | None = None,
     select_subject: int | Sequence[int] | None = None,
     select_trial: int | Sequence[int] | None = None,
     meta_filter_func_args: Sequence | None = None,

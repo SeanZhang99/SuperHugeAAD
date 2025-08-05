@@ -1,3 +1,4 @@
+from typing import Any
 import numpy as np
 
 from .abc import Transform
@@ -26,11 +27,12 @@ class TimeShift(Transform):
             else int(max_shift)
         )
 
-    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> np.ndarray:
+    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> tuple[np.ndarray, Any]:
+        super().__call__(x, *args, **kwargs)
         if self.roll():
             shift = np.random.randint(-self.max_shift, self.max_shift)
             if shift >= 0:
                 return np.pad(x[shift:], ((0, shift), (0, 0))).copy(), *args
             else:
                 return np.pad(x[:shift], ((-shift, 0), (0, 0))).copy(), *args
-        return x
+        return x, *args

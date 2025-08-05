@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pydantic import GetCoreSchemaHandler
 from pydantic_core.core_schema import CoreSchema, no_info_plain_validator_function
 
@@ -66,15 +67,15 @@ class MetadataFilterComposer:
         return no_info_plain_validator_function(cls._validate)
 
     @classmethod
-    def _validate(cls, value: object) -> "MetadataFilter":
+    def _validate(cls, value: object) -> MetadataFilterComposer:
         if not isinstance(value, MetadataFilterComposer):
             raise TypeError(
-                f"Expected an instance of Transform, got {type(value).__name__}"
+                f"Expected an instance of MetadataFilterComposer, got {type(value).__name__}"
             )
         else:
             for filter in value.filters:
                 assert isinstance(
                     filter, MetadataFilter
-                ), f"Transform {filter} is not a Transform."
-                assert callable(filter), f"Transform {filter} is not callable."
+                ), f"Filter {filter} is not a MetadataFilter."
+                assert callable(filter), f"Filter {filter} is not callable."
         return value

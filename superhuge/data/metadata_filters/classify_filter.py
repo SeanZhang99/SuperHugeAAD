@@ -184,18 +184,18 @@ class AsIsClassifyFilter(ClassifyMetadataFilter):
         """
         This function returns the metadata element as is.
         """
-        if hasattr(metadata_element, "label"):
-            if isinstance(metadata_element.label, str):
-                metadata_element.label = int(metadata_element.label.lower())
-            elif isinstance(metadata_element.label, int):
-                metadata_element.label = angle_wrapper(metadata_element.label)
-            else:
-                raise TypeError(
-                    f"CLASSIFIER_FILTER:AS_IS_CLASSIFY_FILTER:LABEL_TYPE_ERROR: Invalid type for label. The label must be an integer or a string. Got {str(type(metadata_element.label)).upper()}."
-                )
-            return metadata_element
-        else:
-            return None
+        if metadata_element is not None:
+            if hasattr(metadata_element, "label"):
+                if isinstance(metadata_element.label, str):
+                    metadata_element.label = int(metadata_element.label.lower())
+                elif isinstance(metadata_element.label, int):
+                    metadata_element.label = angle_wrapper(metadata_element.label)
+                else:
+                    raise TypeError(
+                        f"CLASSIFIER_FILTER:AS_IS_CLASSIFY_FILTER:LABEL_TYPE_ERROR: Invalid type for label. The label must be an integer or a string. Got {str(type(metadata_element.label)).upper()}."
+                    )
+                return metadata_element
+        return None
 
 
 class cEEGridThreeClassFilter(ClassifyMetadataFilter):

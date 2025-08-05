@@ -8,6 +8,8 @@ import lightning as pl2
 import torch
 import torchinfo
 from torch import isnan, nn
+from torch.optim.adamw import AdamW
+from torch.optim.optimizer import Optimizer
 
 from ..module.lambda_layer import LambdaLayer
 from ..module.model_template import ModelInputArgs
@@ -33,9 +35,9 @@ class MInterface(pl2.LightningModule, ABC):
         loss: torch.nn.modules.loss._Loss | Sequence[torch.nn.modules.loss._Loss],
         loss_weights: Sequence[float] | None = None,
         multiloss_weights: Sequence[float] | None = None,
-        optimizer_class: type[torch.optim.Optimizer] = torch.optim.AdamW,
+        optimizer_class: type[Optimizer] = AdamW,
         optimizer_args: dict[str, Any] | None = None,
-        lr_scheduler_class: type[torch.optim.lr_scheduler.LRScheduler] = None,
+        lr_scheduler_class: type[torch.optim.lr_scheduler.LRScheduler] | None = None,
         lr_scheduler_args: dict[str, Any] | None = None,
         ckpt_path: str | None = None,
         log_grad: bool | None = None,

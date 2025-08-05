@@ -1,8 +1,8 @@
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Sequence
 import inspect
 
 
-def validate_kwargs(kwargs: Iterable, required_keys: Iterable):
+def validate_kwargs(kwargs: Sequence, required_keys: Sequence):
     """
     验证 kwargs 是否包含所有必需的键。
     """

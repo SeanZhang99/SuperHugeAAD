@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Sequence
 from einops import rearrange
 from torch import nn, Tensor
 from einops.layers.torch import EinMix
@@ -37,7 +37,7 @@ class MultiHeadAttention(nn.Module):
         self.dropout = dropout
 
     def forward(self, x):
-        qkv: Iterable[Tensor] = self.qkv_project(x).chunk(3, dim=-1)
+        qkv: Sequence[Tensor] = self.qkv_project(x).chunk(3, dim=-1)
         q, k, v = map(
             lambda t: rearrange(
                 self.qkv_dropout(t), "b L (h d) -> b h L d", h=self.num_heads

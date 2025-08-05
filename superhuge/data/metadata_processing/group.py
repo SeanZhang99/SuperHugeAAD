@@ -1,39 +1,23 @@
 import random
-from functools import wraps
 from typing import Any, TypeAlias
 
 from .data import (
-    ClassifyMetadataElement,
     CrossValidationEntry,
     DatasetSubjectTrialEntry,
-    GroupingFunction,
     Metadata,
+    MetadataElement,
 )
 
 DatasetID: TypeAlias = int
 SubjectID: TypeAlias = int
 
 
-def leave_one_out_input_decorator(func) -> GroupingFunction:
-    @wraps(func)
-    def wrapper(
-        metadata: Metadata,
-        test_fold_idx: int,
-        val_fold_idx: int,
-        n_folds: int,
-        seed: int = 42,
-        **kwargs: Any,
-    ) -> CrossValidationEntry:
-        return func(metadata, test_fold_idx, val_fold_idx, n_folds, seed, **kwargs)
-
-    return wrapper
-
-
 def collect_dataset_subject_trials(
     metadata: Metadata,
 ):
     dataset_subject_trials: dict[
-        DatasetID, dict[SubjectID, list[tuple[DatasetSubjectTrialEntry, Metadata]]]
+        DatasetID,
+        dict[SubjectID, list[tuple[DatasetSubjectTrialEntry, MetadataElement]]],
     ] = {}
     for entry, trial_metadata in metadata.items():
         dataset_id = trial_metadata.dataset_id
@@ -94,7 +78,7 @@ def loto(
 
     for dataset_id, subjects in dataset_subject_trials.items():
         for subject_id, trials in subjects.items():
-            trials: list[tuple[DatasetSubjectTrialEntry, Metadata]]
+            trials: list[tuple[DatasetSubjectTrialEntry, MetadataElement]]
             random.shuffle(trials)
             trials_per_fold = len(trials) // n_folds
 
@@ -176,113 +160,6 @@ def lodo(
     return {"train": train_set, "val": val_set, "test": test_set}
 
 
-def unseen_test_chrnological(
-    metadata: Metadata,
-    test_fold_idx: int,
-    val_fold_idx: int,
-    n_folds: int,
-    seed: int = 42,
-    **kwargs: Any,
-) -> CrossValidationEntry:
-    assert (
-        0 <= test_fold_idx < n_folds
-    ), f"test_fold_idx must be in the range [0, {n_folds})"
-    assert (
-        0 <= val_fold_idx < n_folds
-    ), f"val_fold_idx must be in the range [0, {n_folds})"
-    random.seed(seed)
-
-    dataset_subject_trials = collect_dataset_subject_trials(metadata)
-
-    train_set, val_set, test_set = [], [], []
-
-    for dataset_id, subjects in dataset_subject_trials.items():
-        for subject_id, trials in subjects.items():
-            trials: list[tuple[DatasetSubjectTrialEntry, Metadata]]
-
-            for i, trial in enumerate(trials):
-                if i >= 8:
-                    break
-                # (1,2) -> fold 0, (3,4) -> fold 1, (5,6) -> fold 2, (7,8) -> fold 3
-                if i // 2 == test_fold_idx:
-                    test_set.append(trial[0])
-                else:
-                    train_set.append(trial[0])
-
-    return {
-        "train": train_set,
-        "val": train_set,
-        "test": test_set,
-        "train_accept_range": [0, 0.85],
-        "val_reject_range": [0, 0.85],
-    }
-
-
-def unseen_test_unbalanced_shuffled(
-    metadata: Metadata,
-    test_fold_idx: int,
-    val_fold_idx: int,
-    n_folds: int,
-    seed: int = 42,
-    **kwargs: Any,
-) -> CrossValidationEntry:
-
-    result = loto(
-        metadata=metadata,
-        test_fold_idx=test_fold_idx,
-        val_fold_idx=val_fold_idx,
-        n_folds=n_folds,
-        seed=seed,
-    )
-    train_set = result["train"]
-    train_set.extend(result["val"])
-    test_set = result["test"]
-
-    return {
-        "train": train_set,
-        "val": train_set,
-        "test": test_set,
-        "train_reject_range": (0.85, 1.0),
-        "val_accept_range": (0.85, 1.0),
-    }
-
-
-def unseen_test_balanced_shuffled(
-    metadata: Metadata,
-    test_fold_idx: int,
-    val_fold_idx: int,
-    n_folds: int,
-    seed: int = 42,
-    **kwargs: Any,
-) -> CrossValidationEntry:
-    random.seed(seed)
-    dataset_subject_trials = collect_dataset_subject_trials(metadata)
-    all_folds = {i: [] for i in range(n_folds)}
-
-    for dataset_id, subjects in dataset_subject_trials.items():
-        for subject_id, trials in subjects.items():
-            trials: list[tuple[DatasetSubjectTrialEntry, ClassifyMetadataElement]]
-            left_trials = [trial for trial in trials if trial[1].label == 0]
-            right_trials = [trial for trial in trials if trial[1].label == 1]
-            random.shuffle(left_trials)
-            random.shuffle(right_trials)
-
-            for i in range(n_folds):
-                all_folds[i].append(left_trials[i][0])
-                all_folds[i].append(right_trials[i][0])
-    train_set, val_set, test_set = divide_sets(
-        all_folds, n_folds, test_fold_idx, val_fold_idx
-    )
-    train_set.extend(val_set)
-    return {
-        "train": train_set,
-        "val": train_set,
-        "test": test_set,
-        "train_accept_range": [0, 0.85],
-        "val_reject_range": [0, 0.85],
-    }
-
-
 def cgrid_attention_switch_loto(
     metadata: Metadata,
     test_fold_idx: int,
@@ -308,7 +185,7 @@ def cgrid_attention_switch_loto(
 
     # check all metadata entries have true_trial_id
     for entry, trial_metadata in metadata.items():
-        if not trial_metadata.true_trial_id:
+        if not hasattr(trial_metadata, "true_trial_id") or trial_metadata.true_trial_id is None:  # type: ignore
             raise ValueError(
                 f"Metadata entry {entry} does not have a true_trial_id. "
                 "This function requires all entries to have a true_trial_id."
@@ -320,11 +197,11 @@ def cgrid_attention_switch_loto(
 
     for dataset_id, subjects in dataset_subject_trials.items():
         for subject_id, trials in subjects.items():
-            trials: list[tuple[DatasetSubjectTrialEntry, Metadata]]
+            trials: list[tuple[DatasetSubjectTrialEntry, MetadataElement]]
             # get unique true_trial_ids
             true_trial_ids = list(
                 set(
-                    trial[1].true_trial_id for trial in trials if trial[1].true_trial_id
+                    trial[1].true_trial_id for trial in trials if trial[1].true_trial_id  # type: ignore
                 )
             )
             # shuffle the true_trial_ids, and divide sets based on true_trial_ids.
@@ -338,7 +215,7 @@ def cgrid_attention_switch_loto(
                     else len(true_trial_ids)
                 )
                 for trial in trials:
-                    if trial[1].true_trial_id in true_trial_ids[start_idx:end_idx]:
+                    if trial[1].true_trial_id in true_trial_ids[start_idx:end_idx]:  # type: ignore
                         all_folds[i].append(trial[0])
 
     train_set, val_set, test_set = divide_sets(
@@ -386,21 +263,21 @@ def cgrid_leave_one_speaker_out(
 
     for dataset_id, subjects in dataset_subject_trials.items():
         for subject_id, trials in subjects.items():
-            trials: list[tuple[DatasetSubjectTrialEntry, Metadata]]
+            trials: list[tuple[DatasetSubjectTrialEntry, MetadataElement]]
 
             #  get test_trials based on test_fold_idx
             subject_test_trials = [
-                trial[0] for trial in trials if trial[1].speaker_id == test_fold_idx + 4
+                trial[0] for trial in trials if trial[1].speaker_id == test_fold_idx + 4  # type: ignore
             ]
             #  get val_trials based on val_fold_idx
             subject_val_trials = [
                 trial[0]
                 for trial in trials
-                if trial[1].speaker_id == (val_fold_idx + 4) % 3 + 4
+                if trial[1].speaker_id == (val_fold_idx + 4) % 3 + 4  # type: ignore
             ]
             #  get train_trials based on the rest of the speakers
             subject_train_trials = [
-                trial[0] for trial in trials if trial[1].speaker_id in [1, 2, 3]
+                trial[0] for trial in trials if trial[1].speaker_id in [1, 2, 3]  # type: ignore
             ]
 
             train_trials.extend(subject_train_trials)
@@ -440,7 +317,7 @@ def cgrid_within_trial(
 
     for dataset_id, subjects in dataset_subject_trials.items():
         for subject_id, trials in subjects.items():
-            trials: list[tuple[DatasetSubjectTrialEntry, Metadata]]
+            trials: list[tuple[DatasetSubjectTrialEntry, MetadataElement]]
 
             all_trials.extend(trial[0] for trial in trials)
 
@@ -455,6 +332,6 @@ def cgrid_within_trial(
         "val": all_trials,
         "test": all_trials,
         "train_reject_range": (val_partition, test_partition),
-        "val_accept_range": val_partition,
-        "test_accept_range": test_partition,
+        "val_accept_range": (val_partition,),
+        "test_accept_range": (test_partition,),
     }

@@ -1,5 +1,6 @@
+from __future__ import annotations
 from abc import abstractmethod
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
 import numpy as np
 from .abc import Transform
 
@@ -12,7 +13,7 @@ class StatisticalTransform(Transform):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._stat: np.ndarray
+        self._stat: np.ndarray | Sequence[float] | None
         self._fitted: bool = False
 
     @abstractmethod
@@ -24,7 +25,7 @@ class StatisticalTransform(Transform):
         ...
 
     @abstractmethod
-    def fit(self) -> "StatisticalTransform":
+    def fit(self) -> None:
         """
         Finalize statistics using accumulated values.
         """
@@ -69,7 +70,7 @@ class StatisticalTransform(Transform):
         return self._fitted
 
     @abstractmethod
-    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> np.ndarray:
+    def __call__(self, x: np.ndarray, /, *args, **kwargs):
         """
         Apply the transform to the input data.
         Subclasses should implement their own logic.

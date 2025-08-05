@@ -11,5 +11,5 @@ class ResidualLayer(torch.nn.Module):
             if i == 0:
                 y = layer(x)
             else:
-                y += layer(x)
-        return y
+                y += layer(x)  # type: ignore
+        return y  # type: ignore

@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from importlib import import_module
-from typing import Literal, final
+from types import NoneType
+from typing import Any, Literal, final
 
 import torch
 from einops import rearrange
@@ -21,29 +22,29 @@ class ClassifierABC(torch.nn.Module, ABC):
         self,
         /,
         *,
-        classifier: str,
+        classifier: dict[str, str | dict[str, Any]],
         coding_strategy: CODING_STRATEGY = "onevsall",
         **kwargs,
     ):
         super().__init__()
         try:
-            classifier_type = import_module(
-                ".".join(classifier["class_path"].split(".")[:-1])
-            )
-            classifier_type = getattr(
-                classifier_type, classifier["class_path"].split(".")[-1]
-            )
+            class_path = classifier["class_path"]
+            assert isinstance(class_path, str), "class_path must be a string."
+            classifier_type = import_module(".".join(class_path.split(".")[:-1]))
+            classifier_type = getattr(classifier_type, class_path.split(".")[-1])
             assert issubclass(
                 classifier_type, ClassifierMixin
-            ), f"Classifier {classifier['class_path']} must be a subclass of sklearn.base.ClassifierMixin."
+            ), f"Classifier {class_path} must be a subclass of sklearn.base.ClassifierMixin."
         except ImportError as e:
             raise ImportError(
                 f"Classifier {classifier['class_path']} not found. Please check the classifier path."
             ) from e
+        init_args = classifier["class_path"]
+        assert isinstance(
+            init_args, (dict, NoneType)
+        ), "init_args must be a dictionary containing the initialization arguments for the classifier."
         self.classifier = (
-            classifier_type(**classifier["init_args"])
-            if classifier["init_args"] is not None
-            else classifier_type()
+            classifier_type(**init_args) if init_args is not None else classifier_type()
         )
         self.coding_strategy = coding_strategy
         self.eeg = None
@@ -79,7 +80,12 @@ class ClassifierABC(torch.nn.Module, ABC):
         Returns:
         None
         """
-        if hasattr(self, "eeg") and self.eeg is not None:
+        if (
+            hasattr(self, "eeg")
+            and self.eeg is not None
+            and hasattr(self, "labels")
+            and self.labels is not None
+        ):
             self.eeg = torch.cat((self.eeg, eeg), dim=0)
             self.labels = torch.cat((self.labels, labels), dim=0)
         else:
@@ -101,12 +107,15 @@ class ClassifierABC(torch.nn.Module, ABC):
         assert (
             not self._fitted
         ), "Classifier has already been fitted. Please call update() to add more data."
-        assert hasattr(self, "eeg") and hasattr(
-            self, "labels"
+        assert (
+            hasattr(self, "eeg")
+            and isinstance(self.eeg, torch.Tensor)
+            and hasattr(self, "labels")
+            and isinstance(self.labels, torch.Tensor)
         ), "EEG and labels must be set before fitting."
         assert hasattr(self.classifier, "fit"), "Classifier must have a fit method."
         features = self.estimate_feature(self.eeg, self.labels)
-        self.classifier.fit(features, self.labels.cpu().numpy())
+        self.classifier.fit(features, self.labels.cpu().numpy())  # type: ignore
         self._fitted = True
 
     def predict(self, eeg: EEG_TYPE, label: LABEL_TYPE) -> tuple[EEG_TYPE, LABEL_TYPE]:
@@ -125,7 +134,7 @@ class ClassifierABC(torch.nn.Module, ABC):
             self.classifier, "predict"
         ), "Classifier must have a predict method."
         features = self.estimate_feature(eeg, label)
-        predictions = self.classifier.predict(features.cpu().numpy())
+        predictions = self.classifier.predict(features.cpu().numpy())  # type: ignore
         return features, torch.tensor(predictions, dtype=label.dtype).to(label.device)
 
     def forward(self, eeg: EEG_TYPE, label: LABEL_TYPE) -> tuple[EEG_TYPE, LABEL_TYPE]:

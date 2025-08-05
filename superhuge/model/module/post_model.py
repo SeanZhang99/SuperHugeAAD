@@ -6,6 +6,7 @@ from einops.layers.torch import Reduce, EinMix, Rearrange
 def classify_post_model(
     input_size: Sequence[int | None], num_class: int, hidden_dim: int
 ):
+    assert input_size[-1] is not None, "Input size must have a defined last dimension"
     return nn.Sequential(
         # Average pooling across the time dimension if exists
         Reduce("b t c -> b c", "mean") if len(input_size) == 3 else nn.Identity(),

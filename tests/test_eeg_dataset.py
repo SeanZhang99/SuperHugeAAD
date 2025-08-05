@@ -70,7 +70,7 @@ def test_accept_range(mock_metadata, mock_files, mock_eeg_path):
         for start_idx in range(0, eeg_original.shape[0] - dataset.segment_length + 1):
             if np.array_equal(
                 eeg_original[start_idx : start_idx + dataset.segment_length],
-                eeg_segment,
+                eeg_segment,  # type: ignore
             ):
                 break
         else:

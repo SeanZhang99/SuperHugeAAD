@@ -2,7 +2,7 @@ import inspect
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 from collections.abc import Callable, Sequence
-from typing import Any, final
+from typing import Any, Mapping, final
 
 import lightning as pl2
 import torch
@@ -103,7 +103,7 @@ class MInterface(pl2.LightningModule, ABC):
         self.get_stats_fn = get_stats_fn
 
     @final
-    def get_input_size(self, /, **kwargs) -> list[tuple[int | None, ...]]:
+    def get_input_size(self, /, **kwargs) -> Mapping[str, tuple[int]]:
         """
         Get the input size for each required input type based on the model's forward method.
 
@@ -140,6 +140,8 @@ class MInterface(pl2.LightningModule, ABC):
                 input_sizes["label"] = (1,)
 
         self.input_size = input_sizes
+
+        return input_sizes
 
     def forward(self, data: dict) -> tuple[torch.Tensor, ...]:
         """
@@ -223,8 +225,7 @@ class MInterface(pl2.LightningModule, ABC):
         # Call the forward method of the model with the provided arguments
         return self.forward(*args)
 
-    @final
-    def training_step(self, batch: dict[str], batch_idx: int) -> torch.Tensor:
+    def training_step(self, batch: dict[str, Any], batch_idx: int) -> torch.Tensor:
         loss: torch.Tensor = torch.zeros(1, device=self.device)
         batch_size = 0
         for data in batch.values():
@@ -236,7 +237,7 @@ class MInterface(pl2.LightningModule, ABC):
                 meta=data["meta"],
             )
             if self.get_stats_fn:
-                self.get_stats_fn(self, *outputs, meta=data["meta"])
+                self.get_stats_fn(self, *outputs, meta=data["meta"])  # type: ignore
 
         loss /= batch_size
         self.log(
@@ -252,29 +253,24 @@ class MInterface(pl2.LightningModule, ABC):
 
         return loss
 
-    @final
     def validation_step(
         self, batch: dict[str, torch.Tensor | dict], batch_idx: int
     ) -> torch.Tensor:
         return self.training_step(batch, batch_idx)
 
-    @final
     def test_step(
         self, batch: dict[str, torch.Tensor | dict], batch_idx: int
     ) -> torch.Tensor:
         return self.training_step(batch, batch_idx)
 
-    @final
     def on_train_epoch_start(self) -> None:
         self.stage = "train"
         return super().on_train_epoch_start()
 
-    @final
     def on_validation_epoch_start(self) -> None:
         self.stage = "val"
         return super().on_validation_epoch_start()
 
-    @final
     def on_test_epoch_start(self) -> None:
         self.stage = "test"
         return super().on_test_epoch_start()
@@ -297,14 +293,14 @@ class MInterface(pl2.LightningModule, ABC):
 
             if self.loss_weights is not None:
 
-                def loss_fn(
+                def loss_fn(  # type: ignore
                     *args: torch.Tensor
                     | int
                     | str
                     | Sequence[torch.Tensor | int | str],
                 ):
                     loss = torch.zeros(1, device=self.device)
-                    for loss_fn, weight in zip(self.loss, self.multiloss_weights):
+                    for loss_fn, weight in zip(self.loss, self.multiloss_weights):  # type: ignore
                         loss += loss_fn(*args, self.loss_weights).sum() * weight
                     assert not isnan(loss), (
                         "MODEL_INTERFACE:LOSS_FN:ASSERTION:VALUE_ERROR: Loss function returned NaN. "
@@ -315,14 +311,14 @@ class MInterface(pl2.LightningModule, ABC):
 
             else:
 
-                def loss_fn(
+                def loss_fn(  # type: ignore
                     *args: torch.Tensor
                     | int
                     | str
                     | Sequence[torch.Tensor | int | str],
                 ):
                     loss = torch.zeros(1, device=self.device)
-                    for loss_fn, weight in zip(self.loss, self.multiloss_weights):
+                    for loss_fn, weight in zip(self.loss, self.multiloss_weights):  # type: ignore
                         loss += loss_fn(*args).sum() * weight
                     assert not isnan(loss), (
                         "MODEL_INTERFACE:LOSS_FN:ASSERTION:VALUE_ERROR: Loss function returned NaN. "
@@ -335,7 +331,7 @@ class MInterface(pl2.LightningModule, ABC):
             if self.loss_weights is not None:
 
                 def loss_fn(*args: torch.Tensor | int | str):
-                    loss = self.loss(*args, self.loss_weights).sum()
+                    loss = self.loss(*args, self.loss_weights).sum()  # type: ignore
                     assert not isnan(loss), (
                         "MODEL_INTERFACE:LOSS_FN:ASSERTION:VALUE_ERROR: Loss function returned NaN. "
                         "This usually indicates a problem with the model or the data. "
@@ -346,7 +342,7 @@ class MInterface(pl2.LightningModule, ABC):
             else:
 
                 def loss_fn(*args: torch.Tensor | int | str):
-                    loss = self.loss(*args).sum()
+                    loss = self.loss(*args).sum()  # type: ignore
                     assert not isnan(loss), (
                         "MODEL_INTERFACE:LOSS_FN:ASSERTION:VALUE_ERROR: Loss function returned NaN. "
                         "This usually indicates a problem with the model or the data. "
@@ -354,7 +350,7 @@ class MInterface(pl2.LightningModule, ABC):
                     )
                     return loss
 
-            loss_fn.__repr__ = f"{self.loss.__repr__().split('(')[0]}"
+            loss_fn.__repr__ = lambda: f"{self.loss.__repr__().split('(')[0]}"
 
         self.loss_fn = loss_fn
 
@@ -448,8 +444,7 @@ class MInterface(pl2.LightningModule, ABC):
 
         return output_keys
 
-    @final
-    def configure_optimizers(self):
+    def configure_optimizers(self):  # type: ignore
 
         decay, no_decay = [], []
         for name, param in self.named_parameters():
@@ -469,14 +464,14 @@ class MInterface(pl2.LightningModule, ABC):
             },
         ]
 
-        optimizer = self.optmizer_class(grouped_params)
+        optimizer = self.optmizer_class(grouped_params)  # type: ignore
 
         # return optimizer
 
         scheduler = {
             "scheduler": self.lr_scheduler_class(
                 optimizer, **self.lr_scheduler_args if self.lr_scheduler_args else {}
-            ),
+            ),  # type: ignore
             "monitor": "val/loss",  # ⚠️ 这里必须指定你验证时 log 的指标名
             "interval": "epoch",
             "frequency": 1,
@@ -486,15 +481,24 @@ class MInterface(pl2.LightningModule, ABC):
 
     @property
     def lr(self) -> float:
+        assert self.optimizer_args is not None, "optimizer_args is None"
+        assert "lr" in self.optimizer_args, "'lr' key is missing in optimizer_args"
+
         return self.optimizer_args["lr"]
 
     @lr.setter
     def lr(self, value: float) -> None:
         assert isinstance(value, float), f"lr must be a float, but got {type(value)}"
+        assert self.optimizer_args is not None, "optimizer_args is None"
+        assert "lr" in self.optimizer_args, "'lr' key is missing in optimizer_args"
         self.optimizer_args["lr"] = value
 
     @property
     def weight_decay(self) -> float:
+        assert self.optimizer_args is not None, "optimizer_args is None"
+        assert (
+            "weight_decay" in self.optimizer_args
+        ), "'weight_decay' key is missing in optimizer_args"
         return self.optimizer_args["weight_decay"]
 
     @weight_decay.setter
@@ -502,4 +506,8 @@ class MInterface(pl2.LightningModule, ABC):
         assert isinstance(
             value, float
         ), f"weight_decay must be a float, but got {type(value)}"
+        assert self.optimizer_args is not None, "optimizer_args is None"
+        assert (
+            "weight_decay" in self.optimizer_args
+        ), "'weight_decay' key is missing in optimizer_args"
         self.optimizer_args["weight_decay"] = value

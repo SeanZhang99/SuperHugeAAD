@@ -1,7 +1,9 @@
 import torch
 
 
-def prepare_targets(preds: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+def prepare_targets(
+    preds: torch.Tensor, targets: torch.Tensor
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Ensures targets has same shape as preds. Handles:
     - scalar targets: broadcast
@@ -94,7 +96,7 @@ def macro_f1_score(
     targets: torch.Tensor,
     /,
     *,
-    num_classes: int = None,
+    num_classes: int | None = None,
     eps: float = 1e-8,
 ) -> torch.Tensor:
     """

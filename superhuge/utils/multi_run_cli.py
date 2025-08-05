@@ -38,7 +38,7 @@ class MultiRunCLI:
                     cli_argv.pop(i)
                     cli_argv.pop(i)
                 break
-        if ckpt_path is not None and not os.path.isfile(self.ckpt_path):
+        if ckpt_path is not None and not os.path.isfile(self.ckpt_path):  # type: ignore
             raise FileNotFoundError(
                 f"MULTI_RUN_CLI:__INIT__:CKPT_VALIDATION:FILE_NOT_FOUND: "
                 f"Checkpoint file {self.ckpt_path} does not exist"
@@ -97,8 +97,8 @@ class MultiRunCLI:
 
     def run(
         self,
-        verbose: bool | None = True,
-        save_config: bool | None = True,
+        verbose: bool = True,
+        save_config: bool = True,
         extra_experiment_name: str = "",
     ):
         accumulated_results: dict[str, list] = {}
@@ -169,7 +169,7 @@ class MultiRunCLI:
 class NamedParamsCLI(LightningCLI):
     model: LightningModule
 
-    def _get_parameters(self):
+    def _get_parameters(self):  # type: ignore
         return self.model.named_parameters()
 
     def add_arguments_to_parser(self, parser):

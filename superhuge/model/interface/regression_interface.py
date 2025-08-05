@@ -68,6 +68,8 @@ class RegressionInterface(MInterface):
         self,
         y_pred: torch.Tensor,
         y_true: torch.Tensor,
+        /,
+        *,
         meta: dict,
     ) -> dict[str, torch.Tensor]:
         stats: dict[str, torch.Tensor] = {}
@@ -103,5 +105,5 @@ class ChannelMapping2DRegressionInterface(
     pass
 
 
-class LinearRegressionInterface(LinearInterface, RegressionInterface):
+class LinearRegressionInterface(LinearInterface, RegressionInterface):  # type: ignore
     pass

@@ -35,8 +35,8 @@ def pearson_corrcoef(
     numerator = torch.sum(
         (y_true - y_true_mean) * (y_pred - y_pred_mean), dim=dim, keepdim=True
     )
-    std_true = torch.sum((y_true - y_true_mean) ** 2, dim=dim, keepdims=True)
-    std_pred = torch.sum((y_pred - y_pred_mean) ** 2, dim=dim, keepdims=True)
+    std_true = torch.sum((y_true - y_true_mean) ** 2, dim=dim, keepdims=True)  # type: ignore
+    std_pred = torch.sum((y_pred - y_pred_mean) ** 2, dim=dim, keepdims=True)  # type: ignore
     denominator = torch.sqrt(std_true * std_pred)
 
     # Compute the pearson correlation

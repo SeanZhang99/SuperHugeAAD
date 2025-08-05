@@ -30,7 +30,7 @@ class ClassifyInterface(MInterface):
             self.post_model, input_size=self.output_size, verbose=self.summary_verbose
         )
 
-    def get_stats(self, pred: torch.Tensor, label: torch.Tensor, meta: dict):
+    def get_stats(self, pred: torch.Tensor, label: torch.Tensor, /, *, meta: dict):
         stats_dict = {}
         if pred.dtype is torch.float:
             prob, pred = pred, pred.argmax(dim=1)
@@ -51,6 +51,8 @@ class ClassifyInterface(MInterface):
             enable_graph=False,
         )
 
+        return stats_dict
+
 
 class ChannelMapping1DClassifyInterface(ChannelMapping1DInterface, ClassifyInterface):
     pass
@@ -64,8 +66,8 @@ class ChannelMixing1DClassifyInterface(ChannelMixing1DInterface, ClassifyInterfa
 # pass
 
 
-class LinearClassifyInterface(LinearInterface, ClassifyInterface):
-    model: ClassifierABC
+class LinearClassifyInterface(LinearInterface, ClassifyInterface):  # type: ignore
+    model: ClassifierABC  # type: ignore
 
     def on_train_epoch_start(self):
         super().on_train_epoch_start()

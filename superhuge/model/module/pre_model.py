@@ -63,7 +63,7 @@ class Channel1DMixer(Channel1D):
         )
         self._num_mix_out_channels = num_mix_out_channels
 
-    def forward(self, x):
+    def forward(self, data: dict) -> torch.Tensor:
         """
         Perform a 1D channel rearrangement of the input tensor x, based on the given metadata.
 
@@ -74,8 +74,8 @@ class Channel1DMixer(Channel1D):
                 metadata["channel_infos"] = {1: {"name": [`channel_name_sample1`,`channel_name_sample2`]}}
                 In our implementation, the multidataset collect fn `collect_multidataset.collect_multidataset` handles data from different datasets,grouping them into different keys. And the date_interface will handle this grouped data, pass each group (correspond to samples coming from one specific dataset) into the forward path. Therefore, in this object, x is expected to be from the same dataset, thus with the same channel arrangement, making it possible to perform batch-wise channel rearrangement.
         """
-        x = super().forward(x)
-        return self._channel_mixer(x)
+        out: torch.Tensor = super().forward(data)
+        return self._channel_mixer(out)
 
     @property
     def num_channels(self):
@@ -93,7 +93,7 @@ class Channel2D(torch.nn.Module):
     def forward(self, data: dict) -> torch.Tensor:
         x: torch.Tensor = data["eeg"]
         metadata = data["meta"]
-        y = torch.zeros(*x.shape[:-1], self.max_row, self.max_col)
+        y = torch.zeros(*x.shape[:-1], self.max_row, self.max_col)  # type: ignore
         # z-score normalization over batch
         x_mean = x.mean(dim=(1, 2), keepdim=True)
         x_std = x.std(dim=(1, 2), keepdim=True)

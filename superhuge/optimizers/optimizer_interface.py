@@ -1,6 +1,6 @@
 # grouped_adam.py
 import torch
-from torch.optim import Optimizer
+from torch.optim.optimizer import Optimizer
 from collections.abc import Iterator
 from torch.nn import Parameter
 

@@ -156,7 +156,7 @@ class FancyProgressBar(RichProgressBar):
                 *self.configure_columns(trainer),
                 auto_refresh=False,
                 disable=self.is_disabled,
-                console=self._console,
+                console=self._console,  # type: ignore
             )
             self.progress.start()
             # progress has started

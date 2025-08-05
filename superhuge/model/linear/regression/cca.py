@@ -16,8 +16,6 @@ class CCAConfig(pydantic.BaseModel):
     num_components: int
 
     # These will be calculated internally
-    x_lag_samples: int | None = None
-    y_lag_samples: int | None = None
 
     @pydantic.field_validator(
         "x_lag_sec",
@@ -33,10 +31,17 @@ class CCAConfig(pydantic.BaseModel):
             raise ValueError("Value must be non-negative")
         return v
 
-    def model_post_init(self, __context: Any) -> None:
-        """Convert time lags to samples using sampling frequency"""
-        self.x_lag_samples = int(self.x_lag_sec * self.fs)
-        self.y_lag_samples = int(self.y_lag_sec * self.fs)
+    @pydantic.computed_field
+    @property
+    def x_lag_samples(self) -> int:
+        """Convert x_lag_sec to samples using sampling frequency"""
+        return int(self.x_lag_sec * self.fs)
+
+    @pydantic.computed_field
+    @property
+    def y_lag_samples(self) -> int:
+        """Convert y_lag_sec to samples using sampling frequency"""
+        return int(self.y_lag_sec * self.fs)
 
 
 class CCA(LinearABC):
@@ -144,7 +149,7 @@ class CCA(LinearABC):
         self._fitted = True
 
     def predict(
-        self, x: EEG_TYPE, audio: AUDIO_TYPE  # Preserve base class interface
+        self, eeg: EEG_TYPE, audio: AUDIO_TYPE  # Preserve base class interface
     ) -> tuple[EEG_TYPE, AUDIO_TYPE]:
         """
         Project input onto CCA space
@@ -161,7 +166,7 @@ class CCA(LinearABC):
 
         # Create and flatten lagged matrices for both inputs
         x_lag_flat = self.lag_and_flatten(
-            x,
+            eeg,
             "batch lag time features_x -> batch time (lag features_x)",
             self.cfg.x_lag_samples,
             self.cfg.x_lag_samples,

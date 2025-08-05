@@ -209,7 +209,12 @@ class DInterface(pl2.LightningDataModule):
         if meta_filter_func is None:
             meta_filter_func = MetadataFilterComposer()
         elif isinstance(meta_filter_func, Sequence):
-            meta_filter_func = MetadataFilterComposer(*meta_filter_func)
+            if all(isinstance(f, MetadataFilter) for f in meta_filter_func):
+                meta_filter_func = MetadataFilterComposer(*meta_filter_func)
+            else:
+                raise TypeError(
+                    "meta_filter_func must be a sequence of MetadataFilter instances."
+                )
         elif isinstance(meta_filter_func, MetadataFilter):
             meta_filter_func = MetadataFilterComposer(meta_filter_func)
 

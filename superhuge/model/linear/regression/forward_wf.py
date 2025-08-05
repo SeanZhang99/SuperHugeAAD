@@ -6,13 +6,12 @@ from .abc import LinearABC
 
 
 class WienerFilterConfig(pydantic.BaseModel):
-    pre_lag: float
-    post_lag: float
+    pre_lag: float | int
+    post_lag: float | int
     l2: float
     fs: int
     num_features: int
     num_channels: int
-    nlag: int | None = None
 
     @pydantic.field_validator("pre_lag", "post_lag", "l2", "fs", "num_channels")
     def positive_float(cls, v):
@@ -20,10 +19,15 @@ class WienerFilterConfig(pydantic.BaseModel):
             raise ValueError("Value must be non-negative")
         return v
 
+    @pydantic.computed_field
+    @property
+    def nlag(self) -> int:
+        assert isinstance(self.pre_lag, int) and isinstance(self.post_lag, int)
+        return self.pre_lag + self.post_lag + 1
+
     def model_post_init(self, __context):
         self.pre_lag = int(self.pre_lag * self.fs)
         self.post_lag = int(self.post_lag * self.fs)
-        self.nlag = self.pre_lag + self.post_lag + 1
 
 
 class WienerFilter(LinearABC):
@@ -67,8 +71,8 @@ class WienerFilter(LinearABC):
         x_lag = self.lag_and_flatten(
             audio[..., 0],
             "batch lag time channel -> (batch time) (lag channel)",
-            self.cfg.pre_lag,
-            self.cfg.post_lag,
+            self.cfg.pre_lag,  # type: ignore
+            self.cfg.post_lag,  # type: ignore
         )
         y = rearrange(
             eeg,
@@ -100,12 +104,12 @@ class WienerFilter(LinearABC):
         x_lag = self.lag_and_flatten(
             audio,
             "batch lag time feature spekaer -> batch time (lag channel) speaker",
-            self.cfg.pre_lag,
-            self.cfg.post_lag,
+            self.cfg.pre_lag,  # type: ignore
+            self.cfg.post_lag,  # type: ignore
         )
-        y_pred = einops.einsum(
+        y_pred: torch.Tensor = einops.einsum(
             "batch time (lag channel) speaker, (lag channel) channel -> batch time channel speaker",
             x_lag,
-            self.weights,
+            self.weights,  # type: ignore
         )
         return eeg, y_pred

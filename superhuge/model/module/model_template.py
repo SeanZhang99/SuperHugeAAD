@@ -13,11 +13,11 @@ class ModelInputArgs(BaseModel):
 
 
 class LossArgs(BaseModel):
-    weight: Sequence[float] | None = None
+    weight: Sequence[float | torch.Tensor] | None = None
 
     model_config = {"extra": "allow"}
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         if self.weight is not None:
-            self.weight = torch.Tensor(self.weight)
+            self.weight = torch.Tensor(self.weight)  # type: ignore

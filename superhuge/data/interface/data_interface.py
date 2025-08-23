@@ -15,11 +15,12 @@
 # Copyright 2025 Yuanming Zhang
 # This package is adopted based on Pytorch Lightning Template project.
 
+from email.mime import audio
 from logging import log
 import logging
 import os
 import pickle
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 import warnings
 
@@ -27,7 +28,6 @@ import lightning as pl2
 from pydantic import BaseModel, model_validator
 from rich.console import Console
 from rich.table import Table
-import torch
 from torch.utils.data import DataLoader
 
 from ..transforms.resample import Resample
@@ -49,17 +49,13 @@ from ..metadata_processing.data import (
     Metadata,
     MetadataElement,
     MetadataField,
-    GroupingFunction,
     DatasetSubjectTrialEntry,
 )
 from ..metadata_processing.group import (
-    leave_one_out_input_decorator,
     loto,
 )
 from ..transforms.composer import TransformComposer
 from ..transforms.abc import Transform
-from ..transforms.scale import Scale
-from ..transforms.filter import Filter
 
 
 class CreateDatasetsInputConfig(BaseModel):
@@ -103,12 +99,12 @@ class DInterface(pl2.LightningDataModule):
         self,
         /,
         dataset_class: type[EegDataset],
-        dataloader_args: dict,
+        dataloader_args: dict[str, Any],
         root_path: str,
         window_length: int | float,
         fs: int,
         meta_filter_func: MetadataFilter | Sequence[MetadataFilter] | None = None,
-        meta_filter_func_args: list | None = None,
+        meta_filter_func_args: Sequence | None = None,
         meta_group_func: Callable | None = None,
         test_fold_idx: int = 0,
         val_fold_idx: int = 1,
@@ -117,7 +113,7 @@ class DInterface(pl2.LightningDataModule):
         metadata_fields: list[MetadataField] | None = None,
         transform: Transform | Sequence[Transform] | None = None,
         preproc_stage: str | None = None,
-        summary_verbose: bool | None = None,
+        summary_verbose: bool = False,
         **kwargs,
     ):
         super().__init__()
@@ -184,7 +180,9 @@ class DInterface(pl2.LightningDataModule):
         self,
         /,
         dataset_class: type[EegDataset],
-        meta_filter_func: MetadataFilter | Sequence[MetadataField] | None,
+        meta_filter_func: (
+            MetadataFilter | Sequence[MetadataFilter] | MetadataFilterComposer | None
+        ),
         *args,
         **kwargs,
     ) -> MetadataFilterComposer | None:
@@ -211,7 +209,12 @@ class DInterface(pl2.LightningDataModule):
         if meta_filter_func is None:
             meta_filter_func = MetadataFilterComposer()
         elif isinstance(meta_filter_func, Sequence):
-            meta_filter_func = MetadataFilterComposer(*meta_filter_func)
+            if all(isinstance(f, MetadataFilter) for f in meta_filter_func):
+                meta_filter_func = MetadataFilterComposer(*meta_filter_func)
+            else:
+                raise TypeError(
+                    "meta_filter_func must be a sequence of MetadataFilter instances."
+                )
         elif isinstance(meta_filter_func, MetadataFilter):
             meta_filter_func = MetadataFilterComposer(meta_filter_func)
 
@@ -448,14 +451,15 @@ class DInterface(pl2.LightningDataModule):
     def sample_weights(self):
         if issubclass(self.dataset_cfg.dataset_class, EegClassifyBaseDataset):
             samples_per_class = self._global_class_counts.values()
-            weights = [1.0 / num_samples for num_samples in samples_per_class]
-            weights = (
-                weights / sum(weights) * len(samples_per_class)
-            )  # 归一化，使权重总和 = 类别数
+            weights: list[float] = [
+                1.0 / num_samples for num_samples in samples_per_class
+            ]
+            weights = [
+                weight / sum(weights) * len(samples_per_class) for weight in weights
+            ]  # 归一化，使权重总和 = 类别数
             return weights
         else:
             log(
                 logging.WARNING if self.summary_verbose else logging.DEBUG,
                 "Sample weights are only available for classification datasets. Skip operation and return None. This is basically because someone want to use sample weights for regression datasets, which is not a common practice. Skip this message if you know what you are doing.",
             )
-            return None

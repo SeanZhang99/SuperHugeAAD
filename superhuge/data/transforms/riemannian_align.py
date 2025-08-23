@@ -1,3 +1,4 @@
+from typing import Any
 from .stats_abc import StatisticalTransform
 import numpy as np
 
@@ -34,6 +35,6 @@ class RiemannianAlign(StatisticalTransform):
         self._stat = invsqrtm(mean_cov)
         self._fitted = True
 
-    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> np.ndarray:
-        x = super().__call__(x, *args, **kwargs)
+    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> tuple[np.ndarray, Any]:
+        super().__call__(x, *args)[0]
         return (self._stat @ x.T).T, *args

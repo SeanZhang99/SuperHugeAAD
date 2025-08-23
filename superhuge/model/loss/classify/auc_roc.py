@@ -135,7 +135,7 @@ def multiclass_auc_score(
         weights.append((targets == class_index).sum())
 
     if len(aucs) == 0:
-        return torch.tensor(0.0, device=probs.device)
+        return torch.tensor(0.0, device=probs.device, dtype=torch.float32)
 
     aucs_tensor = torch.stack(aucs)
     weights_tensor = torch.stack(weights).float()
@@ -144,3 +144,5 @@ def multiclass_auc_score(
         return aucs_tensor.mean()
     elif average == "weighted":
         return (aucs_tensor * weights_tensor / weights_tensor.sum()).sum()
+    else:
+        return torch.tensor(0.0, device=probs.device, dtype=torch.float32)

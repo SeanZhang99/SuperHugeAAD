@@ -1,7 +1,8 @@
 import os
+from collections.abc import Mapping
+from typing import Literal
 
 import numpy as np
-from pydantic import BaseModel
 
 from ..metadata_processing.data import RegressionMetadataElement
 from .eeg_dataset import EegDataset
@@ -34,15 +35,22 @@ class EegRegressionBaseDataset(EegDataset):
             self.eeg_path.replace("eeg", "stimuli"), self.speech_feature_type
         )
 
-    def load_data(self, idx):
+    def load_data(self, idx) -> Mapping[  # type: ignore
+        Literal["meta", "eeg", "audio"],
+        np.ndarray | np.memmap | RegressionMetadataElement,
+    ]:
         """
         加载样本数据，并返回元数据、EEG段、语音特征段和标签。
         """
         item = super().load_data(idx)
-        meta = item["meta"]
-        eeg = item["eeg"]
+        meta: RegressionMetadataElement = item["meta"]  # type: ignore
+        eeg: np.ndarray | np.memmap = item["eeg"]  # type: ignore
 
-        entry = meta["entry"]
+        assert isinstance(
+            meta, RegressionMetadataElement
+        ), f"EEG_REGRESSION_BASE_DATASET:load_data:ASSERTION:TYPE_ERROR: meta must be a RegressionMetadataElement, got {type(meta)}"
+
+        entry = meta.entry
         # 加载语音特征
         speech_feature: np.ndarray = np.load(
             os.path.join(
@@ -54,32 +62,38 @@ class EegRegressionBaseDataset(EegDataset):
         )
         _, start_idx = self._map_idx_to_file_and_segment(idx)
 
-        meta["speech_feature_type"] = self.speech_feature_type
+        meta.__setattr__("speech_feature_type", self.speech_feature_type)
 
         if self.transform:
             speech_feature = self.transform(
                 speech_feature, meta=meta, whom="audio", when="before_slicing"
-            )[0]
+            )[
+                0
+            ]  # type: ignore
 
         # 根据 segment_length 和 overlap 截取语音特征段
         stride = self.segment_length // self.overlap
-        speech_segment = speech_feature[
+        speech_segment: np.ndarray = speech_feature[
             start_idx : start_idx + self.segment_length
         ].copy()
 
         if self.transform:
             speech_segment = self.transform(
                 speech_segment, meta=meta, whom="audio", when="before_returning"
-            )[0]
+            )[
+                0
+            ]  # type: ignore
 
         return {"meta": meta, "eeg": eeg, "audio": speech_segment.astype(np.float32)}
 
-    def __getitem__(self, idx):
+    def __getitem__(  # type: ignore
+        self, idx
+    ) -> Mapping[Literal["meta", "eeg", "audio"], np.ndarray | dict]:
         item = self.load_data(idx)
-        meta = item["meta"]
-        eeg: np.ndarray | np.memmap = item["eeg"]
-        speech_segment: np.ndarray | np.memmap = item["audio"]
-        if "label" in meta:
+        meta: dict = item["meta"].model_dump()  # type: ignore
+        eeg: np.ndarray | np.memmap = item["eeg"]  # type: ignore
+        speech_segment: np.ndarray | np.memmap = item["audio"]  # type: ignore
+        if "label" in meta.keys():
             del meta["label"]
 
         for field in ["env", "mel", "wav"]:

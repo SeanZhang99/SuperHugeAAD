@@ -1,3 +1,4 @@
+from typing import Any
 from .stats_abc import StatisticalTransform
 import numpy as np
 
@@ -26,9 +27,10 @@ class ZScoreAlign(StatisticalTransform):
         std = np.sqrt(var + 1e-6)
         self._stat = (mean, std)
         self._fitted = True
-        return self
 
-    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> np.ndarray:
-        x = super().__call__(x, *args, **kwargs)
+    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> tuple[np.ndarray, Any]:
+        super().__call__(x, *args, **kwargs)[0]
+        assert self._fitted, "ZScoreAlign must be fitted before calling."
+        assert self._stat is not None, "Statistical parameters are not set."
         mean, std = self._stat
-        return (x - mean) / std
+        return (x - mean) / std, *args

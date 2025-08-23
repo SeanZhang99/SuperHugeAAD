@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Any, Sequence
 
 import numpy as np
 from scipy.signal import butter, filtfilt
@@ -35,7 +35,7 @@ class Filter(Transform):
             raise ValueError("Butter function did not return expected coefficients.")
         self.b, self.a = result
 
-    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> np.ndarray:
+    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> tuple[np.ndarray, Any]:
         super().__call__(x)
         if self.roll():
             x = filtfilt(self.b, self.a, x, axis=0).copy()

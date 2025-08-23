@@ -1,7 +1,7 @@
 import inspect
 import random
-from collections.abc import Callable
-from typing import Any, Protocol, Sequence, TypeAlias
+from collections.abc import Callable, Mapping
+from typing import Any, Protocol, Sequence, TypeAlias, TypeVar
 
 from pydantic import BaseModel
 from pydantic_core import core_schema
@@ -15,6 +15,7 @@ class MetadataElement(BaseModel, extra="allow"):
     signal_length: int | None = 0
     fs: int | None = 0
     dataset_name: str | None = None
+    channel_infos: Mapping[int, Mapping[str, Any]]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -30,103 +31,18 @@ class ClassifyMetadataElement(MetadataElement):
     label: str | int | None
 
 
+MetadataElementType = TypeVar("MetadataElementType", bound=MetadataElement)
+
 DatasetSubjectTrialEntry: TypeAlias = str
 MetadataField: TypeAlias = str
 FoldIndicator: TypeAlias = str
 MetadataValue: TypeAlias = Any
-Metadata: TypeAlias = dict[DatasetSubjectTrialEntry, MetadataElement]
-CrossValidationEntry: TypeAlias = dict[FoldIndicator, list[DatasetSubjectTrialEntry]]
-
-
-class GroupingFunction(Protocol):
-    def __call__(
-        self,
-        **kwargs,
-    ) -> CrossValidationEntry: ...
-
-    @classmethod
-    def __get_pydantic_core_schema__(cls, source_type, handler):
-        return core_schema.no_info_after_validator_function(
-            cls._validate, core_schema.callable_schema()
-        )
-
-    @staticmethod
-    def _validate(value: Callable):
-        # 获取函数签名
-        func_signature = inspect.signature(value)
-
-        # 定义期望的参数和类型
-        expected_params = {
-            "metadata": Metadata,
-            "val_fold_idx": int,
-            "test_fold_idx": int,
-            "n_folds": int,
-            "seed": int,
-        }
-
-        # 检查参数名称和类型
-        for expected_param_name, expected_param_type in expected_params.items():
-            if expected_param_name not in func_signature.parameters:
-                raise ValueError(
-                    f"METADATA_PROCESSING:GROUPING_FUNCTION:VALIDATE:FUNCTION_SIGNATURE_VALIDATION:SIGNATURE_ERROR: Missing required parameter: {expected_param_name}"
-                )
-
-            func_param_type = func_signature.parameters[expected_param_name].annotation
-            if func_param_type is inspect._empty:
-                raise TypeError(
-                    f"METADATA_PROCESSING:GROUPING_FUNCTION:VALIDATE:FUNCTION_SIGNATURE_VALIDATION:ANNOTATION_ERROR: Parameter {expected_param_name} must have a type annotation."
-                )
-
-            if (
-                expected_param_type != func_param_type
-                and func_param_type not in expected_param_type
-            ):
-                raise TypeError(
-                    f"METADATA_PROCESSING:GROUPING_FUNCTION:VALIDATE:FUNCTION_SIGNATURE_VALIDATION:ANNOTATION_ERROR: Expected parameter {expected_param_name} to be {expected_param_type}, but got {func_param_type}"
-                )
-            # 验证类型是否匹配
-
-        test_metadata = generate_test_metadata()
-        test_fold_idx = 0
-        val_fold_idx = 1
-        n_folds = 4
-        test_random_seed = None
-        result = value(
-            metadata=test_metadata,
-            val_fold_idx=val_fold_idx,
-            test_fold_idx=test_fold_idx,
-            n_folds=n_folds,
-            random_seed=test_random_seed,
-        )
-        validate_is_dict = isinstance(result, dict)
-        if validate_is_dict:
-            validate_key_is_str = all([isinstance(key, str) for key in result.keys()])
-        else:
-            validate_key_is_str = False
-        if validate_key_is_str:
-            validate_value_is_seq = all(
-                [isinstance(value, Sequence) for value in result.values()]
-            )
-        else:
-            validate_value_is_seq = False
-        if validate_value_is_seq:
-            validate_value_element_is_str_or_numeric = all(
-                [isinstance(e, (str, float, int)) for l in result.values() for e in l]
-            )
-        else:
-            validate_value_element_is_str_or_numeric = False
-        if (
-            validate_is_dict
-            and validate_key_is_str
-            and validate_value_element_is_str_or_numeric
-        ):
-            pass
-        else:
-            raise TypeError(
-                f"METADATA_PROCESSING:GROUPING_FUNCTION:VALIDATE:RETURN_VALIDATION:Return value must be dict[str,Sequence], but got {type(result)}"
-            )
-
-        return value
+# Metadata: TypeAlias = dict[DatasetSubjectTrialEntry, MetadataElement]
+Metadata = Mapping[DatasetSubjectTrialEntry, MetadataElementType]
+CrossValidationEntry: TypeAlias = dict[
+    FoldIndicator,
+    Sequence[DatasetSubjectTrialEntry] | Sequence[float | int | Sequence[float | int]],
+]
 
 
 def generate_test_metadata(
@@ -154,41 +70,3 @@ def generate_test_metadata(
                 )
 
     return metadata
-
-
-def test_kul_metadata():
-    dataset_id = 4
-    num_subjects = 16
-    num_trials = 8
-    metadata = {}
-    for subject_id in range(1, num_subjects + 1):
-        for trial_id in range(1, num_trials + 1):
-            entry = f"dataset-{dataset_id:03d}-subject-{subject_id:03d}-trial-{trial_id:03d}"
-
-            metadata[entry] = MetadataElement(
-                dataset_id=dataset_id,
-                subject_id=subject_id,
-                trial_id=trial_id,
-                num_channel=64,
-                signal_length=47000,
-                fs=128,
-                label=trial_id % 2,  # Just an example label
-            )
-
-    from superhuge.data.metadata_processing.group import (
-        loto,
-        unseen_test_balanced_shuffled,
-        unseen_test_chrnological,
-        unseen_test_unbalanced_shuffled,
-    )
-
-    unseen_test_balanced_shuffled(metadata, test_fold_idx=0, val_fold_idx=1, n_folds=4)
-    unseen_test_chrnological(metadata, test_fold_idx=0, val_fold_idx=1, n_folds=4)
-    unseen_test_unbalanced_shuffled(
-        metadata, test_fold_idx=0, val_fold_idx=1, n_folds=4
-    )
-
-
-if __name__ == "__main__":
-    test_kul_metadata()
-    print("Metadata processing module is working correctly.")

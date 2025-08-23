@@ -38,7 +38,7 @@ class MultiRunCLI:
                     cli_argv.pop(i)
                     cli_argv.pop(i)
                 break
-        if ckpt_path is not None and not os.path.isfile(self.ckpt_path):
+        if ckpt_path is not None and not os.path.isfile(self.ckpt_path):  # type: ignore
             raise FileNotFoundError(
                 f"MULTI_RUN_CLI:__INIT__:CKPT_VALIDATION:FILE_NOT_FOUND: "
                 f"Checkpoint file {self.ckpt_path} does not exist"
@@ -95,9 +95,14 @@ class MultiRunCLI:
 
         yield from product(val_fold_idx, test_fold_idx)
 
-    def run(self, verbose: bool | None = True, save_config: bool | None = True):
+    def run(
+        self,
+        verbose: bool = True,
+        save_config: bool = True,
+        extra_experiment_name: str = "",
+    ):
         accumulated_results: dict[str, list] = {}
-        for config_list in self.task_config_parser.generate_configs():
+        for config_list, experiment_name in self.task_config_parser.generate_configs():
             for val_fold_idx, test_fold_idx in self.__prepare_fold_idx(config_list):
                 if val_fold_idx == test_fold_idx:
                     # 如果验证集和测试集折叠索引相同，则跳过
@@ -118,6 +123,10 @@ class MultiRunCLI:
                         )
                         + ["--data.init_args.val_fold_idx", val_fold_idx]
                         + ["--data.init_args.test_fold_idx", test_fold_idx]
+                        + [
+                            "--experiment_name",
+                            f"{experiment_name}-{extra_experiment_name}",
+                        ]
                     ),
                     run=False,
                     save_config_callback=SaveConfigCallback if save_config else None,
@@ -143,7 +152,7 @@ class MultiRunCLI:
                             assert not isnan(
                                 value
                             ), f"Evaluation metrics got NaN for {key}"
-                            accumulated_results.setdefault(f"{key}", []).append(value)
+                            accumulated_results.setdefault(key, []).append(value)
                 else:
                     results = cli.trainer.test(
                         model=cli.model,
@@ -153,16 +162,14 @@ class MultiRunCLI:
                     )
                     for key, value in results[0].items():
                         assert not isnan(value), f"Evaluation metrics got NaN for {key}"
-                        if key not in accumulated_results:
-                            accumulated_results[key] = []
-                        accumulated_results[key].append(value)
+                        accumulated_results.setdefault(key, []).append(value)
         return {k: np.mean(v) for k, v in accumulated_results.items()}
 
 
 class NamedParamsCLI(LightningCLI):
     model: LightningModule
 
-    def _get_parameters(self):
+    def _get_parameters(self):  # type: ignore
         return self.model.named_parameters()
 
     def add_arguments_to_parser(self, parser):
@@ -201,8 +208,11 @@ class NamedParamsCLI(LightningCLI):
             "model.init_args.loss_args.weight",
             apply_on="instantiate",
         )
-
-    # parser.link_arguments(
-    #     "data.init_args.fs",
-    #     "data.init_args.dataset_args.meta_filter_func.init_args.init_args.fs",
-    # )
+        parser.add_argument("--experiment_name", type=str)
+        parser.link_arguments(
+            ("experiment_name", "data.init_args.window_length"),
+            "trainer.logger.init_args.name",
+            compute_fn=lambda exp_name, window_length: os.path.join(
+                *exp_name.split("-"), str(window_length)
+            ),
+        )

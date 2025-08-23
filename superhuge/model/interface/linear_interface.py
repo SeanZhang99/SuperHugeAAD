@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 
+from torch.optim.sgd import SGD
+
 
 from .model_interface import MInterface
 from ..linear import LinearABC
@@ -23,8 +25,8 @@ class LinearInterface(MInterface):
 
         self.post_model = torch.nn.Identity()
 
-    def configure_optimizers(self):
-        return torch.optim.SGD(
+    def configure_optimizers(self):  # type: ignore
+        return SGD(
             [
                 self.fake_parameter,
             ],

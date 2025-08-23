@@ -31,17 +31,17 @@ def create_channel_row_mapping(channels: List[str]) -> Dict[str, int]:
     """
     channel_name_to_row = OrderedDict(
         {
-            "N": None,
-            "Fp": None,
-            "AF": None,
-            "F": None,
-            ("FC", "FT"): None,
-            ("A", "C", "T"): None,
-            ("CP", "TP"): None,
-            "P": None,
-            "PO": None,
-            "O": None,
-            "I": None,
+            "N": False,
+            "Fp": False,
+            "AF": False,
+            "F": False,
+            ("FC", "FT"): False,
+            ("A", "C", "T"): False,
+            ("CP", "TP"): False,
+            "P": False,
+            "PO": False,
+            "O": False,
+            "I": False,
         }
     )
 
@@ -52,11 +52,11 @@ def create_channel_row_mapping(channels: List[str]) -> Dict[str, int]:
             for channel_name in channel_name_to_row.keys():
                 if isinstance(channel_name, tuple):
                     if region in channel_name:
-                        channel_name_to_row[channel_name] = 1
+                        channel_name_to_row[channel_name] = True
                         break
                 elif region == channel_name:
                     # 1 indicate reserve the row
-                    channel_name_to_row[channel_name] = 1
+                    channel_name_to_row[channel_name] = True
                     break
 
     new_channel_name_to_row = OrderedDict()
@@ -77,19 +77,19 @@ def create_channel_row_mapping(channels: List[str]) -> Dict[str, int]:
 def create_channel_col_mapping(channels: List[str]) -> Dict[str, int]:
     channel_name_to_col = OrderedDict(
         {
-            "11": None,
-            "9": None,
-            "7": None,
-            "5": None,
-            "3": None,
-            "1": None,
-            "z": None,
-            "2": None,
-            "4": None,
-            "6": None,
-            "8": None,
-            "10": None,
-            "12": None,
+            "11": False,
+            "9": False,
+            "7": False,
+            "5": False,
+            "3": False,
+            "1": False,
+            "z": False,
+            "2": False,
+            "4": False,
+            "6": False,
+            "8": False,
+            "10": False,
+            "12": False,
         }
     )
 
@@ -103,7 +103,7 @@ def create_channel_col_mapping(channels: List[str]) -> Dict[str, int]:
             if region == "A":
                 number = str(10 + int(number))
             if number in channel_name_to_col.keys():
-                channel_name_to_col[number] = 1
+                channel_name_to_col[number] = True
 
     new_channel_name_to_col = OrderedDict()
 
@@ -141,7 +141,7 @@ def infer_channel_positions(channels: List[str]) -> Dict[str, Tuple[int, int]]:
     return channel_to_position
 
 
-def map_channels_to_grid(metadata_path: str, output_path: str = None):
+def map_channels_to_grid(metadata_path: str, output_path: str = ""):
     """
     读取元数据并映射 EEG 通道到二维排列
     """
@@ -187,7 +187,7 @@ def map_channels_to_grid(metadata_path: str, output_path: str = None):
         write_channel_results_to_file(channels, positions, output_path)
 
 
-def map_channel_to_vector(metadata_path: str, output_path: str = None):
+def map_channel_to_vector(metadata_path: str, output_path: str = ""):
     channel_vector = get_channel_summary(metadata_path)
 
     print("\nPlease paste the following list into your code:\n")

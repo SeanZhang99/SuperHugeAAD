@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
+from typing import Any, Literal
 
 import numpy as np
 from pydantic import BaseModel, GetCoreSchemaHandler, field_validator
@@ -9,8 +10,11 @@ from pydantic_core import core_schema
 class TransformConfig(BaseModel):
     seed: int = 42
     apply_prob: float = 0.5
-    when: str = "before_returning"
-    whom: str | Sequence[str] = "eeg"
+    when: Literal["before_slicing", "before_returning"] = "before_returning"
+    whom: (
+        Literal["eeg", "audio", "label", "all"]
+        | Sequence[Literal["eeg", "audio", "label", "all"]]
+    ) = "eeg"
 
     @field_validator("seed")
     def validate_seed(cls, value):
@@ -33,14 +37,19 @@ class TransformConfig(BaseModel):
         return value
 
     @field_validator("when")
-    def validate_when(cls, value):
+    def validate_when(cls, value) -> Literal["before_slicing", "before_returning"]:
         valid_options = ["before_slicing", "before_returning"]
         if value not in valid_options:
             raise ValueError(f"when must be one of {valid_options}, but got {value}.")
         return value
 
     @field_validator("whom")
-    def validate_whom(cls, value):
+    def validate_whom(
+        cls, value
+    ) -> (
+        Literal["eeg", "audio", "label", "all"]
+        | Sequence[Literal["eeg", "audio", "label", "all"]]
+    ):
         valid_options = ["eeg", "audio", "label", "all"]
         if isinstance(value, str):
             if value not in valid_options:
@@ -71,8 +80,11 @@ class Transform(ABC):
         *,
         seed: int = 42,
         apply_prob: float = 1.0,
-        when: str = "before_returning",
-        whom: str | Sequence[str] = "eeg",
+        when: Literal["before_slicing", "before_returning"] = "before_returning",
+        whom: (
+            Literal["eeg", "audio", "label", "all"]
+            | Sequence[Literal["eeg", "audio", "label", "all"]]
+        ) = "eeg",
         **kwargs,
     ) -> None:
         """
@@ -107,7 +119,7 @@ class Transform(ABC):
         return self._cfg.apply_prob
 
     @property
-    def when(self) -> str:
+    def when(self) -> Literal["before_slicing", "before_returning"]:
         """When to apply this transform."""
         return self._cfg.when
 
@@ -125,17 +137,17 @@ class Transform(ABC):
     @when.setter
     def when(self, value: str) -> None:
         """Set when to apply this transform."""
-        self._cfg.validate_when(value)
-        self._cfg.when = value
+        self._cfg.when = self._cfg.validate_when(value)
 
     @whom.setter
     def whom(self, value: str | Sequence[str]) -> None:
         """Set whom this transform is applied to."""
-        self._cfg.validate_whom(value)
-        self._cfg.whom = value
+        self._cfg.whom = self._cfg.validate_whom(value)
 
     @abstractmethod
-    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> np.ndarray:
+    def __call__(
+        self, x: np.ndarray | int | str, /, *args: Any, **kwargs
+    ) -> tuple[np.ndarray | int | str, Any]:
         """Apply transformation to EEG data.
 
         Args:
@@ -144,11 +156,20 @@ class Transform(ABC):
         Returns:
             np.ndarray: Transformed EEG data.
         """
-        assert x.ndim in (2, 3), f"Input must be a 2D/3D ndarray but got {x.ndim}D"
-        assert (
-            x.shape[1] < x.shape[0]
-        ), f"Input must be time first, but seems to be channel first: {x.shape}."
-        return x
+        if isinstance(x, int) or isinstance(x, str):
+            # If x is an int or str, we assume it's a label or metadata.
+            # We return it as is, since transforms are not applied to labels.
+            return x, *args
+        elif isinstance(x, np.ndarray):
+            assert x.ndim in (2, 3), f"Input must be a 2D/3D ndarray but got {x.ndim}D"
+            assert (
+                x.shape[1] < x.shape[0]
+            ), f"Input must be time first, but seems to be channel first: {x.shape}."
+            return x, *args
+        else:
+            raise TypeError(
+                f"Input must be a np.ndarray, int, or str but got {type(x).__name__}."
+            )
 
     def roll(self) -> bool:
         return self.dice.random() < self.apply_prob

@@ -35,19 +35,19 @@ class CSPClassifier(ClassifierABC):
         # Design filters and store coefficients
         nyquist = self.fs / 2
         for low_freq, high_freq in self.passbands:
-            b, a = scipy.signal.butter(
+            b, a = scipy.signal.butter(  # type: ignore
                 4, [low_freq / nyquist, high_freq / nyquist], btype="bandpass"
-            )
+            )  # type: ignore
             self.filters[(low_freq, high_freq)] = (b, a)
 
     def bandpass_filter(
-        self, eeg: EEG_TYPE, low_freq: float, high_freq: float
+        self, eeg: np.ndarray, low_freq: float, high_freq: float
     ) -> np.ndarray:
         """
         Apply a bandpass filter to EEG data using precomputed filter coefficients.
 
         Parameters:
-        eeg: torch.Tensor, the EEG data.
+        eeg: np.ndarray, the EEG data.
         low_freq: float, the lower bound of the frequency band.
         high_freq: float, the upper bound of the frequency band.
 
@@ -88,6 +88,9 @@ class CSPClassifier(ClassifierABC):
                     cov_matrices[int(lbl)] = np.einsum(
                         "bti,btj->ij", filtered_data, filtered_data
                     ) / (filtered_data.shape[0] - 1)
+                    cov_matrices[int(lbl)] = (
+                        cov_matrices[int(lbl)] + cov_matrices[int(lbl)].T
+                    ) / 2  # Ensure symmetry
 
                 # Solve the generalized eigenvalue problem for the current passband
                 for lbl, cov_matrix in cov_matrices.items():

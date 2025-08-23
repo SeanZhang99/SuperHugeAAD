@@ -1,3 +1,4 @@
+from typing import Any, Literal, Sequence
 import numpy as np
 from pydantic import GetCoreSchemaHandler
 from pydantic_core.core_schema import CoreSchema, no_info_plain_validator_function
@@ -15,8 +16,11 @@ class TransformComposer:
         **kwargs,
     ) -> None:
         self._transforms = list(transforms)
-        self._when_options = ["before_slicing", "before_returning"]
-        self._whom_options = [
+        self._when_options: list[Literal["before_slicing", "before_returning"]] = [
+            "before_slicing",
+            "before_returning",
+        ]
+        self._whom_options: list[Literal["eeg", "audio", "label", "all"]] = [
             "eeg",
             "audio",
             "label",
@@ -25,14 +29,14 @@ class TransformComposer:
 
     def __call__(
         self,
-        x: np.ndarray,
+        x: np.ndarray | int | str,
         /,
-        *args,
+        *args: Any,
         meta: MetadataElement,
-        when: str,
-        whom: str,
+        when: Literal["before_slicing", "before_returning"],
+        whom: Literal["eeg", "audio", "label", "all"],
         **kwargs,
-    ) -> np.ndarray:
+    ) -> tuple[np.ndarray | int | str, MetadataElement, Any]:
         """Filter metadata element."""
         assert (
             when in self._when_options
@@ -40,13 +44,12 @@ class TransformComposer:
         assert (
             whom in self._whom_options
         ), f"Invalid whom option: {whom}. Expected one of {self._whom_options}."
-        x = (x, meta, *args)
         for transform in self._transforms:
             if transform.when == when and (
                 whom in transform.whom or "all" in transform.whom
             ):
-                x = transform(*x)
-        return x
+                x = transform(x, *args, meta=meta)[0]
+        return x, meta, *args
 
     @classmethod
     def __get_pydantic_core_schema__(
@@ -55,10 +58,10 @@ class TransformComposer:
         return no_info_plain_validator_function(cls._validate)
 
     @classmethod
-    def _validate(cls, value: object) -> "Transform":
+    def _validate(cls, value: object) -> "TransformComposer":
         if not isinstance(value, TransformComposer):
             raise TypeError(
-                f"Expected an instance of Transform, got {type(value).__name__}"
+                f"Expected an instance of TransformComposer, got {type(value).__name__}"
             )
         else:
             for transform in value.transforms:
@@ -69,16 +72,16 @@ class TransformComposer:
         return value
 
     @property
-    def transforms(self) -> list[Transform]:
+    def transforms(self) -> Sequence[Transform]:
         """Get transforms."""
         return self._transforms
 
     @property
-    def when_options(self) -> list[str]:
+    def when_options(self) -> Sequence[Literal["before_slicing", "before_returning"]]:
         """Get when options."""
         return self._when_options
 
     @property
-    def whom_options(self) -> list[str]:
+    def whom_options(self) -> Sequence[Literal["eeg", "audio", "label", "all"]]:
         """Get whom options."""
         return self._whom_options

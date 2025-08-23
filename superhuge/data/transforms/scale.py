@@ -1,8 +1,11 @@
 import os
 import pickle
+from typing import Any
 from warnings import warn
 
 import numpy as np
+
+from ..metadata_processing.data import MetadataElement
 
 from .abc import Transform
 
@@ -25,19 +28,21 @@ class Scale(Transform):
         with open(
             os.path.join(root_path, preproc_stage, "meta", scaling_factor_path), "rb"
         ) as f:
-            self._scale: dict[str, dict[str, np.array]] = pickle.load(f)
+            self._scale: dict[str, dict[str, np.ndarray]] = pickle.load(f)
 
         self._scaling_factor_key = scaling_factor_key
         self.eps = eps
 
-    def __call__(self, x: np.ndarray, meta, /, *args, **kwargs) -> np.ndarray:
+    def __call__(
+        self, x: np.ndarray, /, *args, meta: MetadataElement, **kwargs
+    ) -> tuple[np.ndarray, Any]:
         super().__call__(x)
-        entry = f"dataset-{meta['dataset_id']:03d}-subject-{meta['subject_id']:03d}"
+        entry = f"dataset-{meta.dataset_id:03d}-subject-{meta.subject_id:03d}"
         if entry not in self._scale:
             warn(f"Scaling factor for {entry} not found. Skip applying scaling.")
             return x, *args
         else:
-            key = meta["speech_feature_type"] if self.whom == "audio" else "eeg"
+            key = meta.speech_feature_type if self.whom == "audio" else "eeg"  # type: ignore
             scale_factor = self._scale[entry][key]
 
             return (x / (scale_factor + self.eps), *args)

@@ -189,6 +189,11 @@ class NamedParamsCLI(LightningCLI):
             "model.init_args.model_common_args.num_channels",
         )
         parser.link_arguments(
+            "data.num_channels",
+            "model.init_args.model_common_args.num_channels",
+            apply_on="instantiate",
+        )
+        parser.link_arguments(
             "data.init_args.root_path", "data.init_args.transform.root_path"
         )
         parser.link_arguments(

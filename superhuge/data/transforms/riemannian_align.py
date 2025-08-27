@@ -33,6 +33,7 @@ class RiemannianAlign(StatisticalTransform):
 
         mean_cov = mean_riemann(np.stack(self._cov_matrices, axis=0))
         self._stat = invsqrtm(mean_cov)
+        assert isinstance(self._stat, np.ndarray)
         self._fitted = True
 
     def __call__(self, x: np.ndarray, /, *args, **kwargs) -> tuple[np.ndarray, Any]:

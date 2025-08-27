@@ -463,3 +463,12 @@ class DInterface(pl2.LightningDataModule):
                 logging.WARNING if self.summary_verbose else logging.DEBUG,
                 "Sample weights are only available for classification datasets. Skip operation and return None. This is basically because someone want to use sample weights for regression datasets, which is not a common practice. Skip this message if you know what you are doing.",
             )
+
+    @property
+    def num_channels(self):
+        if hasattr(self.dataset_cfg.transform, "num_channels"):
+            return getattr(self.dataset_cfg.transform, "num_channels")
+        else:
+            raise AttributeError(
+                "Transform does not have attribute 'num_channels'. Please ensure you have a ChannelSelection transform in the pipeline."
+            )

@@ -85,3 +85,11 @@ class TransformComposer:
     def whom_options(self) -> Sequence[Literal["eeg", "audio", "label", "all"]]:
         """Get whom options."""
         return self._whom_options
+
+    def __getattr__(self, name: str) -> Any:
+        for transform in self._transforms:
+            if hasattr(transform, name):
+                return getattr(transform, name)
+        raise AttributeError(
+            f"{self.__class__.__name__} and its transforms {self._transforms} has no attribute {name}"
+        )

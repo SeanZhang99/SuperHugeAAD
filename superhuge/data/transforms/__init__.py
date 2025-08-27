@@ -10,3 +10,4 @@ from .scale import Scale
 from .zscore import ZScore
 from .riemannian_align import RiemannianAlign
 from .zscore_align import ZScoreAlign
+from .channel_selection import ChannelSelection

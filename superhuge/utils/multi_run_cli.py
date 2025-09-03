@@ -2,6 +2,8 @@ import hashlib
 from itertools import product
 from math import isnan
 import os
+import pickle
+from typing import Iterator, NamedTuple
 
 import numpy as np
 
@@ -10,8 +12,12 @@ from lightning.pytorch.cli import LightningCLI, SaveConfigCallback
 
 from .task_config_parser import TaskConfigParser
 
+cv_fold = NamedTuple("cv_fold", [("val_fold_idx", str), ("test_fold_idx", str)])
+
 
 class MultiRunCLI:
+    cv_folds: Iterator[cv_fold] | None = None
+
     def __init__(self, *args: str) -> None:
         self.cli_argv = list(args)
         self.task_config_path, self.cli_argv = self.__extract_task_config()
@@ -20,6 +26,8 @@ class MultiRunCLI:
             self.task_config_path is not None
         ), "MULTI_RUN_CLI:__INIT__:TASK_CONFIG_ACQUIRING:ARGUMENT_MISSING: Task config is required by providing --task_config=<path> or --task_config <path>"
         self.task_config_parser = TaskConfigParser(self.task_config_path)
+
+        self.configs = iter(list(self.task_config_parser.generate_configs()))
 
     def __extract_ckpt_path(self) -> tuple[str | None, list[str]]:
         cli_argv: list[str] = self.cli_argv
@@ -117,89 +125,111 @@ class MultiRunCLI:
         extra_experiment_name: str = "",
     ):
         accumulated_results: dict[str, list] = {}
-        for config_list, experiment_name in self.task_config_parser.generate_configs():
-            for val_fold_idx, test_fold_idx in self.__prepare_fold_idx(config_list):
-                if val_fold_idx == test_fold_idx:
-                    # 如果验证集和测试集折叠索引相同，则跳过
-                    continue
-                args = (
-                    self.cli_argv
-                    + config_list
-                    + [
-                        "--data.init_args.val_fold_idx",
-                        val_fold_idx,
-                        "--data.init_args.test_fold_idx",
-                        test_fold_idx,
-                        "--experiment_name",
-                        f"{experiment_name}-{extra_experiment_name}",
-                        "--model_name",
-                        f"{self.__extract_model_name()}",
-                    ]
-                )
-                seed = str(self.__generate_config_hash(args))
-                cli = NamedParamsCLI(
-                    parser_kwargs={"parser_mode": "omegaconf"},
-                    args=(
-                        args
-                        + (
-                            [
-                                "--seed_everything",
+
+        while True:
+            try:
+                config_list, experiment_name = next(self.configs)
+                if self.cv_folds is None:
+                    self.cv_folds = iter(
+                        cv_fold(val, test)
+                        for val, test in self.__prepare_fold_idx(config_list)
+                    )
+                try:
+                    val_fold_idx, test_fold_idx = next(self.cv_folds)
+
+                    if val_fold_idx == test_fold_idx:
+                        # 如果验证集和测试集折叠索引相同，则跳过
+                        continue
+                    args = (
+                        self.cli_argv
+                        + config_list
+                        + [
+                            "--data.init_args.val_fold_idx",
+                            val_fold_idx,
+                            "--data.init_args.test_fold_idx",
+                            test_fold_idx,
+                            "--experiment_name",
+                            f"{experiment_name}-{extra_experiment_name}",
+                            "--model_name",
+                            f"{self.__extract_model_name()}",
+                        ]
+                    )
+                    seed = str(self.__generate_config_hash(args))
+                    cli = NamedParamsCLI(
+                        parser_kwargs={"parser_mode": "omegaconf"},
+                        args=(
+                            args
+                            + (
+                                [
+                                    "--seed_everything",
+                                    seed,
+                                ]
+                                if "--seed_everything" not in self.cli_argv
+                                else []
+                            )
+                            + [
+                                "--experiment_hash",
                                 seed,
                             ]
-                            if "--seed_everything" not in self.cli_argv
-                            else []
-                        )
-                        + [
-                            "--experiment_hash",
-                            seed,
-                        ]
-                    ),
-                    run=False,
-                    save_config_callback=SaveConfigCallback if save_config else None,
-                )
-                from ..model.interface.model_interface import MInterface
-                from ..data.interface.data_interface import DInterface
-
-                assert isinstance(
-                    cli.datamodule, DInterface
-                ), "DataModule is not an instance of DInterface"
-                assert isinstance(
-                    cli.model, MInterface
-                ), "Model is not an instance of MInterface"
-
-                cli.trainer.fit(
-                    model=cli.model, datamodule=cli.datamodule, ckpt_path=self.ckpt_path
-                )
-
-                if hasattr(cli.model, "fake_parameter"):
-                    for func, loader in zip(
-                        (cli.trainer.validate, cli.trainer.test),
-                        (
-                            cli.datamodule.val_dataloader(),
-                            cli.datamodule.test_dataloader(),
                         ),
-                    ):
-                        results = func(
+                        run=False,
+                        save_config_callback=(
+                            SaveConfigCallback if save_config else None
+                        ),
+                    )
+                    from ..model.interface.model_interface import MInterface
+                    from ..data.interface.data_interface import DInterface
+
+                    assert isinstance(
+                        cli.datamodule, DInterface
+                    ), "DataModule is not an instance of DInterface"
+                    assert isinstance(
+                        cli.model, MInterface
+                    ), "Model is not an instance of MInterface"
+
+                    cli.trainer.fit(
+                        model=cli.model,
+                        datamodule=cli.datamodule,
+                        ckpt_path=self.ckpt_path,
+                    )
+
+                    if hasattr(cli.model, "fake_parameter"):
+                        for func, loader in zip(
+                            (cli.trainer.validate, cli.trainer.test),
+                            (
+                                cli.datamodule.val_dataloader(),
+                                cli.datamodule.test_dataloader(),
+                            ),
+                        ):
+                            results = func(
+                                model=cli.model,
+                                dataloaders=loader,
+                                verbose=verbose,
+                                ckpt_path="best",
+                            )
+                            for key, value in results[0].items():
+                                assert not isnan(
+                                    value
+                                ), f"Evaluation metrics got NaN for {key}"
+                                accumulated_results.setdefault(key, []).append(value)
+                    else:
+                        results = cli.trainer.test(
                             model=cli.model,
-                            dataloaders=loader,
-                            verbose=verbose,
+                            datamodule=cli.datamodule,
                             ckpt_path="best",
+                            verbose=verbose,
                         )
                         for key, value in results[0].items():
                             assert not isnan(
                                 value
                             ), f"Evaluation metrics got NaN for {key}"
                             accumulated_results.setdefault(key, []).append(value)
-                else:
-                    results = cli.trainer.test(
-                        model=cli.model,
-                        datamodule=cli.datamodule,
-                        ckpt_path="best",
-                        verbose=verbose,
-                    )
-                    for key, value in results[0].items():
-                        assert not isnan(value), f"Evaluation metrics got NaN for {key}"
-                        accumulated_results.setdefault(key, []).append(value)
+                    # with open(...) as f:
+                    #     pickle.dump(cli, f)
+                except StopIteration:
+                    self.cv_folds = None
+            except StopIteration:
+                break
         return {k: np.mean(v) for k, v in accumulated_results.items()}
 
 

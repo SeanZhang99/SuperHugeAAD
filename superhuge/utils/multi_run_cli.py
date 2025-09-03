@@ -1,9 +1,12 @@
+from collections.abc import Generator, Sequence
+from dataclasses import dataclass
 import hashlib
 from itertools import product
 from math import isnan
 import os
 import pickle
 from typing import Iterator, NamedTuple
+from pathlib import Path
 
 import numpy as np
 
@@ -13,60 +16,112 @@ from lightning.pytorch.cli import LightningCLI, SaveConfigCallback
 from .task_config_parser import TaskConfigParser
 
 cv_fold = NamedTuple("cv_fold", [("val_fold_idx", str), ("test_fold_idx", str)])
+task_config = NamedTuple("task_config", [("config_list", list[str]), ("name", str)])
+
+
+@dataclass
+class ExperimentStates:
+    _task_configs: Iterator[task_config]
+    _cli_argv: list[str]
+    _current_task_config: list[str] | None = None
+    _current_experiment_name: str | None = None
+    _cv_folds_iter: Iterator[cv_fold] | None = None
+    _current_val_fold_idx: str | None = None
+    _current_test_fold_idx: str | None = None
+
+    def __iter__(self):
+        if isinstance(self._task_configs, Sequence):
+            self._task_configs_iter = iter(list(self._task_configs))
+        else:
+            self._task_configs_iter = iter(self._task_configs)
+        return self
+
+    def __next__(self) -> tuple[list[str], str]:
+        if self._cv_folds_iter is None:
+            self._current_task_config, self._current_experiment_name = next(
+                self._task_configs_iter
+            )
+            self._cv_folds_iter = iter(
+                [
+                    cv_fold(*fold)
+                    for fold in self.__prepare_fold_idx(self._current_task_config)
+                ]
+            )
+        try:
+            self._current_val_fold_idx, self._current_test_fold_idx = next(
+                self._cv_folds_iter
+            )
+            if self._current_val_fold_idx == self._current_test_fold_idx:
+                return self.__next__()
+        except StopIteration:
+            self._cv_folds_iter = None
+            return self.__next__()
+
+        assert self._current_task_config is not None
+        assert self._current_experiment_name is not None
+        return (
+            self._current_task_config
+            + [
+                "--data.init_args.val_fold_idx",
+                self._current_val_fold_idx,
+                "--data.init_args.test_fold_idx",
+                self._current_test_fold_idx,
+            ],
+            self._current_experiment_name,
+        )
+
+    def __prepare_fold_idx(self, config_list: list[str]):
+        assert "--data.init_args.n_folds" in config_list, (
+            "MULTI_RUN_CLI:__PREPARE_FOLD_IDX:ARGUMENT_MISSING: "
+            "Argument --data.init_args.n_folds is required to prepare fold indices"
+        )
+        n_folds = int(config_list[config_list.index("--data.init_args.n_folds") + 1])
+        if "--data.init_args.val_fold_idx" not in self._cli_argv:
+            val_fold_idx = [str(x) for x in range(n_folds)]
+        else:
+            val_fold_idx = self._cli_argv[
+                self._cli_argv.index("--data.init_args.val_fold_idx") + 1
+            ]
+
+        if "--data.init_args.test_fold_idx" not in self._cli_argv:
+            test_fold_idx = [str(x) for x in range(n_folds)]
+        else:
+            test_fold_idx = self._cli_argv[
+                self._cli_argv.index("--data.init_args.test_fold_idx") + 1
+            ]
+
+        return list(product(val_fold_idx, test_fold_idx))
 
 
 class MultiRunCLI:
-    cv_folds: Iterator[cv_fold] | None = None
+    _experiment_states: ExperimentStates
 
-    def __init__(self, *args: str) -> None:
+    def __init__(
+        self,
+        *args: str,
+        task_config_path: str,
+        model_checkpoint_path: str | None = None,
+        cli_checkpoint_path: str | None = None,
+    ) -> None:
         self.cli_argv = list(args)
-        self.task_config_path, self.cli_argv = self.__extract_task_config()
-        self.ckpt_path, self.cli_argv = self.__extract_ckpt_path()
+        self.task_config_path = task_config_path
+        self.model_ckpt_path = model_checkpoint_path
+        self.cli_ckpt_path = cli_checkpoint_path
+
         assert (
             self.task_config_path is not None
         ), "MULTI_RUN_CLI:__INIT__:TASK_CONFIG_ACQUIRING:ARGUMENT_MISSING: Task config is required by providing --task_config=<path> or --task_config <path>"
         self.task_config_parser = TaskConfigParser(self.task_config_path)
 
-        self.configs = iter(list(self.task_config_parser.generate_configs()))
-
-    def __extract_ckpt_path(self) -> tuple[str | None, list[str]]:
-        cli_argv: list[str] = self.cli_argv
-        ckpt_path = None
-        for i, arg in enumerate(self.cli_argv):
-            if arg.startswith("--ckpt_path"):
-                if "=" in arg:
-                    ckpt_path = arg.split("=")[1]
-                    cli_argv.pop(i)
-                elif i + 1 < len(self.cli_argv):
-                    ckpt_path = self.cli_argv[i + 1]
-                    cli_argv.pop(i)
-                    cli_argv.pop(i)
-                break
-        if ckpt_path is not None and not os.path.isfile(self.ckpt_path):  # type: ignore
-            raise FileNotFoundError(
-                f"MULTI_RUN_CLI:__INIT__:CKPT_VALIDATION:FILE_NOT_FOUND: "
-                f"Checkpoint file {self.ckpt_path} does not exist"
+        if self.cli_ckpt_path is not None and os.path.isfile(self.cli_ckpt_path):
+            with open(self.cli_ckpt_path, "rb") as f:
+                loaded: MultiRunCLI = pickle.load(f)
+            self._experiment_states = loaded._experiment_states
+        else:
+            self._experiment_states = ExperimentStates(
+                _task_configs=list(self.task_config_parser.generate_configs()),
+                _cli_argv=self.cli_argv,
             )
-        return ckpt_path, cli_argv
-
-    def __extract_task_config(self) -> tuple[str | None, list[str]]:
-        cli_argv: list[str] = self.cli_argv
-        task_config_path = None
-        for i, arg in enumerate(self.cli_argv):
-            if arg.startswith("--task_config"):
-                if "=" in arg:
-                    task_config_path = arg.split("=")[1]
-                    cli_argv.pop(i)
-                elif i + 1 < len(self.cli_argv):
-                    task_config_path = self.cli_argv[i + 1]
-                    cli_argv.pop(i)
-                    cli_argv.pop(i)
-                break
-        assert (
-            task_config_path is not None
-        ), "MULTI_RUN_CLI:__INIT__:TASK_CONFIG_ACQUIRING:ARGUMENT_MISSING: Task config is required by providing --task_config=<path> or --task_config <path>"
-
-        return task_config_path, cli_argv
 
     def __generate_config_hash(self, config_list: list[str]) -> int:
         """生成配置列表的确定性哈希种子"""
@@ -83,30 +138,8 @@ class MultiRunCLI:
         config_str = "|".join(sorted(config_list)).encode("utf-8")
         # 生成SHA256哈希
         hash_digest = hashlib.sha256(config_str).digest()
-        # 转换为0-2^64范围内的长整数
-        return int.from_bytes(hash_digest[:8], byteorder="big") % (2**64)
-
-    def __prepare_fold_idx(self, config_list: list[str]):
-        assert "--data.init_args.n_folds" in config_list, (
-            "MULTI_RUN_CLI:__PREPARE_FOLD_IDX:ARGUMENT_MISSING: "
-            "Argument --data.init_args.n_folds is required to prepare fold indices"
-        )
-        n_folds = int(config_list[config_list.index("--data.init_args.n_folds") + 1])
-        if "--data.init_args.val_fold_idx" not in self.cli_argv:
-            val_fold_idx = [str(x) for x in range(n_folds)]
-        else:
-            val_fold_idx = self.cli_argv[
-                self.cli_argv.index("--data.init_args.val_fold_idx") + 1
-            ]
-
-        if "--data.init_args.test_fold_idx" not in self.cli_argv:
-            test_fold_idx = [str(x) for x in range(n_folds)]
-        else:
-            test_fold_idx = self.cli_argv[
-                self.cli_argv.index("--data.init_args.test_fold_idx") + 1
-            ]
-
-        yield from product(val_fold_idx, test_fold_idx)
+        # 转换为0-2^32-1范围内的整数
+        return int.from_bytes(hash_digest[:4], byteorder="big") % (2**32)
 
     def __extract_model_name(self):
         for i, arg in enumerate(self.cli_argv):
@@ -124,112 +157,99 @@ class MultiRunCLI:
         save_config: bool = True,
         extra_experiment_name: str = "",
     ):
+
         accumulated_results: dict[str, list] = {}
-
-        while True:
-            try:
-                config_list, experiment_name = next(self.configs)
-                if self.cv_folds is None:
-                    self.cv_folds = iter(
-                        cv_fold(val, test)
-                        for val, test in self.__prepare_fold_idx(config_list)
-                    )
-                try:
-                    val_fold_idx, test_fold_idx = next(self.cv_folds)
-
-                    if val_fold_idx == test_fold_idx:
-                        # 如果验证集和测试集折叠索引相同，则跳过
-                        continue
-                    args = (
-                        self.cli_argv
-                        + config_list
-                        + [
-                            "--data.init_args.val_fold_idx",
-                            val_fold_idx,
-                            "--data.init_args.test_fold_idx",
-                            test_fold_idx,
-                            "--experiment_name",
-                            f"{experiment_name}-{extra_experiment_name}",
-                            "--model_name",
-                            f"{self.__extract_model_name()}",
+        for (
+            config_list,
+            experiment_name,
+        ) in self._experiment_states:
+            args = (
+                self.cli_argv
+                + config_list
+                + [
+                    "--experiment_name",
+                    f"{experiment_name}-{extra_experiment_name}",
+                    "--model_name",
+                    f"{self.__extract_model_name()}",
+                ]
+            )
+            seed = str(self.__generate_config_hash(args))
+            cli = NamedParamsCLI(
+                parser_kwargs={"parser_mode": "omegaconf"},
+                args=(
+                    args
+                    + (
+                        [
+                            "--seed_everything",
+                            seed,
                         ]
+                        if "--seed_everything" not in self.cli_argv
+                        else []
                     )
-                    seed = str(self.__generate_config_hash(args))
-                    cli = NamedParamsCLI(
-                        parser_kwargs={"parser_mode": "omegaconf"},
-                        args=(
-                            args
-                            + (
-                                [
-                                    "--seed_everything",
-                                    seed,
-                                ]
-                                if "--seed_everything" not in self.cli_argv
-                                else []
-                            )
-                            + [
-                                "--experiment_hash",
-                                seed,
-                            ]
-                        ),
-                        run=False,
-                        save_config_callback=(
-                            SaveConfigCallback if save_config else None
-                        ),
-                    )
-                    from ..model.interface.model_interface import MInterface
-                    from ..data.interface.data_interface import DInterface
+                    + [
+                        "--experiment_hash",
+                        seed,
+                    ]
+                ),
+                run=False,
+                save_config_callback=(SaveConfigCallback if save_config else None),
+            )
+            from ..model.interface.model_interface import MInterface
+            from ..data.interface.data_interface import DInterface
 
-                    assert isinstance(
-                        cli.datamodule, DInterface
-                    ), "DataModule is not an instance of DInterface"
-                    assert isinstance(
-                        cli.model, MInterface
-                    ), "Model is not an instance of MInterface"
+            assert isinstance(
+                cli.datamodule, DInterface
+            ), "DataModule is not an instance of DInterface"
+            assert isinstance(
+                cli.model, MInterface
+            ), "Model is not an instance of MInterface"
 
-                    cli.trainer.fit(
+            cli.trainer.fit(
+                model=cli.model,
+                datamodule=cli.datamodule,
+                ckpt_path=self.model_ckpt_path,
+            )
+
+            if hasattr(cli.model, "fake_parameter"):
+                for func, loader in zip(
+                    (cli.trainer.validate, cli.trainer.test),
+                    (
+                        cli.datamodule.val_dataloader(),
+                        cli.datamodule.test_dataloader(),
+                    ),
+                ):
+                    results = func(
                         model=cli.model,
-                        datamodule=cli.datamodule,
-                        ckpt_path=self.ckpt_path,
+                        dataloaders=loader,
+                        verbose=verbose,
+                        ckpt_path="best",
                     )
+                    for key, value in results[0].items():
+                        assert not isnan(value), f"Evaluation metrics got NaN for {key}"
+                        accumulated_results.setdefault(key, []).append(value)
+            else:
+                results = cli.trainer.test(
+                    model=cli.model,
+                    datamodule=cli.datamodule,
+                    ckpt_path="best",
+                    verbose=verbose,
+                )
+                for key, value in results[0].items():
+                    assert not isnan(value), f"Evaluation metrics got NaN for {key}"
+                    accumulated_results.setdefault(key, []).append(value)
+            if (
+                isinstance(cli.trainer.loggers, Sequence)
+                and len(cli.trainer.loggers) > 0
+            ):
+                cli_ckpt_path: Path = (
+                    Path(cli.trainer.loggers[0]._root_dir)
+                    / str(cli.trainer.loggers[0]._name)
+                    / f"version_{cli.trainer.loggers[0]._version}"
+                    / "cli_ckpt.pkl"
+                )
+                with cli_ckpt_path.open("wb") as f:
+                    pickle.dump(self, f)
 
-                    if hasattr(cli.model, "fake_parameter"):
-                        for func, loader in zip(
-                            (cli.trainer.validate, cli.trainer.test),
-                            (
-                                cli.datamodule.val_dataloader(),
-                                cli.datamodule.test_dataloader(),
-                            ),
-                        ):
-                            results = func(
-                                model=cli.model,
-                                dataloaders=loader,
-                                verbose=verbose,
-                                ckpt_path="best",
-                            )
-                            for key, value in results[0].items():
-                                assert not isnan(
-                                    value
-                                ), f"Evaluation metrics got NaN for {key}"
-                                accumulated_results.setdefault(key, []).append(value)
-                    else:
-                        results = cli.trainer.test(
-                            model=cli.model,
-                            datamodule=cli.datamodule,
-                            ckpt_path="best",
-                            verbose=verbose,
-                        )
-                        for key, value in results[0].items():
-                            assert not isnan(
-                                value
-                            ), f"Evaluation metrics got NaN for {key}"
-                            accumulated_results.setdefault(key, []).append(value)
-                    # with open(...) as f:
-                    #     pickle.dump(cli, f)
-                except StopIteration:
-                    self.cv_folds = None
-            except StopIteration:
-                break
         return {k: np.mean(v) for k, v in accumulated_results.items()}
 
 
@@ -298,18 +318,6 @@ class NamedParamsCLI(LightningCLI):
             path = os.path.join(*paths)
             return path
 
-        # def compute_experiment_path(
-        #     experiment_name: str,
-        #     model_name: str,
-        #     experiment_hash: str,
-        #     window_length: int,
-        # ) -> str:
-        #     return os.path.join(
-        #         experiment_name,
-        #         model_name,
-        #         f"{experiment_hash}",
-        #         f"{window_length}",
-        #     )
         parser.add_argument("--experiment_name", type=str)
         parser.add_argument("--model_name", type=str)
         parser.add_argument("--experiment_hash", type=str)

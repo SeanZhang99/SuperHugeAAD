@@ -466,9 +466,14 @@ class DInterface(pl2.LightningDataModule):
 
     @property
     def num_channels(self):
-        if hasattr(self.dataset_cfg.transform, "num_channels"):
-            return getattr(self.dataset_cfg.transform, "num_channels")
-        else:
-            raise AttributeError(
-                "Transform does not have attribute 'num_channels'. Please ensure you have a ChannelSelection transform in the pipeline."
-            )
+        if self.dataset_cfg.transform is not None:
+            for transform in self.dataset_cfg.transform._transforms:
+                if hasattr(transform, "num_channels"):
+                    return getattr(transform, "num_channels")
+        raise AttributeError(
+            "Transform does not have attribute 'num_channels'. Please ensure you have a ChannelSelection transform in the pipeline."
+        )
+
+    @property
+    def window_length(self):
+        return self.dataset_cfg.window_length

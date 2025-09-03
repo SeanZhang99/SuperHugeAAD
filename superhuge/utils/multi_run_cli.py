@@ -1,16 +1,12 @@
-import gc
 import hashlib
 from itertools import product
 from math import isnan
 import os
-from glob import glob
-from typing import Sequence
 
 import numpy as np
-import torch
+
 from lightning import LightningModule
 from lightning.pytorch.cli import LightningCLI, SaveConfigCallback
-import tqdm
 
 from .task_config_parser import TaskConfigParser
 
@@ -66,12 +62,21 @@ class MultiRunCLI:
 
     def __generate_config_hash(self, config_list: list[str]) -> int:
         """生成配置列表的确定性哈希种子"""
+        # remove val_fold_idx and test_fold_idx from config_list
+        config_list = [
+            config
+            for i, config in enumerate(config_list)
+            if config_list[i - 1]
+            not in ("--data.init_args.val_fold_idx", "--data.init_args.test_fold_idx")
+            and config
+            not in ("--data.init_args.val_fold_idx", "--data.init_args.test_fold_idx")
+        ]
         # 创建稳定字符串表示
         config_str = "|".join(sorted(config_list)).encode("utf-8")
         # 生成SHA256哈希
         hash_digest = hashlib.sha256(config_str).digest()
-        # 转换为0-2^32范围内的整数
-        return int.from_bytes(hash_digest[:4], byteorder="big") % (2**32)
+        # 转换为0-2^64范围内的长整数
+        return int.from_bytes(hash_digest[:8], byteorder="big") % (2**64)
 
     def __prepare_fold_idx(self, config_list: list[str]):
         assert "--data.init_args.n_folds" in config_list, (
@@ -95,6 +100,16 @@ class MultiRunCLI:
 
         yield from product(val_fold_idx, test_fold_idx)
 
+    def __extract_model_name(self):
+        for i, arg in enumerate(self.cli_argv):
+            if arg == "--model":
+                if i + 1 < len(self.cli_argv):
+                    config_path = self.cli_argv[i + 1]
+                    model_name = os.path.splitext(os.path.basename(config_path))[0]
+                    if model_name != "optimizer_config":
+                        return model_name
+        return None
+
     def run(
         self,
         verbose: bool = True,
@@ -107,34 +122,55 @@ class MultiRunCLI:
                 if val_fold_idx == test_fold_idx:
                     # 如果验证集和测试集折叠索引相同，则跳过
                     continue
-                # 替换配置列表中的折叠索引
+                args = (
+                    self.cli_argv
+                    + config_list
+                    + [
+                        "--data.init_args.val_fold_idx",
+                        val_fold_idx,
+                        "--data.init_args.test_fold_idx",
+                        test_fold_idx,
+                        "--experiment_name",
+                        f"{experiment_name}-{extra_experiment_name}",
+                        "--model_name",
+                        f"{self.__extract_model_name()}",
+                    ]
+                )
+                seed = str(self.__generate_config_hash(args))
                 cli = NamedParamsCLI(
                     parser_kwargs={"parser_mode": "omegaconf"},
                     args=(
-                        self.cli_argv
-                        + config_list
+                        args
                         + (
                             [
                                 "--seed_everything",
-                                str(self.__generate_config_hash(config_list)),
+                                seed,
                             ]
                             if "--seed_everything" not in self.cli_argv
                             else []
                         )
-                        + ["--data.init_args.val_fold_idx", val_fold_idx]
-                        + ["--data.init_args.test_fold_idx", test_fold_idx]
                         + [
-                            "--experiment_name",
-                            f"{experiment_name}-{extra_experiment_name}",
+                            "--experiment_hash",
+                            seed,
                         ]
                     ),
                     run=False,
                     save_config_callback=SaveConfigCallback if save_config else None,
                 )
+                from ..model.interface.model_interface import MInterface
+                from ..data.interface.data_interface import DInterface
+
+                assert isinstance(
+                    cli.datamodule, DInterface
+                ), "DataModule is not an instance of DInterface"
+                assert isinstance(
+                    cli.model, MInterface
+                ), "Model is not an instance of MInterface"
 
                 cli.trainer.fit(
                     model=cli.model, datamodule=cli.datamodule, ckpt_path=self.ckpt_path
                 )
+
                 if hasattr(cli.model, "fake_parameter"):
                     for func, loader in zip(
                         (cli.trainer.validate, cli.trainer.test),
@@ -147,6 +183,7 @@ class MultiRunCLI:
                             model=cli.model,
                             dataloaders=loader,
                             verbose=verbose,
+                            ckpt_path="best",
                         )
                         for key, value in results[0].items():
                             assert not isnan(
@@ -213,11 +250,47 @@ class NamedParamsCLI(LightningCLI):
             "model.init_args.loss_args.weight",
             apply_on="instantiate",
         )
+
+        def compute_experiment_path(*args: str | int) -> str:
+            paths = []
+            for arg in args:
+                if isinstance(arg, str):
+                    if "-" in arg:
+                        paths.extend(arg.split("-"))
+                    else:
+                        paths.append(arg)
+                elif isinstance(arg, int):
+                    paths.append(str(arg))
+                else:
+                    raise ValueError(
+                        "Only str and int types are supported for experiment path computation."
+                    )
+            path = os.path.join(*paths)
+            return path
+
+        # def compute_experiment_path(
+        #     experiment_name: str,
+        #     model_name: str,
+        #     experiment_hash: str,
+        #     window_length: int,
+        # ) -> str:
+        #     return os.path.join(
+        #         experiment_name,
+        #         model_name,
+        #         f"{experiment_hash}",
+        #         f"{window_length}",
+        #     )
         parser.add_argument("--experiment_name", type=str)
+        parser.add_argument("--model_name", type=str)
+        parser.add_argument("--experiment_hash", type=str)
+
         parser.link_arguments(
-            ("experiment_name", "data.init_args.window_length"),
-            "trainer.logger.init_args.name",
-            compute_fn=lambda exp_name, window_length: os.path.join(
-                *exp_name.split("-"), str(window_length)
+            source=(
+                "experiment_name",
+                "model_name",
+                "experiment_hash",
+                "data.init_args.window_length",
             ),
+            target="trainer.logger.init_args.name",
+            compute_fn=compute_experiment_path,
         )

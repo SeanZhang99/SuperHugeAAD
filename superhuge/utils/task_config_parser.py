@@ -55,7 +55,7 @@ class TaskConfigParser:
                 args.append(str(value))
         return args
 
-    def generate_configs(self)  -> Generator[tuple[list[str], str], Any, None]:
+    def generate_configs(self) -> Generator[tuple[list[str], str], Any, None]:
         for task_type, task_details in self.tasks.items():
             general_data: dict = self.config[task_type]["general"]["data"]
             for task_name, task_detail in task_details.items():
@@ -96,13 +96,9 @@ class TaskConfigParser:
                         self._dict_to_cli_args("--model", config_copy["model"])
                     )
 
-                    yield cli_args, "-".join(
-                        [
-                            task_type,
-                            task_name,
-                            cv_name,
-                        ]
-                    )
+                    experiment_name = f"{task_type}-{task_name}-{cv_name}"
+
+                    yield cli_args, experiment_name
 
 
 if __name__ == "__main__":

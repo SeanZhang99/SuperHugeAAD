@@ -473,7 +473,3 @@ class DInterface(pl2.LightningDataModule):
         raise AttributeError(
             "Transform does not have attribute 'num_channels'. Please ensure you have a ChannelSelection transform in the pipeline."
         )
-
-    @property
-    def window_length(self):
-        return self.dataset_cfg.window_length

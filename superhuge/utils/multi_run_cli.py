@@ -16,16 +16,15 @@ from lightning.pytorch.cli import LightningCLI, SaveConfigCallback
 from .task_config_parser import TaskConfigParser
 
 cv_fold = NamedTuple("cv_fold", [("val_fold_idx", str), ("test_fold_idx", str)])
-task_config = NamedTuple("task_config", [("config_list", list[str]), ("name", str)])
 
 
 @dataclass
 class ExperimentStates:
-    _task_configs: Iterator[task_config]
+    _task_configs: Iterator[tuple[list[str], str]]
     _cli_argv: list[str]
     _current_task_config: list[str] | None = None
     _current_experiment_name: str | None = None
-    _cv_folds_iter: Iterator[cv_fold] | None = None
+    _cv_folds_iter: Iterator[tuple[str, str]] | None = None
     _current_val_fold_idx: str | None = None
     _current_test_fold_idx: str | None = None
 
@@ -119,7 +118,7 @@ class MultiRunCLI:
             self._experiment_states = loaded._experiment_states
         else:
             self._experiment_states = ExperimentStates(
-                _task_configs=list(self.task_config_parser.generate_configs()),
+                _task_configs=iter(list(self.task_config_parser.generate_configs())),
                 _cli_argv=self.cli_argv,
             )
 
@@ -324,8 +323,8 @@ class NamedParamsCLI(LightningCLI):
 
         parser.link_arguments(
             source=(
-                "experiment_name",
                 "model_name",
+                "experiment_name",
                 "experiment_hash",
                 "data.init_args.window_length",
             ),

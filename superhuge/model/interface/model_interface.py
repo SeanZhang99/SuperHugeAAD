@@ -33,7 +33,7 @@ class MInterface(pl2.LightningModule, ABC):
         model_args: dict[str, Any],
         model_common_args: ModelInputArgs,
         loss: torch.nn.modules.loss._Loss | Sequence[torch.nn.modules.loss._Loss],
-        loss_weights: Sequence[float] | None = None,
+        multiclass_loss_weights: Sequence[float] | None = None,
         multiloss_weights: Sequence[float] | None = None,
         optimizer_class: type[Optimizer] = AdamW,
         optimizer_args: dict[str, Any] | None = None,
@@ -58,15 +58,15 @@ class MInterface(pl2.LightningModule, ABC):
                 multiloss_weights is None
             ), f"When specifying a single loss, you should not specify the loss weights, but got {loss} and {multiloss_weights}"
         self.loss = loss
-        self.loss_weights = (
-            nn.Parameter(torch.tensor(loss_weights, device=self.device))
-            if loss_weights is not None
+        self.multiclass_loss_weights = (
+            nn.Parameter(torch.tensor(multiclass_loss_weights, device=self.device))
+            if multiclass_loss_weights is not None
             else None
         )
         self.multiloss_weights = multiloss_weights
         self.configure_loss()
 
-        self.optmizer_class = optimizer_class
+        self.optimizer_class = optimizer_class
         self.optimizer_args = optimizer_args
         self.lr_scheduler_class = lr_scheduler_class
         self.lr_scheduler_args = lr_scheduler_args
@@ -173,6 +173,11 @@ class MInterface(pl2.LightningModule, ABC):
                 ), f"EEG_CLASSIFY_BASE_DATASET:FORWARD:ASSERTION:VALUE_ERROR: label input is required, but not found in data. Available keys: {data.keys()}"
                 # Extract label input directly from data
                 inputs.append(data["label"])
+            elif input_type == "meta":
+                assert (
+                    "meta" in data
+                ), f"EEG_CLASSIFY_BASE_DATASET:FORWARD:ASSERTION:VALUE_ERROR: meta input is required, but not found in data. Available keys: {data.keys()}"
+                inputs.append(data["meta"])
 
         # Pass the inputs to the model in the required order
         model_outputs = self.model(*inputs)
@@ -292,7 +297,7 @@ class MInterface(pl2.LightningModule, ABC):
                 self.multiloss_weights, device=self.device
             )
 
-            if self.loss_weights is not None:
+            if self.multiclass_loss_weights is not None:
 
                 def loss_fn(  # type: ignore
                     *args: torch.Tensor
@@ -302,7 +307,9 @@ class MInterface(pl2.LightningModule, ABC):
                 ):
                     loss = torch.zeros(1, device=self.device)
                     for loss_fn, weight in zip(self.loss, self.multiloss_weights):  # type: ignore
-                        loss += loss_fn(*args, self.loss_weights).sum() * weight
+                        loss += (
+                            loss_fn(*args, self.multiclass_loss_weights).sum() * weight
+                        )
                     assert not isnan(loss), (
                         "MODEL_INTERFACE:LOSS_FN:ASSERTION:VALUE_ERROR: Loss function returned NaN. "
                         "This usually indicates a problem with the model or the data. "
@@ -329,10 +336,10 @@ class MInterface(pl2.LightningModule, ABC):
                     return loss
 
         else:
-            if self.loss_weights is not None:
+            if self.multiclass_loss_weights is not None:
 
                 def loss_fn(*args: torch.Tensor | int | str):
-                    loss = self.loss(*args, self.loss_weights).sum()  # type: ignore
+                    loss = self.loss(*args, self.multiclass_loss_weights).sum()  # type: ignore
                     assert not isnan(loss), (
                         "MODEL_INTERFACE:LOSS_FN:ASSERTION:VALUE_ERROR: Loss function returned NaN. "
                         "This usually indicates a problem with the model or the data. "
@@ -412,6 +419,8 @@ class MInterface(pl2.LightningModule, ABC):
                     required_inputs.append("audio")
                 elif param_name == "label":
                     required_inputs.append("label")
+                elif param_name == "meta":
+                    required_inputs.append("meta")
 
         return required_inputs
 
@@ -465,7 +474,7 @@ class MInterface(pl2.LightningModule, ABC):
             },
         ]
 
-        optimizer = self.optmizer_class(grouped_params)  # type: ignore
+        optimizer = self.optimizer_class(grouped_params)  # type: ignore
 
         # return optimizer
 

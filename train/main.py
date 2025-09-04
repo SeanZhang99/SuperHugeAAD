@@ -44,8 +44,6 @@ if __name__ == "__main__":
     # if not model_config:
     model_config = os.path.join(project_path, "configs", "models", "simple_cnn.yaml")
     cli = MultiRunCLI(
-        "--task_config",
-        os.path.join(config_path, "task_config.yaml"),
         "--config",
         os.path.join(config_path, "trainer_config.yaml"),
         "--data",
@@ -54,7 +52,6 @@ if __name__ == "__main__":
         model_config,
         "--model",
         os.path.join(config_path, "optimizer_config.yaml"),
-        "--data.init_args.summary_verbose",
-        "true",
+        task_config_path=os.path.join(config_path, "task_config.yaml"),
     )
     cli.run()

@@ -8,6 +8,7 @@ import pickle
 from typing import Iterator, NamedTuple
 from pathlib import Path
 
+from lightning.pytorch.loggers.logger import Logger
 import numpy as np
 
 from lightning import LightningModule
@@ -240,10 +241,14 @@ class MultiRunCLI:
                 isinstance(cli.trainer.loggers, Sequence)
                 and len(cli.trainer.loggers) > 0
             ):
+                logger: Logger = cli.trainer.loggers[0]
+                assert hasattr(logger, "_root_dir")
+                assert hasattr(logger, "_name")
+                assert hasattr(logger, "_version")
                 cli_ckpt_path: Path = (
-                    Path(cli.trainer.loggers[0]._root_dir)
-                    / str(cli.trainer.loggers[0]._name)
-                    / f"version_{cli.trainer.loggers[0]._version}"
+                    Path(logger._root_dir)
+                    / str(logger._name)
+                    / f"version_{logger._version}"
                     / "cli_ckpt.pkl"
                 )
                 with cli_ckpt_path.open("wb") as f:
@@ -296,7 +301,7 @@ class NamedParamsCLI(LightningCLI):
         )
         parser.link_arguments(
             "data.sample_weights",
-            "model.init_args.loss_args.weight",
+            "model.init_args.multiclass_loss_weights",
             apply_on="instantiate",
         )
 

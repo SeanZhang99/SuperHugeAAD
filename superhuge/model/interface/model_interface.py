@@ -86,14 +86,15 @@ class MInterface(pl2.LightningModule, ABC):
 
         # Configure the input/output of the main model.
         self._required_inputs = self.configure_input()
-        self.get_input_size(**self.model_common_args.model_dump())
+        self.get_input_example(**self.model_common_args.model_dump())
         self._output_keys = self.configure_output()
 
         self.summary_verbose = int(summary_verbose or False)
         summary: torchinfo.ModelStatistics = torchinfo.summary(
             self.model,
-            input_size=list(self.input_size.values()),
+            input_data=list(self.input_example.values()),
             verbose=self.summary_verbose,
+            device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
         )
         self.output_size = summary.summary_list[0].output_size
 
@@ -104,7 +105,7 @@ class MInterface(pl2.LightningModule, ABC):
         self.get_stats_fn = get_stats_fn
 
     @final
-    def get_input_size(self, /, **kwargs) -> Mapping[str, tuple[int]]:
+    def get_input_example(self, /, **kwargs) -> Mapping[str, tuple[int]]:
         """
         Get the input size for each required input type based on the model's forward method.
 
@@ -115,7 +116,7 @@ class MInterface(pl2.LightningModule, ABC):
             list[tuple[int | None, ...]]: A list of input sizes in the order specified by self._required_inputs.
         """
         # Explicitly ensure dictionary insert order
-        input_sizes = OrderedDict()
+        input_example = OrderedDict()
 
         # Determine EEG/EXG input size
         input_length = kwargs["fs"] * kwargs["window_length"]
@@ -125,24 +126,50 @@ class MInterface(pl2.LightningModule, ABC):
         for required_input in self._required_inputs:
             # Add EEG/EXG input size if required
             if required_input == "eeg":
-                input_sizes["eeg"] = (1, input_length, num_channels)
+                input_example["eeg"] = torch.randn(1, input_length, num_channels)
 
             # Add audio input size if required
             if "audio" == required_input:
-                input_sizes["audio"] = (
+                input_example["audio"] = torch.randn(
                     1,
                     input_length,
                     kwargs["num_audio_features"],
                     1,
                 )
+            if "meta" == required_input:
+                input_example["meta"] = {
+                    "dataset_id": torch.tensor(
+                        [
+                            1,
+                        ],
+                        dtype=torch.long,
+                    ),
+                    "subject_id": torch.tensor(
+                        [
+                            1,
+                        ],
+                        dtype=torch.long,
+                    ),
+                    "trial_id": torch.tensor(
+                        [
+                            1,
+                        ],
+                        dtype=torch.long,
+                    ),
+                    "signal_length": input_length,
+                    "num_channel": num_channels,
+                    "fs": kwargs["fs"],
+                }
 
             # Add label input size if required
             if "label" == required_input:
-                input_sizes["label"] = (1,)
+                input_example["label"] = torch.randn(
+                    1,
+                )
 
-        self.input_size = input_sizes
+        self.input_example = input_example
 
-        return input_sizes
+        return input_example
 
     def forward(self, data: dict) -> tuple[torch.Tensor, ...]:
         """

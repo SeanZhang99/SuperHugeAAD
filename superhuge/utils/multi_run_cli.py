@@ -210,33 +210,23 @@ class MultiRunCLI:
                 ckpt_path=self.model_ckpt_path,
             )
 
-            if hasattr(cli.model, "fake_parameter"):
-                for func, loader in zip(
-                    (cli.trainer.validate, cli.trainer.test),
-                    (
-                        cli.datamodule.val_dataloader(),
-                        cli.datamodule.test_dataloader(),
-                    ),
-                ):
-                    results = func(
-                        model=cli.model,
-                        dataloaders=loader,
-                        verbose=verbose,
-                        ckpt_path="best",
-                    )
-                    for key, value in results[0].items():
-                        assert not isnan(value), f"Evaluation metrics got NaN for {key}"
-                        accumulated_results.setdefault(key, []).append(value)
-            else:
-                results = cli.trainer.test(
+            for func, loader in zip(
+                (cli.trainer.validate, cli.trainer.test),
+                (
+                    cli.datamodule.val_dataloader(),
+                    cli.datamodule.test_dataloader(),
+                ),
+            ):
+                results = func(
                     model=cli.model,
-                    datamodule=cli.datamodule,
-                    ckpt_path="best",
+                    dataloaders=loader,
                     verbose=verbose,
+                    ckpt_path="best",
                 )
                 for key, value in results[0].items():
                     assert not isnan(value), f"Evaluation metrics got NaN for {key}"
                     accumulated_results.setdefault(key, []).append(value)
+
             if (
                 isinstance(cli.trainer.loggers, Sequence)
                 and len(cli.trainer.loggers) > 0
@@ -246,9 +236,9 @@ class MultiRunCLI:
                 assert hasattr(logger, "_name")
                 assert hasattr(logger, "_version")
                 cli_ckpt_path: Path = (
-                    Path(logger._root_dir)
-                    / str(logger._name)
-                    / f"version_{logger._version}"
+                    Path(logger._root_dir)  # type: ignore
+                    / str(logger._name)  # type: ignore
+                    / f"version_{logger._version}"  # type: ignore
                     / "cli_ckpt.pkl"
                 )
                 with cli_ckpt_path.open("wb") as f:

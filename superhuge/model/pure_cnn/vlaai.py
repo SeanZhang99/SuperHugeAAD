@@ -1,5 +1,5 @@
 import gc
-from typing import Annotated, Sequence
+from typing import Annotated, Any, Mapping, Sequence
 
 import einops
 from einops.layers.torch import EinMix
@@ -56,12 +56,11 @@ class ExtractorParams(BaseModel):
 
 
 def extractor(
-    num_kernels: Sequence[int] | int,
-    kernel_sizes: Sequence[int] | int,
+    num_kernels: Sequence[int],
+    kernel_sizes: Sequence[int],
     input_channels: int,
-    input_time_dim: int,
-    num_layers: int,
     drouput: float = 0.0,
+    **kwargs,
 ):
 
     layers = nn.Sequential()
@@ -69,9 +68,14 @@ def extractor(
         layers.append(
             nn.Sequential(
                 nn.ZeroPad1d((0, kernel_size - 1)),
-                convNd_with_constraint(
-                    nd=1,
-                    max_norm=2,
+                # convNd_with_constraint(
+                #     nd=1,
+                #     max_norm=2,
+                #     in_channels=input_channels if i == 0 else num_kernels[i - 1],
+                #     out_channels=num_kernel,
+                #     kernel_size=kernel_size,
+                # ),
+                nn.Conv1d(
                     in_channels=input_channels if i == 0 else num_kernels[i - 1],
                     out_channels=num_kernel,
                     kernel_size=kernel_size,
@@ -87,15 +91,20 @@ def extractor(
 
 def output_context(
     input_channels: int,
-    time_dim: int,
     kernel_size: int,
     drouput: float = 0.0,
+    **kwargs,
 ):
     return nn.Sequential(
         nn.ZeroPad1d((kernel_size - 1, 0)),
-        convNd_with_constraint(
-            nd=1,
-            max_norm=2,
+        # convNd_with_constraint(
+        #     nd=1,
+        #     max_norm=2,
+        #     in_channels=input_channels,
+        #     out_channels=input_channels,
+        #     kernel_size=kernel_size,
+        # ),
+        nn.Conv1d(
             in_channels=input_channels,
             out_channels=input_channels,
             kernel_size=kernel_size,
@@ -109,7 +118,8 @@ def output_context(
 
 def vlaai_block(
     *,
-    extractor_args: ExtractorParams,
+    num_kernels: Sequence[int],
+    kernel_sizes: Sequence[int],
     output_context_kernel_size: int,
     num_channels: int,
     time_dim: int,
@@ -117,10 +127,17 @@ def vlaai_block(
 ):
     return nn.Sequential(
         extractor(
-            **extractor_args.model_dump(),
+            num_kernels=num_kernels,
+            kernel_sizes=kernel_sizes,
             input_channels=num_channels,
             drouput=drouput,
-            input_time_dim=time_dim,
+        ),
+        nn.Dropout(drouput),
+        output_context(
+            input_channels=num_kernels[-1],
+            kernel_size=output_context_kernel_size,
+            time_dim=time_dim,
+            drouput=drouput,
         ),
         # EinMix(
         #     "b k t -> b c t",
@@ -129,13 +146,6 @@ def vlaai_block(
         #     c=num_channels,
         #     k=extractor_args.num_kernels[-1],
         # ),
-        nn.Dropout(drouput),
-        output_context(
-            input_channels=extractor_args.num_kernels[-1],
-            kernel_size=output_context_kernel_size,
-            time_dim=time_dim,
-            drouput=drouput,
-        ),
     )
 
 
@@ -159,9 +169,12 @@ class VLAAI(nn.Module):
 
         self._vlaai_blocks = nn.ModuleList(
             vlaai_block(
-                extractor_args=extractor_args,
+                num_kernels=extractor_args.num_kernels,
+                kernel_sizes=extractor_args.kernel_sizes,
                 output_context_kernel_size=output_context_kernel_size,
-                num_channels=kwargs["num_channels"],
+                num_channels=(
+                    kwargs["num_channels"] if _ == 0 else extractor_args.num_kernels[-1]
+                ),
                 time_dim=kwargs["fs"] * kwargs["window_length"],
                 drouput=dropout,
             )

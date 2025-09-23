@@ -15,7 +15,7 @@ directional_focus_decoding:
           class_path: superhuge.model.loss.CrossEntropyLoss
   tasks:
     binary_leftright:
-      enable: 1
+      enable: 0
       data:
         init_args:
           meta_filter_func_args:
@@ -105,7 +105,7 @@ speech_reconstruction:
           class_path: superhuge.model.loss.MSELoss
   tasks:
     envelope_reconstruction:
-      enable: 0
+      enable: 1
       data:
         init_args:
           meta_filter_func_args:
@@ -113,7 +113,7 @@ speech_reconstruction:
 
   cross_validation:
     leave_one_trial_out:
-      enable: 0
+      enable: 1
       data:
         init_args:
           meta_group_func: superhuge.data.metadata_processing.loto

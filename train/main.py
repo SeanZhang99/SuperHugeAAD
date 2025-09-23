@@ -32,7 +32,6 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import torch
 
 from superhuge.utils.multi_run_cli import MultiRunCLI
-from superhuge.utils.pick_model_config import pick_file
 
 torch.set_float32_matmul_precision("medium")
 
@@ -42,7 +41,7 @@ if __name__ == "__main__":
     config_path = os.path.join(project_path, "configs")
     # model_config = pick_file(project_path, timeout=10)
     # if not model_config:
-    model_config = os.path.join(project_path, "configs", "models", "simple_cnn.yaml")
+    model_config = os.path.join(project_path, "configs", "models", "vlaai.yaml")
     cli = MultiRunCLI(
         "--config",
         os.path.join(config_path, "trainer_config.yaml"),

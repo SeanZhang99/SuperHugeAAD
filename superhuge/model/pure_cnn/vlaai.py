@@ -68,14 +68,9 @@ def extractor(
         layers.append(
             nn.Sequential(
                 nn.ZeroPad1d((0, kernel_size - 1)),
-                # convNd_with_constraint(
-                #     nd=1,
-                #     max_norm=2,
-                #     in_channels=input_channels if i == 0 else num_kernels[i - 1],
-                #     out_channels=num_kernel,
-                #     kernel_size=kernel_size,
-                # ),
-                nn.Conv1d(
+                convNd_with_constraint(
+                    nd=1,
+                    max_norm=2,
                     in_channels=input_channels if i == 0 else num_kernels[i - 1],
                     out_channels=num_kernel,
                     kernel_size=kernel_size,
@@ -97,14 +92,9 @@ def output_context(
 ):
     return nn.Sequential(
         nn.ZeroPad1d((kernel_size - 1, 0)),
-        # convNd_with_constraint(
-        #     nd=1,
-        #     max_norm=2,
-        #     in_channels=input_channels,
-        #     out_channels=input_channels,
-        #     kernel_size=kernel_size,
-        # ),
-        nn.Conv1d(
+        convNd_with_constraint(
+            nd=1,
+            max_norm=2,
             in_channels=input_channels,
             out_channels=input_channels,
             kernel_size=kernel_size,

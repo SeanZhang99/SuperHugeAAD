@@ -5,10 +5,10 @@ init_args:
     extractor_args:
       class_path: superhuge.model.pure_cnn.ExtractorParams
       init_args:
-        kernel_sizes: [8]
-        num_kernels: [24]
-        num_layers: 6
-    nb_blocks: 1
+        kernel_sizes: [15]
+        num_kernels: [16]
+        num_layers: 3
+    nb_blocks: 2
     output_context_kernel_size: 9
     dropout: 0.2
     use_skip: false

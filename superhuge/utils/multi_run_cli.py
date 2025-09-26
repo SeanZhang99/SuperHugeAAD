@@ -221,7 +221,9 @@ class MultiRunCLI:
                     model=cli.model,
                     dataloaders=loader,
                     verbose=verbose,
-                    ckpt_path="best",
+                    ckpt_path=(
+                        "best" if not hasattr(cli.model, "fake_parameter") else None
+                    ),
                 )
                 for key, value in results[0].items():
                     assert not isnan(value), f"Evaluation metrics got NaN for {key}"

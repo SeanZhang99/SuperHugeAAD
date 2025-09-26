@@ -1,6 +1,8 @@
 from typing import Any
 from .stats_abc import StatisticalTransform
 import numpy as np
+from pyriemann.utils.mean import mean_riemann
+from pyriemann.utils.base import invsqrtm
 
 
 class RiemannianAlign(StatisticalTransform):
@@ -28,8 +30,6 @@ class RiemannianAlign(StatisticalTransform):
         self._cov_matrices.append(cov)
 
     def fit(self):
-        from pyriemann.utils.mean import mean_riemann
-        from pyriemann.utils.base import invsqrtm
 
         mean_cov = mean_riemann(np.stack(self._cov_matrices, axis=0))
         self._stat = invsqrtm(mean_cov)

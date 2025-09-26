@@ -291,7 +291,7 @@ class DInterface(pl2.LightningDataModule):
 
         metadata = self.filt_metadata(metadata, self.dataset_cfg.meta_filter_func)
 
-        splits = self.dataset_cfg.meta_group_func(
+        splits: Mapping = self.dataset_cfg.meta_group_func(
             metadata=metadata,
             val_fold_idx=self.dataset_cfg.val_fold_idx,
             test_fold_idx=self.dataset_cfg.test_fold_idx,

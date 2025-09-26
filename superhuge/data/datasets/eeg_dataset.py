@@ -110,7 +110,7 @@ class EegDataset(Dataset):
                 for t in self.transform.transforms
                 if isinstance(t, StatisticalTransform)
             ]
-            for file_name in tqdm.tqdm(self.files):
+            for file_name in self.files:
                 eeg = np.load(os.path.join(self.eeg_path, file_name + ".npy"))
                 for t in updatable_transforms:
                     t.update(eeg)

@@ -5,15 +5,5 @@ from .pearson_loss import (
     AbsPearsonLoss,
     ContrastiveAbsPearsonLoss,
     pearson_corrcoef,
+    SumPearsonLoss,
 )
-
-
-__all__ = [
-    "MSELoss",
-    "ContrastiveMSELoss",
-    "PearsonLoss",
-    "ContrastivePearsonLoss",
-    "AbsPearsonLoss",
-    "ContrastiveAbsPearsonLoss",
-    "pearson_corrcoef",
-]

@@ -102,7 +102,8 @@ speech_reconstruction:
       init_args:
         num_audio_features: 1
         loss:
-          class_path: superhuge.model.loss.MSELoss
+          class_path: superhuge.model.loss.ContrastivePearsonLoss
+          # class_path: superhuge.model.loss.PearsonLoss
   tasks:
     envelope_reconstruction:
       enable: 1

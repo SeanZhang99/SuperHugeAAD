@@ -69,6 +69,14 @@ class ContrastivePearsonLoss(_Loss):
         return loss
 
 
+class SumPearsonLoss(_Loss):
+    def forward(
+        self, y_pred: torch.Tensor, y_true: torch.Tensor, *args, **kwargs
+    ) -> torch.Tensor:
+        # sum across feature and speaker dimension
+        return -pearson_corrcoef(y_pred, y_true, dim=1).mean(dim=(1, 2))
+
+
 class AbsPearsonLoss(_Loss):
     def forward(
         self, y_pred: torch.Tensor, y_true: torch.Tensor, *args, **kwargs

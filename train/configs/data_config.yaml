@@ -18,12 +18,12 @@ init_args:
           # - 1 # AHU
           # - 2 # DTU
           # - 3 # Estart
-          # - 4 # KUL: lrtc?
+          - 4 # KUL: lrtc?
           # - 5 # KUL-AV-GC?
           # - 6 # NJU
           # - 7 # NUS
           # - 8 # PKU?
-          - 9 # sparKULee
+          # - 9 # sparKULee
   overlap: 1
   root_path: E:/derivatives/SuperHuge
   preproc_stage: preprocessed
@@ -58,4 +58,4 @@ init_args:
     #     apply_prob: 1.0
     #     when: before_returning
     #     whom: audio
-  window_length: 1
+  window_length: 10

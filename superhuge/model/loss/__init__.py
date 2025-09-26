@@ -4,15 +4,6 @@ from .regression import (
     ContrastivePearsonLoss,
     AbsPearsonLoss,
     ContrastiveAbsPearsonLoss,
+    SumPearsonLoss,
 )
 from .regression.mse_loss import MSELoss, ContrastiveMSELoss
-
-__all__ = [
-    "CrossEntropyLoss",
-    "AbsPearsonLoss",
-    "ContrastiveAbsPearsonLoss",
-    "MSELoss",
-    "ContrastiveMSELoss",
-    "PearsonLoss",
-    "ContrastivePearsonLoss",
-]

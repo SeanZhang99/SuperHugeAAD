@@ -59,3 +59,4 @@ init_args:
     #     when: before_returning
     #     whom: audio
   window_length: 10
+  summary_verbose: true

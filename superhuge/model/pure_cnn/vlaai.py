@@ -10,8 +10,8 @@ from ..module.convnd_with_constraint import convNd_with_constraint
 
 
 class ExtractorParams(BaseModel):
-    num_kernels: int | Sequence[int]
-    kernel_sizes: int | Sequence[int]
+    num_kernels: Sequence[int]
+    kernel_sizes: Sequence[int]
     num_layers: Annotated[int | None, Field(gt=0)] = None
 
     @model_validator(mode="before")
@@ -59,6 +59,7 @@ def extractor(
     num_kernels: Sequence[int],
     kernel_sizes: Sequence[int],
     input_channels: int,
+    time_dim: int,
     drouput: float = 0.0,
     **kwargs,
 ):
@@ -75,8 +76,8 @@ def extractor(
                     out_channels=num_kernel,
                     kernel_size=kernel_size,
                 ),
-                # nn.LayerNorm([num_kernel, input_time_dim]),
-                nn.BatchNorm1d(num_kernel),
+                nn.LayerNorm([num_kernel, time_dim]),
+                # nn.BatchNorm1d(num_kernel),
                 nn.ELU(),
                 nn.Dropout(drouput),
             )
@@ -87,6 +88,7 @@ def extractor(
 def output_context(
     input_channels: int,
     kernel_size: int,
+    time_dim: int,
     drouput: float = 0.0,
     **kwargs,
 ):
@@ -99,8 +101,8 @@ def output_context(
             out_channels=input_channels,
             kernel_size=kernel_size,
         ),
-        # nn.LayerNorm([input_channels, time_dim]),
-        nn.BatchNorm1d(input_channels),
+        nn.LayerNorm([input_channels, time_dim]),
+        # nn.BatchNorm1d(input_channels),
         nn.ELU(),
         nn.Dropout(drouput),
     )
@@ -121,6 +123,7 @@ def vlaai_block(
             kernel_sizes=kernel_sizes,
             input_channels=num_channels,
             drouput=drouput,
+            time_dim=time_dim,
         ),
         nn.Dropout(drouput),
         output_context(
@@ -196,7 +199,7 @@ class VLAAI(nn.Module):
         return x_hat
 
 
-class VLAAI_ws(VLAAI):
+class VLAAI_ws(nn.Module):
     """
     VLAAI_ws weight sharing version of VLAAI.
 
@@ -204,18 +207,57 @@ class VLAAI_ws(VLAAI):
     :type VLAAI: a subclass of torch.nn.Module
     """
 
-    def __init__(self, /, **kwargs):
-        """
-        __init__ instantiate VLAAI_ws object.
-        :param kwargs: kwargs for VLAAI. You may refer to VLAAI class for more details.
-        """
-        super().__init__(**kwargs)
+    def __init__(
+        self,
+        /,
+        *,
+        nb_blocks: int,
+        extractor_args: ExtractorParams,
+        output_context_kernel_size: int,
+        use_skip: bool = True,
+        dropout: float = 0.0,
+        **kwargs,
+    ):
+        super().__init__()
+        self.use_skip = use_skip
+        if isinstance(nb_blocks, str):
+            nb_blocks = int(nb_blocks)
+
         block = vlaai_block(
-            extractor_args=kwargs["extractor_args"],
-            output_context_kernel_size=kwargs["output_context_kernel_size"],
-            num_channels=kwargs["num_channels"],
+            num_kernels=extractor_args.num_kernels,
+            kernel_sizes=extractor_args.kernel_sizes,
+            output_context_kernel_size=output_context_kernel_size,
+            num_channels=(
+                kwargs["num_channels"] if _ == 0 else extractor_args.num_kernels[-1]
+            ),
             time_dim=kwargs["fs"] * kwargs["window_length"],
-            drouput=kwargs["dropout"],
+            drouput=dropout,
         )
-        self.vlaai_block = nn.ModuleList(block for _ in range(kwargs["nb_blocks"]))
+        # self.vlaai_block = nn.ModuleList(block for _ in range(kwargs["nb_blocks"]))
+        self.block = block
+        self.nb_blocks = nb_blocks
         gc.collect()
+
+    def forward(self, x: Tensor) -> Tensor:
+        """
+        forward Call forward pass of VLAAI model.
+
+        :param x: input tensor
+        :type x: torch.Tensor
+        :return: output tensor
+        :rtype: torch.Tensor
+        """
+        # 将输入从 (b, t, c) 转换为 (b, c, t)
+        x = einops.rearrange(x, "b t c -> b c t")
+        x_hat = x
+        for i in range(self.nb_blocks):
+            if self.use_skip and i > 0:
+                # Problem:
+                # 1st layer: no effect. then x_hat get normalized after x_hat=block(x_hat)
+                # 2nd layer: x_hat already normalized, but x not normalized.
+                x_hat = x_hat + x
+            x_hat = self.block(x_hat)
+
+        x_hat = einops.rearrange(x_hat, "b c t -> b t c")
+
+        return x_hat

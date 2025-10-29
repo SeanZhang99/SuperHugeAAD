@@ -24,7 +24,16 @@ class RegressionInterface(MInterface):
 
         self.post_model = regression_post_model(self.output_size, num_audio_features)
         torchinfo.summary(
-            self.post_model, input_size=self.output_size, verbose=self.summary_verbose
+            self.post_model,
+            input_size=self.output_size,
+            verbose=self.summary_verbose,
+            col_names=[
+                "input_size",
+                "output_size",
+                "num_params",
+                "mult_adds",
+                "trainable",
+            ],
         )
 
     def log_metric_and_stats(

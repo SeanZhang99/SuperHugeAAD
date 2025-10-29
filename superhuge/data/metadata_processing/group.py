@@ -291,7 +291,7 @@ def cgrid_leave_one_speaker_out(
     }
 
 
-def cgrid_within_trial(
+def within_trial(
     metadata: Metadata,
     test_fold_idx: int,
     val_fold_idx: int,
@@ -300,7 +300,7 @@ def cgrid_within_trial(
     **kwargs: Any,
 ) -> CrossValidationEntry:
     """
-    This function implements a within-trial cross-validation strategy for the CGrid dataset.
+    This function implements a within-trial cross-validation strategy.
     """
 
     assert (

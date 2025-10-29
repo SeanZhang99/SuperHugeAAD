@@ -95,6 +95,13 @@ class MInterface(pl2.LightningModule, ABC):
             input_data=list(self.input_example.values()),
             verbose=self.summary_verbose,
             device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+            col_names=[
+                "input_size",
+                "output_size",
+                "num_params",
+                "mult_adds",
+                "trainable",
+            ],
         )
         self.output_size = summary.summary_list[0].output_size
 

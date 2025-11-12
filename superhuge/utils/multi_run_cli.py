@@ -1,10 +1,13 @@
 from collections.abc import Generator, Sequence
 from dataclasses import dataclass
+import datetime
 import hashlib
 from itertools import product
 from math import isnan
 import os
 import pickle
+from pyexpat import model
+import time
 from typing import Iterator, NamedTuple
 from pathlib import Path
 
@@ -13,6 +16,7 @@ import numpy as np
 
 from lightning import LightningModule
 from lightning.pytorch.cli import LightningCLI, SaveConfigCallback
+import yaml
 
 from .task_config_parser import TaskConfigParser
 
@@ -148,8 +152,18 @@ class MultiRunCLI:
                     config_path = self.cli_argv[i + 1]
                     model_name = os.path.splitext(os.path.basename(config_path))[0]
                     if model_name != "optimizer_config":
-                        return model_name
-        return None
+                        with open(config_path, "r") as f:
+
+                            model_config = f.read()
+                            model_hash = hashlib.sha256(
+                                model_config.encode("utf-8")
+                            ).hexdigest()[:4]
+
+                        return (
+                            model_name,
+                            f"{model_hash}",
+                        )
+        return None, None
 
     def run(
         self,
@@ -163,6 +177,7 @@ class MultiRunCLI:
             config_list,
             experiment_name,
         ) in self._experiment_states:
+            model_name, model_hash = self.__extract_model_name()
             args = (
                 self.cli_argv
                 + config_list
@@ -170,7 +185,7 @@ class MultiRunCLI:
                     "--experiment_name",
                     f"{experiment_name}-{extra_experiment_name}",
                     "--model_name",
-                    f"{self.__extract_model_name()}",
+                    f"{model_name}_v_{model_hash}",
                 ]
             )
             seed = str(self.__generate_config_hash(args))

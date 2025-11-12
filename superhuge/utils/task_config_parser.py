@@ -62,11 +62,19 @@ class TaskConfigParser:
                 for cv_name, cv_details in self.cross_validations.get(
                     task_type, {}
                 ).items():
-                    n_folds = cv_details["data"]["init_args"].get("n_folds", None)
+                    n_folds = (
+                        cv_details.get("data", {})
+                        .get("init_args", {})
+                        .get("n_folds", None)
+                    )
                     if n_folds is None:
-                        n_folds = task_detail["data"]["init_args"].get("n_folds", None)
+                        n_folds = (
+                            task_detail.get("data", {})
+                            .get("init_args", {})
+                            .get("n_folds", None)
+                        )
                     if n_folds is None:
-                        n_folds = general_data["init_args"].get("n_folds", None)
+                        n_folds = general_data.get("init_args", {}).get("n_folds", None)
                     assert n_folds is not None, "n_folds not specified."
                     task_data: dict = task_detail.get("data", {})
                     cv_data: dict = cv_details.get("data", {})

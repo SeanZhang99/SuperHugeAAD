@@ -25,7 +25,6 @@ DInterface can be seen as transparent to all your args.
 """
 import os
 
-import numpy as np
 
 os.environ["KERAS_BACKEND"] = "torch"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -39,18 +38,21 @@ torch.set_float32_matmul_precision("medium")
 if __name__ == "__main__":
     project_path = os.path.dirname(os.path.abspath(__file__))
     config_path = os.path.join(project_path, "configs")
-    # model_config = pick_file(project_path, timeout=10)
-    # if not model_config:
     model_config = os.path.join(project_path, "configs", "models", "vlaai.yaml")
     cli = MultiRunCLI(
         "--config",
         os.path.join(config_path, "trainer_config.yaml"),
         "--data",
-        os.path.join(config_path, "data_config.yaml"),
+        os.path.join(
+            config_path,
+            "data_config.yaml" if os.name == "nt" else "wsl_data_config.yaml",
+        ),
         "--model",
         model_config,
         "--model",
         os.path.join(config_path, "optimizer_config.yaml"),
+        "--model.init_args.summary_verbose",
+        "true",
         task_config_path=os.path.join(config_path, "task_config.yaml"),
     )
     cli.run()

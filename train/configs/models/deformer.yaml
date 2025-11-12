@@ -4,11 +4,9 @@ init_args:
   model_args:
     dropout: 0.3
     ff_hidden_dim: 128
-    mha_depth: 4
-    time_dim: 1280
+    mha_depth: 2
     mha_embed_dim: 256
-    mha_num_heads: 8
-    num_electrodes: 70
-    num_kernels: 32
+    mha_num_heads: 2
+    num_kernels: 16
     temporal_kernel_size: 13
   model_class: superhuge.model.former.Deformer

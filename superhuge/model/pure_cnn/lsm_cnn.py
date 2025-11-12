@@ -40,7 +40,7 @@ def cnn_block(
     channel_kernel_size: int | Sequence[int],
     num_kernels: int | Sequence[int],
     dropout: float = 0.0,
-) -> Tuple[nn.Module, Tensor]:
+) -> nn.Module:
     class cnn_config(BaseModel):
         num_layers: Annotated[int, Field(ge=1)]
         temporal_kernel_size: Annotated[Sequence[int], Field(min_length=1)]

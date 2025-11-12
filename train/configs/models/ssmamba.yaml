@@ -1,0 +1,13 @@
+---
+class_path: superhuge.model.interface.MInterface
+init_args:
+  model_args:
+    d_inner: 256
+    n_head: 2
+    n_layers: 1
+    fft_conv1d_kernel: [5, 1]
+    fft_conv1d_padding: [2, 0]
+    dropout: 0.5
+    g_con: 1
+    within_sub_num: 110
+  model_class: superhuge.model.ssmamba.SSMamba

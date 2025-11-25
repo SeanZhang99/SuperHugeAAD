@@ -29,14 +29,14 @@ class TransformComposer:
 
     def __call__(
         self,
-        x: np.ndarray | int | str,
+        x: np.ndarray,
         /,
         *args: Any,
         meta: MetadataElement,
         when: Literal["before_slicing", "before_returning"],
         whom: Literal["eeg", "audio", "label", "all"],
         **kwargs,
-    ) -> tuple[np.ndarray | int | str, MetadataElement, Any]:
+    ) -> tuple[np.ndarray, MetadataElement]:
         """Filter metadata element."""
         assert (
             when in self._when_options
@@ -48,8 +48,15 @@ class TransformComposer:
             if transform.when == when and (
                 whom in transform.whom or "all" in transform.whom
             ):
-                x = transform(x, *args, meta=meta)[0]
-        return x, meta, *args
+                output = transform(x, meta=meta)
+                assert isinstance(
+                    output["x"], np.ndarray
+                ), f"Transform {transform} did not return expected ndarray for x."
+                x = output["x"]
+                if "meta" in output:
+                    meta = output["meta"]  # type: ignore
+
+        return x, meta
 
     @classmethod
     def __get_pydantic_core_schema__(

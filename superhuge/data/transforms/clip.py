@@ -27,8 +27,8 @@ class Clipper(Transform):
             self.lower_bound = lower_bound
             self.upper_bound = upper_bound
 
-    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> tuple[np.ndarray, Any]:
+    def __call__(self, x: np.ndarray, /, **kwargs) -> dict[str, np.ndarray]:
         super().__call__(x)
         if self.roll():
             x = np.clip(x, a_min=self.lower_bound, a_max=self.upper_bound)
-        return x, *args
+        return {"x": x}

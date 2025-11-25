@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from collections import OrderedDict
 from collections.abc import Callable, Sequence
 from typing import Any, Mapping, final
+from warnings import warn
 
 import lightning as pl2
 import torch
@@ -110,6 +111,27 @@ class MInterface(pl2.LightningModule, ABC):
         self.log_norm = log_norm
 
         self.get_stats_fn = get_stats_fn
+
+        if self.ckpt_path is not None:
+            self.resume_model_checkpoint()
+
+    def resume_model_checkpoint(self):
+        """Resume model from checkpoint if ckpt_path is provided."""
+        if self.ckpt_path is not None:
+            print(
+                f"Restoring model parameters from the checkpoint path at {self.ckpt_path}"
+            )
+            checkpoint = torch.load(self.ckpt_path)
+            state_dict: dict[str, torch.Tensor] = checkpoint["state_dict"]
+            self.model.load_state_dict(
+                {
+                    ".".join(k.split(".")[1:]): v
+                    for k, v in state_dict.items()
+                    if k.startswith("model")
+                },
+            )
+        else:
+            warn("ckpt_path is None, cannot restore model parameters.")
 
     @final
     def get_input_example(self, /, **kwargs) -> Mapping[str, tuple[int]]:

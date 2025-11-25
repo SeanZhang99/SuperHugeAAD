@@ -33,16 +33,15 @@ class Scale(Transform):
         self._scaling_factor_key = scaling_factor_key
         self.eps = eps
 
-    def __call__(
-        self, x: np.ndarray, /, *args, meta: MetadataElement, **kwargs
-    ) -> tuple[np.ndarray, Any]:
+    def __call__(self, x: np.ndarray, **kwargs) -> dict[str, np.ndarray]:
         super().__call__(x)
+        meta: MetadataElement = kwargs.get("meta")  # type: ignore
         entry = f"dataset-{meta.dataset_id:03d}-subject-{meta.subject_id:03d}"
         if entry not in self._scale:
             warn(f"Scaling factor for {entry} not found. Skip applying scaling.")
-            return x, *args
+            return {"x": x}
         else:
             key = meta.speech_feature_type if self.whom == "audio" else "eeg"  # type: ignore
             scale_factor = self._scale[entry][key]
 
-            return (x / (scale_factor + self.eps), *args)
+            return {"x": (x / (scale_factor + self.eps))}

@@ -24,7 +24,7 @@ class ChannelSelection(Transform):
             self.channel_names is not None
         ), "Either channel_indices or channel_names must be provided, but not both."
 
-    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> tuple[np.ndarray, Any]:
+    def __call__(self, x: np.ndarray, /, **kwargs) -> dict[str, np.ndarray]:
         super().__call__(x)
         if self.channel_indices is None:
             meta: MetadataElement = kwargs.get("meta", {})
@@ -38,7 +38,7 @@ class ChannelSelection(Transform):
                         self.channel_indices = []
                     self.channel_indices.append(idx - 1)
         assert self.channel_indices, "No valid channel indices were found."
-        return x[..., self.channel_indices], *args
+        return {"x": x[..., self.channel_indices]}
 
     @property
     def num_channels(self) -> int:

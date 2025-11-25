@@ -13,8 +13,8 @@ class ChannelMask(Transform):
         super().__init__(**kwargs)
         self.p_mask = p_mask
 
-    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> tuple[np.ndarray, Any]:
+    def __call__(self, x: np.ndarray, /, **kwargs) -> dict[str, np.ndarray]:
         super().__call__(x)
         if self.roll():
             x *= self.dice.random(x.shape[-1]) > self.p_mask
-        return x, *args
+        return {"x": x}

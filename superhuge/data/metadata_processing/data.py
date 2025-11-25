@@ -31,6 +31,12 @@ class ClassifyMetadataElement(MetadataElement):
     label: str | int | None
 
 
+class RegressionClassifyMetadataElement(
+    RegressionMetadataElement, ClassifyMetadataElement
+):
+    pass
+
+
 MetadataElementType = TypeVar("MetadataElementType", bound=MetadataElement)
 
 DatasetSubjectTrialEntry: TypeAlias = str

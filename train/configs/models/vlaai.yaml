@@ -5,11 +5,11 @@ init_args:
     extractor_args:
       class_path: superhuge.model.pure_cnn.ExtractorParams
       init_args:
-        kernel_sizes: [15]
-        num_kernels: [16]
-        num_layers: 3
-    nb_blocks: 2
-    output_context_kernel_size: 9
-    dropout: 0.2
+        kernel_sizes: [8]
+        num_kernels: [256, 256, 256, 128, 128]
+        num_layers: 5
+    nb_blocks: 4
+    output_context_kernel_size: 32
+    dropout: 0.5
     use_skip: false
   model_class: superhuge.model.pure_cnn.VLAAI

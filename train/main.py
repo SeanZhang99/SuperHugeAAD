@@ -38,7 +38,7 @@ torch.set_float32_matmul_precision("medium")
 if __name__ == "__main__":
     project_path = os.path.dirname(os.path.abspath(__file__))
     config_path = os.path.join(project_path, "configs")
-    model_config = os.path.join(project_path, "configs", "models", "vlaai.yaml")
+    model_config = os.path.join(project_path, "configs", "models", "ssmamba.yaml")
     cli = MultiRunCLI(
         "--config",
         os.path.join(config_path, "trainer_config.yaml"),
@@ -54,5 +54,6 @@ if __name__ == "__main__":
         "--model.init_args.summary_verbose",
         "true",
         task_config_path=os.path.join(config_path, "task_config.yaml"),
+        cli_checkpoint_path=r"/mnt/c/Users/sean/Documents/GitDocuments/24-12-SuperHugeAAD/SuperHugeAAD/logs/tb_logs/ssmamba_v_b661/dnn_envelope_reconstruction/pcc_diff/leave_one_trial_out/3497017829/10/version_11/cli_ckpt.pkl",
     )
     cli.run()

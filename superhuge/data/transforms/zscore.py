@@ -14,10 +14,9 @@ class ZScore(Transform):
 
         super().__init__(**kwargs)
 
-    def __call__(
-        self, x: np.ndarray, /, *args, eps=1.0e-5, **kwargs
-    ) -> tuple[np.ndarray, Any]:
-        super().__call__(x)
+    def __call__(self, x: np.ndarray, **kwargs) -> dict[str, np.ndarray]:
+        super().__call__(x, **kwargs)
+        eps = kwargs.get("eps", 1.0e-5)
         x -= x.mean(axis=0, keepdims=True)
         x /= x.std(axis=0, keepdims=True) + eps
-        return x, *args
+        return {"x": x}

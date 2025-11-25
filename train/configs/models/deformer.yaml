@@ -3,10 +3,10 @@ class_path: superhuge.model.interface.MInterface
 init_args:
   model_args:
     dropout: 0.3
-    ff_hidden_dim: 128
+    ff_hidden_dim: 64
     mha_depth: 2
-    mha_embed_dim: 256
+    mha_embed_dim: 32
     mha_num_heads: 2
-    num_kernels: 16
+    num_kernels: 8
     temporal_kernel_size: 13
   model_class: superhuge.model.former.Deformer

@@ -27,12 +27,14 @@ class TimeShift(Transform):
             else int(max_shift)
         )
 
-    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> tuple[np.ndarray, Any]:
-        super().__call__(x, *args, **kwargs)
+    def __call__(self, x: np.ndarray, **kwargs) -> dict[str, np.ndarray]:
+        super().__call__(
+            x,
+        )
         if self.roll():
             shift = np.random.randint(-self.max_shift, self.max_shift)
             if shift >= 0:
-                return np.pad(x[shift:], ((0, shift), (0, 0))).copy(), *args
+                return ({"x": np.pad(x[shift:], ((0, shift), (0, 0))).copy()},)  # type: ignore
             else:
-                return np.pad(x[:shift], ((-shift, 0), (0, 0))).copy(), *args
-        return x, *args
+                return ({"x": np.pad(x[:shift], ((-shift, 0), (0, 0))).copy()},)  # type: ignore
+        return ({"x": x},)  # type: ignore

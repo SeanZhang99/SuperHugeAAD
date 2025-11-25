@@ -36,6 +36,6 @@ class RiemannianAlign(StatisticalTransform):
         assert isinstance(self._stat, np.ndarray)
         self._fitted = True
 
-    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> tuple[np.ndarray, Any]:
-        super().__call__(x, *args)[0]
-        return (self._stat @ x.T).T, *args
+    def __call__(self, x: np.ndarray, **kwargs) -> dict[str, np.ndarray]:
+        super().__call__(x)
+        return {"x": (self._stat @ x.T).T}

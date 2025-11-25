@@ -28,9 +28,8 @@ class ZScoreAlign(StatisticalTransform):
         self._stat = (mean, std)
         self._fitted = True
 
-    def __call__(self, x: np.ndarray, /, *args, **kwargs) -> tuple[np.ndarray, Any]:
-        super().__call__(x, *args, **kwargs)[0]
+    def __call__(self, x: np.ndarray, **kwargs) -> dict[str, np.ndarray]:
         assert self._fitted, "ZScoreAlign must be fitted before calling."
         assert self._stat is not None, "Statistical parameters are not set."
         mean, std = self._stat
-        return (x - mean) / std, *args
+        return {"x": (x - mean) / std}  # type: ignore

@@ -146,8 +146,8 @@ class Transform(ABC):
 
     @abstractmethod
     def __call__(
-        self, x: np.ndarray | int | str, /, *args: Any, **kwargs
-    ) -> tuple[np.ndarray | int | str, Any]:
+        self, x: np.ndarray, /, **kwargs
+    ) -> dict[str, np.ndarray | int | str | Any]:
         """Apply transformation to EEG data.
 
         Args:
@@ -156,20 +156,12 @@ class Transform(ABC):
         Returns:
             np.ndarray: Transformed EEG data.
         """
-        if isinstance(x, int) or isinstance(x, str):
-            # If x is an int or str, we assume it's a label or metadata.
-            # We return it as is, since transforms are not applied to labels.
-            return x, *args
-        elif isinstance(x, np.ndarray):
-            assert x.ndim in (2, 3), f"Input must be a 2D/3D ndarray but got {x.ndim}D"
-            assert (
-                x.shape[1] < x.shape[0]
-            ), f"Input must be time first, but seems to be channel first: {x.shape}."
-            return x, *args
-        else:
-            raise TypeError(
-                f"Input must be a np.ndarray, int, or str but got {type(x).__name__}."
-            )
+        assert isinstance(x, np.ndarray), f"Input must be an ndarray but got {type(x)}"
+        assert x.ndim in (2, 3), f"Input must be a 2D/3D ndarray but got {x.ndim}D"
+        assert (
+            x.shape[1] < x.shape[0]
+        ), f"Input must be time first, but seems to be channel first: {x.shape}."
+        return {"x": x}
 
     def roll(self) -> bool:
         return self.dice.random() < self.apply_prob

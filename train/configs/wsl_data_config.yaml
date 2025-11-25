@@ -2,9 +2,9 @@
 class_path: superhuge.data.interface.DInterface
 init_args:
   dataloader_args:
-    batch_size: 32
+    batch_size: 10
     drop_last: false
-    num_workers: 4
+    num_workers: 2
     persistent_workers: true
     pin_memory: true
     prefetch_factor: 8
@@ -26,7 +26,7 @@ init_args:
           # - 9 # PKU-NBD
           # - 10 # sparKULee
   overlap: 1
-  root_path: E:/derivatives/SuperHuge
+  root_path: /mnt/e/derivatives/SuperHuge
   preproc_stage: preprocessed
   transform:
     - class_path: superhuge.data.transforms.Filter
@@ -59,5 +59,5 @@ init_args:
     #     apply_prob: 1.0
     #     when: before_returning
     #     whom: audio
-  window_length: 10
+  window_length: 1
   summary_verbose: true

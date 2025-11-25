@@ -25,7 +25,7 @@ class EegClassifyBaseDataset(EegDataset):
         Literal["meta", "eeg", "label"],
         np.ndarray | ClassifyMetadataElement,
     ]:
-        item = super().load_data(idx)
+        item = super(EegClassifyBaseDataset, self).load_data(idx)
         meta: ClassifyMetadataElement = item["meta"]  # type: ignore
         eeg: np.ndarray | np.memmap = item["eeg"]  # type: ignore
 
@@ -38,13 +38,6 @@ class EegClassifyBaseDataset(EegDataset):
         assert isinstance(label, (int, str)) or isinstance(
             super(), EegRegressionBaseDataset
         ), f"EEG_CLASSIFY_BASE_DATASET:load_data:ASSERTION:VALUE_ERROR: label must be an integer, got {type(label)}"
-
-        if self.transform:
-            label: int | str = self.transform(
-                label, meta=meta, whom="label", when="before_returning"
-            )[
-                0
-            ]  # type: ignore
 
         meta.label = label
 

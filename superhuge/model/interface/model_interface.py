@@ -87,7 +87,7 @@ class MInterface(pl2.LightningModule, ABC):
 
         # Configure the input/output of the main model.
         self._required_inputs = self.configure_input()
-        self.get_input_example(**self.model_common_args.model_dump())
+        self.configure_input_example(**self.model_common_args.model_dump())
         self._output_keys = self.configure_output()
 
         self.summary_verbose = int(summary_verbose or False)
@@ -134,7 +134,7 @@ class MInterface(pl2.LightningModule, ABC):
             warn("ckpt_path is None, cannot restore model parameters.")
 
     @final
-    def get_input_example(self, /, **kwargs) -> Mapping[str, tuple[int]]:
+    def configure_input_example(self, /, **kwargs) -> Mapping[str, tuple[int]]:
         """
         Get the input size for each required input type based on the model's forward method.
 
@@ -471,7 +471,7 @@ class MInterface(pl2.LightningModule, ABC):
 
             # Check for required inputs based on parameter names
             for param_name in forward_params:
-                if param_name in ["env", "mel", "audio"]:
+                if param_name in ["env", "mel", "audio", "stimuli", "stimulus"]:
                     required_inputs.append("audio")
                 elif param_name == "label":
                     required_inputs.append("label")

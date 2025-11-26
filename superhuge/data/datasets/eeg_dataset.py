@@ -294,6 +294,7 @@ class EegDataset(Dataset):
         file_path = os.path.join(self.eeg_path, file_name + ".npy")
 
         meta = self.metadata[file_name]
+        meta = self.metadata_cls(**meta.model_dump())  # type: ignore
 
         eeg: np.ndarray | np.memmap = np.load(
             file_path, mmap_mode="r", allow_pickle=False

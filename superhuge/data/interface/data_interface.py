@@ -114,7 +114,7 @@ class DInterface(pl2.LightningDataModule):
         transform: Transform | Sequence[Transform] | None = None,
         preproc_stage: str | None = None,
         summary_verbose: bool = False,
-        **kwargs,
+        dataset_args: dict[str, Any] | None = None,
     ):
         super().__init__()
 
@@ -170,7 +170,7 @@ class DInterface(pl2.LightningDataModule):
             metadata_fields=list(set(metadata_fields)),
         )
 
-        self.kwargs = kwargs
+        self.dataset_args = dataset_args
 
         self.create_datasets()
         self.summary(verbose=summary_verbose)
@@ -264,7 +264,7 @@ class DInterface(pl2.LightningDataModule):
         meta_dict = {}
         for entry, data in metadata.items():
             if set(metadata_fields).issubset(set(data.keys())):
-                meta_dict[entry] = dataset_class.metadata_cls(**data)
+                meta_dict[entry] = MetadataElement(**data)
         return meta_dict
 
     def filt_metadata(
@@ -313,7 +313,7 @@ class DInterface(pl2.LightningDataModule):
                 accept_range=splits.get(f"{mode}_accept_range", None),
                 reject_range=splits.get(f"{mode}_reject_range", None),
                 stage=mode,
-                **self.kwargs,
+                **self.dataset_args if self.dataset_args else {},
             )
             for mode in dataset_modes
         )

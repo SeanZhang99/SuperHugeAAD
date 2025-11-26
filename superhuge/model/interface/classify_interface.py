@@ -21,6 +21,7 @@ class ClassifyInterface(MInterface):
         self.required_output_keys = ["eeg", "label"]
         super().__init__(**kwargs)
         self.num_class = num_class
+        self.hidden_dim = hidden_dim
         self.confusion_matrix = ConfusionMatrix(
             task="multiclass",
             num_classes=num_class,

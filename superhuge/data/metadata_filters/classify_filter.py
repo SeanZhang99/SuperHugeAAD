@@ -45,12 +45,11 @@ class BinaryLeftRightFilter(ClassifyMetadataFilter):
         if metadata_element is None:
             return None
         result = None
-        label = metadata_element.label
+        label = getattr(metadata_element, "label", None)
         if isinstance(label, str):
             if label.lower() in ["left", "right"]:
-                metadata_element.label = label.lower()
                 result = metadata_element
-                result.label = 0 if result.label == "left" else 1
+                result.label = 0 if label.lower() == "left" else 1
             else:
                 try:
                     metadata_element.label = int(label)

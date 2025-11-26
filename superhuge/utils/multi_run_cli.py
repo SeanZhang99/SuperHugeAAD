@@ -1,13 +1,10 @@
-from collections.abc import Generator, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
-import datetime
 import hashlib
 from itertools import product
 from math import isnan
 import os
 import pickle
-from pyexpat import model
-import time
 from typing import Iterator, NamedTuple
 from pathlib import Path
 
@@ -16,7 +13,6 @@ import numpy as np
 
 from lightning import LightningModule
 from lightning.pytorch.cli import LightningCLI, SaveConfigCallback
-import yaml
 
 from .task_config_parser import TaskConfigParser
 
@@ -209,15 +205,6 @@ class MultiRunCLI:
                 run=False,
                 save_config_callback=(SaveConfigCallback if save_config else None),
             )
-            from ..model.interface.model_interface import MInterface
-            from ..data.interface.data_interface import DInterface
-
-            assert isinstance(
-                cli.datamodule, DInterface
-            ), "DataModule is not an instance of DInterface"
-            assert isinstance(
-                cli.model, MInterface
-            ), "Model is not an instance of MInterface"
 
             cli.trainer.fit(
                 model=cli.model,

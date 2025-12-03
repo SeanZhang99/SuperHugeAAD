@@ -8,6 +8,7 @@ class ModelInputArgs(BaseModel):
     window_length: int
     num_channels: int | None = None
     num_audio_features: int | None = None
+    num_class: int | None = None
 
     model_config = {"extra": "allow"}
 

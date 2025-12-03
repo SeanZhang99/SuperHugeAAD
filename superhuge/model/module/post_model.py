@@ -4,15 +4,22 @@ from einops.layers.torch import Reduce, EinMix, Rearrange
 
 
 def classify_post_model(
-    input_size: Sequence[int | None], num_class: int, hidden_dim: int
+    input_size: Sequence[int | None],
+    num_class: int,
+    hidden_dim: int,
+    activation: type[nn.Module] = nn.Sigmoid,
 ):
     assert input_size[-1] is not None, "Input size must have a defined last dimension"
+    assert len(input_size) in (
+        2,
+        3,
+    ), "Input must be of shape (batch, features) or (batch, time, features)"
     return nn.Sequential(
         # Average pooling across the time dimension if exists
         Reduce("b t c -> b c", "mean") if len(input_size) == 3 else nn.Identity(),
         # dense the last dimension
         nn.Linear(input_size[-1], hidden_dim),
-        nn.Sigmoid(),
+        activation(),
         nn.Linear(hidden_dim, num_class),
     )
 

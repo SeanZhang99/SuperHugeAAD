@@ -318,6 +318,10 @@ class DInterface(pl2.LightningDataModule):
             for mode in dataset_modes
         )
 
+        if self.trainset.transform is not None:
+            self.valset.sync_transform_stats(self.trainset.transform)
+            self.testset.sync_transform_stats(self.trainset.transform)
+
     def create_dataloader(self, dataset, *args, **kwargs):
         return DataLoader(
             dataset,

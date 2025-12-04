@@ -103,6 +103,7 @@ class MInterface(pl2.LightningModule, ABC):
                 "mult_adds",
                 "trainable",
             ],
+            depth=5,
         )
         self.output_size = summary.summary_list[0].output_size
 

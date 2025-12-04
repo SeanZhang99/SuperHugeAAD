@@ -294,6 +294,10 @@ class NamedParamsCLI(LightningCLI):
             "model.init_args.model_common_args.num_audio_features",
         )
         parser.link_arguments(
+            "model.init_args.num_class",
+            "model.init_args.model_common_args.num_class",
+        )
+        parser.link_arguments(
             "data.sample_weights",
             "model.init_args.multiclass_loss_weights",
             apply_on="instantiate",

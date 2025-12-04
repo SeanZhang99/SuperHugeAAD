@@ -13,7 +13,7 @@ class StatisticalTransform(Transform):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._stat: np.ndarray | Sequence[float] | None
+        self._stat
         self._fitted: bool = False
 
     @abstractmethod

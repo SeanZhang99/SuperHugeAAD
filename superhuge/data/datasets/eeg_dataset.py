@@ -4,6 +4,7 @@ from math import ceil
 from typing import Literal, Sequence, override
 
 import numpy as np
+import psutil
 import tqdm
 from numpy.typing import NDArray
 from torch.utils.data import Dataset
@@ -28,6 +29,9 @@ class EegDataset(Dataset):
     accept_range: Sequence[tuple[float, float]]
     reject_range: Sequence[tuple[float, float]] | None
     _stage: Literal["train", "val", "test"]
+    _save_on_memory: Literal[True, False] | None = None
+    _disk_usage: int | None = None
+    memory: dict[int, dict]
     """
     EEG Dataset for loading and processing EEG signal data.
 
@@ -93,6 +97,16 @@ class EegDataset(Dataset):
         else:
             self._stage = _stage
         self._update_and_fit_stats_transform()
+
+        self.memory = dict()
+
+    def _get_file_disk_usage(self):
+        total_size_bytes = 0
+        for file_name in self.files:
+            file_path = os.path.join(self.eeg_path, file_name + ".npy")
+            total_size_bytes += os.path.getsize(file_path)
+
+        return total_size_bytes
 
     def _update_and_fit_stats_transform(self):
         """
@@ -287,36 +301,67 @@ class EegDataset(Dataset):
         return len(self)
 
     def load_data(
-        self, idx: int
+        self, idx: int, read_from_disk: bool | None = None
     ) -> Mapping[Literal["meta", "eeg"], MetadataElement | NDArray]:
-        file_idx, start_idx = self._map_idx_to_file_and_segment(idx)
-        file_name = self.files[file_idx]  # Redirect to self._file_names via property
-        file_path = os.path.join(self.eeg_path, file_name + ".npy")
+        if (
+            self._save_on_memory is None
+            and self._get_file_disk_usage() < psutil.virtual_memory().available * 0.8
+        ):
+            self._save_on_memory = True
+            print("Dataset will cache loaded data in memory.")
+            print(
+                f"Memory usage detail: {self._get_file_disk_usage() / psutil.virtual_memory().total * 100:.2f}% of memory will be used to cache dataset."
+            )
+        elif self._save_on_memory is None:
+            print("Dataset will NOT cache loaded data in memory.")
+            self._save_on_memory = False
 
-        meta = self.metadata[file_name]
-        meta = self.metadata_cls(**meta.model_dump())  # type: ignore
+        if (
+            self._save_on_memory
+            and idx in self.memory
+            and {"meta", "eeg"}.issubset(set(self.memory[idx]))
+            and not read_from_disk
+        ):
+            data = self.memory[idx]
+        else:
+            file_idx, start_idx = self._map_idx_to_file_and_segment(idx)
+            file_name = self.files[
+                file_idx
+            ]  # Redirect to self._file_names via property
+            file_path = os.path.join(self.eeg_path, file_name + ".npy")
 
-        eeg: np.ndarray | np.memmap = np.load(
-            file_path, mmap_mode="r", allow_pickle=False
-        )
+            meta = self.metadata[file_name]
+            meta = self.metadata_cls(**meta.model_dump())  # type: ignore
 
-        self._validate_eeg_shape(eeg, file_name)
-
-        if self.transform:
-            eeg, meta = self.transform(eeg, meta=meta, when="before_slicing", whom="eeg")  # type: ignore
-
-        eeg_seg = eeg[start_idx : start_idx + self.segment_length].copy()
-
-        if self.transform:
-            eeg_seg, meta = self.transform(
-                eeg_seg, meta=meta, when="before_returning", whom="eeg"
+            eeg: np.ndarray | np.memmap = np.load(
+                file_path, mmap_mode="r", allow_pickle=False
             )
 
-        assert isinstance(
-            eeg_seg, np.ndarray
-        ), f"EEG segment must be a numpy array, but got {type(eeg_seg).__name__}."
+            self._validate_eeg_shape(eeg, file_name)
 
-        return {"meta": meta, "eeg": eeg_seg.astype(np.float32)}
+            if self.transform:
+                eeg, meta = self.transform(eeg, meta=meta, when="before_slicing", whom="eeg")  # type: ignore
+
+            eeg_seg = eeg[start_idx : start_idx + self.segment_length].copy()
+
+            if self.transform:
+                eeg_seg, meta = self.transform(
+                    eeg_seg, meta=meta, when="before_returning", whom="eeg"
+                )
+
+            assert isinstance(
+                eeg_seg, np.ndarray
+            ), f"EEG segment must be a numpy array, but got {type(eeg_seg).__name__}."
+
+            data: dict[Literal["meta", "eeg"], MetadataElement | NDArray] = {
+                "meta": meta,
+                "eeg": eeg_seg.astype(np.float32),
+            }
+
+            if self._save_on_memory:
+                self.memory[idx] = data
+
+        return data
 
     @override
     def __getitem__(self, idx: int) -> Mapping[Literal["meta", "eeg"], dict | NDArray]:

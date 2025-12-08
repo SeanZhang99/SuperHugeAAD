@@ -21,27 +21,44 @@ class EegClassifyBaseDataset(EegDataset):
     # python require mapping key to be invariant (it does not allow extending or narrowing the `Literal`).
     # Declare a type ignore to suppress warning, but make the return type more clear for users.
     @override
-    def load_data(self, idx) -> Mapping[  # type: ignore
+    def load_data(self, idx: int, read_from_disk: bool | None = None) -> Mapping[  # type: ignore
         Literal["meta", "eeg", "label"],
         np.ndarray | ClassifyMetadataElement,
     ]:
-        item = super(EegClassifyBaseDataset, self).load_data(idx)
-        meta: ClassifyMetadataElement = item["meta"]  # type: ignore
-        eeg: np.ndarray | np.memmap = item["eeg"]  # type: ignore
+        if (
+            self._save_on_memory
+            and idx in self.memory
+            and {"meta", "eeg", "label"}.issubset(set(self.memory[idx]))
+            and not read_from_disk
+        ):
+            data = self.memory[idx]
+        else:
+            item = super(EegClassifyBaseDataset, self).load_data(idx)
+            meta: ClassifyMetadataElement = item["meta"]  # type: ignore
+            eeg: np.ndarray | np.memmap = item["eeg"]  # type: ignore
 
-        # in normal conditions, `label` is in `meta`.
-        # If a diamond inheritage is used (e.g. class(EegClassifyBaseDataset, EegRegressionBaseDataset)),
-        # `label` may be delted during regression.__getitem__
-        # in this case, label is None.
-        label: int | str = meta.label  # type: ignore
+            # in normal conditions, `label` is in `meta`.
+            # If a diamond inheritage is used (e.g. class(EegClassifyBaseDataset, EegRegressionBaseDataset)),
+            # `label` may be delted during regression.__getitem__
+            # in this case, label is None.
+            label: int | str = meta.label  # type: ignore
 
-        assert isinstance(label, (int, str)) or isinstance(
-            super(), EegRegressionBaseDataset
-        ), f"EEG_CLASSIFY_BASE_DATASET:load_data:ASSERTION:VALUE_ERROR: label must be an integer, got {type(label)}"
+            assert isinstance(label, (int, str)) or isinstance(
+                super(), EegRegressionBaseDataset
+            ), f"EEG_CLASSIFY_BASE_DATASET:load_data:ASSERTION:VALUE_ERROR: label must be an integer, got {type(label)}"
 
-        meta.label = label
+            meta.label = label
 
-        return {"meta": meta, "eeg": eeg, "label": label}  # type: ignore
+            data = {
+                "meta": meta,
+                "eeg": eeg,
+                "label": label,
+            }
+
+            if self._save_on_memory:
+                self.memory[idx] = data
+
+        return data  # type: ignore
 
     def __getitem__(  # type: ignore
         self, idx

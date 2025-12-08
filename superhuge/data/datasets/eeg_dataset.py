@@ -100,6 +100,8 @@ class EegDataset(Dataset):
 
         self.memory = dict()
 
+        self._save_on_memory = kwargs.get("save_on_memory", None)
+
     def _get_file_disk_usage(self):
         total_size_bytes = 0
         for file_name in self.files:

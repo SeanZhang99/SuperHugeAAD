@@ -17,7 +17,15 @@ from .model_interface import MInterface
 
 class ClassifyInterface(MInterface):
 
-    def __init__(self, /, *, num_class: int, hidden_dim: int, **kwargs):
+    def __init__(
+        self,
+        /,
+        *,
+        num_class: int,
+        hidden_dim: int,
+        post_model_activation: type[torch.nn.Module] = torch.nn.GELU,
+        **kwargs,
+    ):
         self.required_output_keys = ["eeg", "label"]
         super().__init__(**kwargs)
         self.num_class = num_class
@@ -26,7 +34,7 @@ class ClassifyInterface(MInterface):
             task="multiclass",
             num_classes=num_class,
         )
-        self.post_model = classify_post_model(self.output_size, num_class, hidden_dim)
+        self.__init_post_model__(activation=post_model_activation)
         torchinfo.summary(
             self.post_model,
             input_size=self.output_size,
@@ -38,6 +46,11 @@ class ClassifyInterface(MInterface):
                 "mult_adds",
                 "trainable",
             ],
+        )
+
+    def __init_post_model__(self, activation: type[torch.nn.Module]):
+        self.post_model = classify_post_model(
+            self.output_size, self.num_class, self.hidden_dim, activation=activation
         )
 
     def get_stats(self, pred: torch.Tensor, label: torch.Tensor, /, *, meta: dict):

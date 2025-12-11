@@ -22,7 +22,8 @@ class EegDataset(Dataset):
     eeg_path: str
     _input_files_list: Sequence[str]
     metadata: Metadata
-    segment_length: int | float
+    fs: int | float
+    window_length: int | float
     overlap: int
     transform: TransformComposer | None
     metadata_fields: list[MetadataField]
@@ -39,7 +40,6 @@ class EegDataset(Dataset):
         eeg_path (str): Path to the dataset folder.
         files (Sequence[str]): List of file names.
         metadata (Metadata): Metadata containing information for each trial.
-        segment_length (int): Length of each signal segment.
         overlap (int): Overlap ratio, determines the stride for segment slicing.
         transform (TransformComposer | None): Transformations applied to samples.
         metadata_fields (list[MetadataField]): Metadata fields to record.
@@ -68,9 +68,8 @@ class EegDataset(Dataset):
         self.eeg_path = kwargs["eeg_path"]
         self._input_files_list = kwargs["files"]
         self.metadata = kwargs["metadata"]
-        self.segment_length = kwargs.get("fs", 128.0) * kwargs.get(
-            "window_length", 10.0
-        )  # Default segment length is 1280
+        self.fs = kwargs["fs"]
+        self.window_length = kwargs["window_length"]
         self.overlap = kwargs.get("overlap", 1)  # Default no overlap
         self.transform = kwargs.get("transform", None)
         self.metadata_fields = kwargs["metadata_fields"]
@@ -239,7 +238,9 @@ class EegDataset(Dataset):
         current_index = 0
 
         for file_idx, file in enumerate(self._input_files_list):
-            trial_length = self.metadata[file].signal_length
+            trial_length = (
+                self.metadata[file].signal_length / self.metadata[file].fs * self.fs
+            )
             assert trial_length, f"Metadata for file {file} is missing signal_length."
             start_indices = self._find_valid_start_idx(trial_length)
 
@@ -268,7 +269,7 @@ class EegDataset(Dataset):
         Returns:
             list[int]: A list of valid segment start indices.
         """
-        stride = ceil(self.segment_length // self.overlap)
+        stride = ceil(self.fs * self.window_length // self.overlap)
         start_indices = []
 
         for accept_range in self.accept_range:
@@ -276,7 +277,7 @@ class EegDataset(Dataset):
             accept_end = int(accept_range[1] * trial_length)
 
             for start_idx in range(accept_start, accept_end, stride):
-                end_idx = start_idx + self.segment_length
+                end_idx = start_idx + self.fs * self.window_length
                 if end_idx > accept_end:
                     break
                 if self.reject_range:
@@ -303,7 +304,7 @@ class EegDataset(Dataset):
         return len(self)
 
     def load_data(
-        self, idx: int, read_from_disk: bool | None = None
+        self, idx: int
     ) -> Mapping[Literal["meta", "eeg"], MetadataElement | NDArray]:
         if (
             self._save_on_memory is None
@@ -317,12 +318,13 @@ class EegDataset(Dataset):
         elif self._save_on_memory is None:
             print("Dataset will NOT cache loaded data in memory.")
             self._save_on_memory = False
-
+            print(
+                f"Memory usage detail: {self._get_file_disk_usage() / psutil.virtual_memory().total * 100:.2f}% of memory will be used to cache dataset."
+            )
         if (
             self._save_on_memory
             and idx in self.memory
             and {"meta", "eeg"}.issubset(set(self.memory[idx]))
-            and not read_from_disk
         ):
             data = self.memory[idx]
         else:
@@ -344,7 +346,7 @@ class EegDataset(Dataset):
             if self.transform:
                 eeg, meta = self.transform(eeg, meta=meta, when="before_slicing", whom="eeg")  # type: ignore
 
-            eeg_seg = eeg[start_idx : start_idx + self.segment_length].copy()
+            eeg_seg = eeg[start_idx : start_idx + self.window_length * getattr(meta, "fs")].copy()  # type: ignore
 
             if self.transform:
                 eeg_seg, meta = self.transform(
@@ -447,3 +449,7 @@ class EegDataset(Dataset):
             AssertionError: If any required key is missing.
         """
         validate_kwargs(kwargs, required_keys)
+
+    @property
+    def segment_length(self) -> float:
+        return self.fs * self.window_length

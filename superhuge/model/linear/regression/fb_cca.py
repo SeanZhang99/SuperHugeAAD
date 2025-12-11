@@ -1,3 +1,4 @@
+from typing import Sequence
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -114,7 +115,7 @@ class FilterbankCCA(LinearABC):
             impulse_response_lengths=impulse_response_lengths,
             num_components=num_components,
             num_channels=num_channels,
-            num_audio_features=num_audio_features,
+            num_audio_features=sum(num_audio_features.values()),
         )
 
         filters = make_dyadic_fir_filterbank(
@@ -126,7 +127,7 @@ class FilterbankCCA(LinearABC):
         self.filterbank = FIRFilterbank(filters)
 
         feat_x = num_channels * len(impulse_response_lengths)
-        feat_y = num_audio_features * len(impulse_response_lengths)
+        feat_y = self.cfg.num_audio_features * len(impulse_response_lengths)
         self.register_buffer("Rxyxy", torch.zeros((feat_x + feat_y, feat_x + feat_y)))
         self.register_buffer("weight_x", torch.zeros((feat_x, num_components)))
         self.register_buffer("weight_y", torch.zeros((feat_y, num_components)))

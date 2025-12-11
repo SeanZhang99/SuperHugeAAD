@@ -80,7 +80,7 @@ class CCA(LinearABC):
             fs=kwargs["fs"],
             l2=l2,
             num_features_x=kwargs["num_channels"],
-            num_features_y=kwargs["num_audio_features"],
+            num_features_y=sum(kwargs["num_audio_features"].values()),
             num_components=num_components,
         )
         self.covar_dim_x = (self.cfg.x_lag_samples * 2 + 1) * self.cfg.num_features_x

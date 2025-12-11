@@ -1,5 +1,7 @@
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 
+import pydantic
 import torch
 import torchinfo
 
@@ -12,17 +14,30 @@ from .channel_mapping_interface import (
 )
 from .linear_interface import LinearInterface
 from .model_interface import MInterface
+from ..module.model_template import NumAudioFeaturesMixin
 
 
 class RegressionInterface(MInterface):
 
-    def __init__(self, /, *, num_audio_features: int, **kwargs):
+    def __init__(
+        self,
+        /,
+        *,
+        num_audio_features: NumAudioFeaturesMixin,
+        **kwargs,
+    ):
         self.required_output_keys = ["eeg", "audio"]
         super().__init__(**kwargs)
 
+        num_audio_features = num_audio_features.model_dump()  # type: ignore
+
+        assert isinstance(num_audio_features, Mapping)
+
         self._num_audio_features = num_audio_features
 
-        self.post_model = regression_post_model(self.output_size, num_audio_features)
+        self.post_model = regression_post_model(
+            self.output_size, sum(num_audio_features.values())
+        )
         torchinfo.summary(
             self.post_model,
             input_size=self.output_size,

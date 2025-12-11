@@ -1,5 +1,7 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import date
+import datetime
 import hashlib
 from itertools import product
 from math import isnan
@@ -317,7 +319,9 @@ class NamedParamsCLI(LightningCLI):
                     raise ValueError(
                         "Only str and int types are supported for experiment path computation."
                     )
-            path = os.path.join(*paths)
+            path = os.path.join(
+                *paths,
+            )
             return path
 
         parser.add_argument("--experiment_name", type=str)

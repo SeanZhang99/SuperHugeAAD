@@ -4,6 +4,8 @@ from sklearn.decomposition import PCA as sk_pca
 
 
 class PCA(StatisticalTransform):
+    _stat: sk_pca | None = None
+
     def __init__(self, /, *, n_components: int, **kwargs):
         self.n_components = n_components
         super().__init__(**kwargs)
@@ -15,15 +17,17 @@ class PCA(StatisticalTransform):
 
     def fit(self):
         self._pca.fit_transform(np.stack(self._data_tmp, axis=0))
-        self._stat: sk_pca = self._pca
+        self._stat = self._pca
         self._fitted = True
 
     def reset(self):
         super().reset()
         self._pca = sk_pca(n_components=self.n_components)
         self._data_tmp = []
+        self._stat = None
 
     def __call__(self, x: np.ndarray, **kwargs) -> dict[str, np.ndarray]:
         super().__call__(x)
+        assert self._stat is not None
         x_transformed = self._stat.transform(x)
         return {"x": x_transformed}

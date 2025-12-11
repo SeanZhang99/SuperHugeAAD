@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from typing import Sequence
 from pydantic import BaseModel
 import torch
@@ -7,10 +8,17 @@ class ModelInputArgs(BaseModel):
     fs: int
     window_length: int
     num_channels: int | None = None
-    num_audio_features: int | None = None
+    num_audio_features: Mapping[str, int] | None = None
     num_class: int | None = None
 
     model_config = {"extra": "allow"}
+
+
+class NumAudioFeaturesMixin(BaseModel):
+    env: int | None = None
+    mel: int | None = None
+    wav: int | None = None
+    wav2vec2: int | None = None
 
 
 class LossArgs(BaseModel):

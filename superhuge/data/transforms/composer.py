@@ -20,12 +20,6 @@ class TransformComposer:
             "before_slicing",
             "before_returning",
         ]
-        self._whom_options: list[Literal["eeg", "audio", "label", "all"]] = [
-            "eeg",
-            "audio",
-            "label",
-            "all",
-        ]
 
     def __call__(
         self,
@@ -34,16 +28,13 @@ class TransformComposer:
         *args: Any,
         meta: MetadataElement,
         when: Literal["before_slicing", "before_returning"],
-        whom: Literal["eeg", "audio", "label", "all"],
+        whom: str,
         **kwargs,
     ) -> tuple[np.ndarray, MetadataElement]:
         """Filter metadata element."""
         assert (
             when in self._when_options
         ), f"Invalid when option: {when}. Expected one of {self._when_options}."
-        assert (
-            whom in self._whom_options
-        ), f"Invalid whom option: {whom}. Expected one of {self._whom_options}."
         for transform in self._transforms:
             if transform.when == when and (
                 whom in transform.whom or "all" in transform.whom
@@ -87,8 +78,3 @@ class TransformComposer:
     def when_options(self) -> Sequence[Literal["before_slicing", "before_returning"]]:
         """Get when options."""
         return self._when_options
-
-    @property
-    def whom_options(self) -> Sequence[Literal["eeg", "audio", "label", "all"]]:
-        """Get whom options."""
-        return self._whom_options

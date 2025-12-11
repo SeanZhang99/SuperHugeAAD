@@ -3,8 +3,6 @@ from .abc import RegressionMetadataFilter
 
 __all__ = ["get_regression_filter"]
 
-ALLOWED_SPEECH_FEATURES = ["env", "mel"]
-
 
 class EnvFilter(RegressionMetadataFilter):
     def __call__(
@@ -34,14 +32,28 @@ class MelFilter(RegressionMetadataFilter):
         return None
 
 
-def get_regression_filter(
-    speech_feature: str, *args, **kwargs
-) -> RegressionMetadataFilter:
-    if speech_feature == "env":
-        return EnvFilter()
-    elif speech_feature == "mel":
-        return MelFilter()
-    else:
-        raise ValueError(
-            f"REGRESSION_FILTER:GET_REGRESSION_FILTER:VALUE_ERROR: Invalid speech feature name: {speech_feature}"
-        )
+class AudioFilter(RegressionMetadataFilter):
+    def __init__(self, /, *, field_name: str, **kwargs):
+        super().__init__(**kwargs)
+        self.field_name = field_name
+
+    def __call__(
+        self, metadata_element: RegressionMetadataElement | None
+    ) -> RegressionMetadataElement | None:
+        """
+        This function filters the metadata elements based on the presence of a specified audio attribute.
+        If the specified audio attribute is present, the function returns the metadata element.
+        Otherwise, it returns None.
+        """
+        if hasattr(metadata_element, self.field_name) and getattr(
+            metadata_element, self.field_name
+        ):
+            return metadata_element
+        return None
+
+    def __repr__(self) -> str:
+        return f"AudioFilter(field_name={self.field_name})"
+
+
+def get_regression_filter(speech_feature: str) -> RegressionMetadataFilter:
+    return AudioFilter(field_name=speech_feature)

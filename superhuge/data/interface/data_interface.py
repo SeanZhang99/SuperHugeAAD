@@ -184,7 +184,6 @@ class DInterface(pl2.LightningDataModule):
             MetadataFilter | Sequence[MetadataFilter] | MetadataFilterComposer | None
         ),
         *args,
-        **kwargs,
     ) -> MetadataFilterComposer | None:
         """
         meta_filter_func_parser
@@ -226,8 +225,9 @@ class DInterface(pl2.LightningDataModule):
                 isinstance(f, ClassifyMetadataFilter) for f in meta_filter_func.filters
             )
             if not has_classify_filter:
-                classify_filter = get_classify_filter(*args, **kwargs)
-                meta_filter_func.add_filters(classify_filter)
+                for arg in args:
+                    classify_filter = get_classify_filter(num_class=arg)
+                    meta_filter_func.add_filters(classify_filter)
 
         # Check for regression dataset and add regression filter if missing
         elif issubclass(dataset_class, EegRegressionBaseDataset):
@@ -236,8 +236,9 @@ class DInterface(pl2.LightningDataModule):
                 for f in meta_filter_func.filters
             )
             if not has_regression_filter:
-                regression_filter = get_regression_filter(*args, **kwargs)
-                meta_filter_func.add_filters(regression_filter)
+                for arg in args:
+                    regression_filter = get_regression_filter(speech_feature=arg)
+                    meta_filter_func.add_filters(regression_filter)
 
         return meta_filter_func
 
@@ -305,7 +306,7 @@ class DInterface(pl2.LightningDataModule):
                 eeg_path=self.dataset_cfg.eeg_path,
                 files=splits[mode],
                 metadata=metadata,
-                fs=self.dataset_cfg.fs,
+                fs=self.fs,
                 window_length=self.dataset_cfg.window_length,
                 overlap=self.dataset_cfg.overlap,
                 transform=self.dataset_cfg.transform,

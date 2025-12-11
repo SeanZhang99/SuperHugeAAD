@@ -159,11 +159,14 @@ class MInterface(pl2.LightningModule, ABC):
                 input_example["eeg"] = torch.randn(1, input_length, num_channels)
 
             # Add audio input size if required
-            if "audio" == required_input:
-                input_example["audio"] = torch.randn(
+            if (
+                self.model_common_args.num_audio_features is not None
+                and required_input in self.model_common_args.num_audio_features.keys()
+            ):
+                input_example[required_input] = torch.randn(
                     1,
                     input_length,
-                    kwargs["num_audio_features"],
+                    kwargs["num_audio_features"][required_input],
                     1,
                 )
             if "meta" == required_input:
@@ -218,23 +221,11 @@ class MInterface(pl2.LightningModule, ABC):
             if input_type == "eeg":
                 # Process EEG/EXG input through pre_model
                 inputs.append(self.pre_model(data))
-            elif input_type == "audio":
+            else:
                 assert (
-                    "audio" in data
-                ), f"EEG_CLASSIFY_BASE_DATASET:FORWARD:ASSERTION:VALUE_ERROR: audio input is required, but not found in data. Available keys: {data.keys()}"
-                # Extract audio input directly from data
-                inputs.append(data["audio"])
-            elif input_type == "label":
-                assert (
-                    "label" in data
-                ), f"EEG_CLASSIFY_BASE_DATASET:FORWARD:ASSERTION:VALUE_ERROR: label input is required, but not found in data. Available keys: {data.keys()}"
-                # Extract label input directly from data
-                inputs.append(data["label"])
-            elif input_type == "meta":
-                assert (
-                    "meta" in data
-                ), f"EEG_CLASSIFY_BASE_DATASET:FORWARD:ASSERTION:VALUE_ERROR: meta input is required, but not found in data. Available keys: {data.keys()}"
-                inputs.append(data["meta"])
+                    input_type in data
+                ), f"MODEL_INTERFACE:FORWARD:ASSERTION:INPUT_MISSING: Required input '{input_type}' is missing from data."
+                inputs.append(data[input_type])
 
         # Pass the inputs to the model in the required order
         model_outputs = self.model(*inputs)
@@ -426,14 +417,14 @@ class MInterface(pl2.LightningModule, ABC):
                     self.log(
                         f"grad_norm2/{name}",
                         param.grad.detach().data.norm(2).item(),
-                        on_epoch=False,
+                        on_epoch=True,
                         batch_size=1,
                         enable_graph=False,
                     )
                     self.log(
                         f"param_norm2/{name}",
                         param.detach().data.norm(2).item(),
-                        on_epoch=False,
+                        on_epoch=True,
                         batch_size=1,
                         enable_graph=False,
                     )
@@ -446,7 +437,7 @@ class MInterface(pl2.LightningModule, ABC):
                     self.log(
                         f"param_norm2/{name}",
                         param.detach().data.norm(2).item(),
-                        on_epoch=False,
+                        on_epoch=True,
                         batch_size=1,
                         enable_graph=False,
                     )
@@ -463,21 +454,20 @@ class MInterface(pl2.LightningModule, ABC):
                        Possible values: 'eeg', 'audio', 'label'.
         """
 
-        required_inputs = ["eeg"]
+        required_inputs: list[str] = []
 
         # Inspect the forward method of the model
-        if hasattr(self.model, "forward"):
-            forward_signature = inspect.signature(self.model.forward)
-            forward_params = forward_signature.parameters
+        assert hasattr(self.model, "forward"), (
+            "MODEL_INTERFACE:CONFIGURE_INPUT:ASSERTION:FORWARD_METHOD_NOT_FOUND: "
+            "The model must have a forward method."
+        )
+        forward_signature = inspect.signature(self.model.forward)
+        forward_params = forward_signature.parameters
 
-            # Check for required inputs based on parameter names
-            for param_name in forward_params:
-                if param_name in ["env", "mel", "audio", "stimuli", "stimulus"]:
-                    required_inputs.append("audio")
-                elif param_name == "label":
-                    required_inputs.append("label")
-                elif param_name == "meta":
-                    required_inputs.append("meta")
+        # Check for required inputs based on parameter names
+        for param_name in forward_params:
+            if param_name != "self":
+                required_inputs.append(param_name.lower())
 
         return required_inputs
 

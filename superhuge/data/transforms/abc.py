@@ -11,10 +11,7 @@ class TransformConfig(BaseModel):
     seed: int = 42
     apply_prob: float = 0.5
     when: Literal["before_slicing", "before_returning"] = "before_returning"
-    whom: (
-        Literal["eeg", "audio", "label", "all"]
-        | Sequence[Literal["eeg", "audio", "label", "all"]]
-    ) = "eeg"
+    whom: str | Sequence[str] = "eeg"
 
     @field_validator("seed")
     def validate_seed(cls, value):
@@ -43,32 +40,6 @@ class TransformConfig(BaseModel):
             raise ValueError(f"when must be one of {valid_options}, but got {value}.")
         return value
 
-    @field_validator("whom")
-    def validate_whom(
-        cls, value
-    ) -> (
-        Literal["eeg", "audio", "label", "all"]
-        | Sequence[Literal["eeg", "audio", "label", "all"]]
-    ):
-        valid_options = ["eeg", "audio", "label", "all"]
-        if isinstance(value, str):
-            if value not in valid_options:
-                raise ValueError(
-                    f"whom must be one of {valid_options}, but got {value}."
-                )
-            value = [value]
-        elif isinstance(value, Sequence):
-            for v in value:
-                if v not in valid_options or v == "all":
-                    raise ValueError(
-                        f"whom must be one of {valid_options}, but got {v}."
-                    )
-        else:
-            raise ValueError(
-                f"whom must be a string or a sequence, but got {type(value).__name__}."
-            )
-        return value
-
 
 class Transform(ABC):
     """Abstract base class for EEG transforms in superhuge package."""
@@ -81,10 +52,7 @@ class Transform(ABC):
         seed: int = 42,
         apply_prob: float = 1.0,
         when: Literal["before_slicing", "before_returning"] = "before_returning",
-        whom: (
-            Literal["eeg", "audio", "label", "all"]
-            | Sequence[Literal["eeg", "audio", "label", "all"]]
-        ) = "eeg",
+        whom: str | Sequence[str] = "eeg",
         **kwargs,
     ) -> None:
         """
@@ -138,11 +106,6 @@ class Transform(ABC):
     def when(self, value: str) -> None:
         """Set when to apply this transform."""
         self._cfg.when = self._cfg.validate_when(value)
-
-    @whom.setter
-    def whom(self, value: str | Sequence[str]) -> None:
-        """Set whom this transform is applied to."""
-        self._cfg.whom = self._cfg.validate_whom(value)
 
     @abstractmethod
     def __call__(

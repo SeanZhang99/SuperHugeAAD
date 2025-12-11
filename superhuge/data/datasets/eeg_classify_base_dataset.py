@@ -21,7 +21,7 @@ class EegClassifyBaseDataset(EegDataset):
     # python require mapping key to be invariant (it does not allow extending or narrowing the `Literal`).
     # Declare a type ignore to suppress warning, but make the return type more clear for users.
     @override
-    def load_data(self, idx: int, read_from_disk: bool | None = None) -> Mapping[  # type: ignore
+    def load_data(self, idx: int) -> Mapping[  # type: ignore
         Literal["meta", "eeg", "label"],
         np.ndarray | ClassifyMetadataElement,
     ]:
@@ -29,7 +29,6 @@ class EegClassifyBaseDataset(EegDataset):
             self._save_on_memory
             and idx in self.memory
             and {"meta", "eeg", "label"}.issubset(set(self.memory[idx]))
-            and not read_from_disk
         ):
             data = self.memory[idx]
         else:

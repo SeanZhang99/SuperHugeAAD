@@ -7,7 +7,7 @@ def classify_post_model(
     input_size: Sequence[int | None],
     num_class: int,
     hidden_dim: int,
-    activation: type[nn.Module] = nn.Sigmoid,
+    activation: type[nn.Module],
 ):
     assert input_size[-1] is not None, "Input size must have a defined last dimension"
     assert len(input_size) in (

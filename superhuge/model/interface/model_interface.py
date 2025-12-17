@@ -161,7 +161,8 @@ class MInterface(pl2.LightningModule, ABC):
             # Add audio input size if required
             if (
                 self.model_common_args.num_audio_features is not None
-                and required_input in self.model_common_args.num_audio_features.keys()
+                and required_input
+                in self.model_common_args.num_audio_features.model_dump()
             ):
                 input_example[required_input] = torch.randn(
                     1,
@@ -418,6 +419,7 @@ class MInterface(pl2.LightningModule, ABC):
                         f"grad_norm2/{name}",
                         param.grad.detach().data.norm(2).item(),
                         on_epoch=True,
+                        on_step=False,
                         batch_size=1,
                         enable_graph=False,
                     )
@@ -425,23 +427,25 @@ class MInterface(pl2.LightningModule, ABC):
                         f"param_norm2/{name}",
                         param.detach().data.norm(2).item(),
                         on_epoch=True,
+                        on_step=False,
                         batch_size=1,
                         enable_graph=False,
                     )
         super().on_after_backward()
 
-    def on_before_backward(self, loss):
-        if getattr(self, "log_norm", False):
-            for name, param in self.named_parameters():
-                if param.grad is not None:
-                    self.log(
-                        f"param_norm2/{name}",
-                        param.detach().data.norm(2).item(),
-                        on_epoch=True,
-                        batch_size=1,
-                        enable_graph=False,
-                    )
-        return super().on_before_backward(loss)
+    # def on_before_backward(self, loss):
+    #     if getattr(self, "log_norm", False):
+    #         for name, param in self.named_parameters():
+    #             if param.grad is not None:
+    #                 self.log(
+    #                     f"param_norm2/{name}",
+    #                     param.detach().data.norm(2).item(),
+    #                     on_epoch=True,
+    #                     on_step=False,
+    #                     batch_size=1,
+    #                     enable_graph=False,
+    #                 )
+    #     return super().on_before_backward(loss)
 
     @final
     def configure_input(self) -> list[str]:

@@ -10,9 +10,9 @@ class RiemannianWienerFilter(WienerFilter):
         super().__init__(**kwargs)
         self.Rxx_list = []
 
-    def update(self, eeg: EEG_TYPE, audio: AUDIO_TYPE) -> None:
+    def update(self, eeg: EEG_TYPE, env: AUDIO_TYPE) -> None:
 
-        super(WienerFilter, self).update(eeg, audio)
+        super(WienerFilter, self).update(eeg, env)
 
         x_lag = self.lag_and_flatten(
             eeg,
@@ -21,7 +21,7 @@ class RiemannianWienerFilter(WienerFilter):
             self.cfg.post_lag,  # type: ignore
         )
         y = rearrange(
-            audio[..., 0],
+            env[..., 0],
             "batch time num_features -> (batch time) num_features",
             num_features=1,
         )

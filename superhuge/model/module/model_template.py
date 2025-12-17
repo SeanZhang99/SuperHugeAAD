@@ -8,7 +8,7 @@ class ModelInputArgs(BaseModel):
     fs: int
     window_length: int
     num_channels: int | None = None
-    num_audio_features: Mapping[str, int] | None = None
+    num_audio_features: "NumAudioFeaturesMixin | None" = None
     num_class: int | None = None
 
     model_config = {"extra": "allow"}

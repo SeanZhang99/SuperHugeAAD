@@ -132,9 +132,9 @@ class FilterbankCCA(LinearABC):
         self.register_buffer("weight_x", torch.zeros((feat_x, num_components)))
         self.register_buffer("weight_y", torch.zeros((feat_y, num_components)))
 
-    def update(self, eeg: torch.Tensor, audio: torch.Tensor):
+    def update(self, eeg: torch.Tensor, env: torch.Tensor):
         eeg_filt = self.filterbank(eeg)
-        audio = rearrange(audio, "b t f s -> b t (f s)")
+        audio = rearrange(env, "b t f s -> b t (f s)")
         audio_filt = self.filterbank(audio)
 
         x = rearrange(eeg_filt, "b t f -> (b t) f")
@@ -156,11 +156,11 @@ class FilterbankCCA(LinearABC):
 
         self._fitted = True
 
-    def predict(self, eeg: torch.Tensor, audio: torch.Tensor):
+    def predict(self, eeg: torch.Tensor, env: torch.Tensor):
         assert self._fitted
 
         eeg_filt = self.filterbank(eeg)
-        audio = rearrange(audio, "b t f s -> b t (f s)")
+        audio = rearrange(env, "b t f s -> b t (f s)")
         audio_filt = self.filterbank(audio)
 
         x = rearrange(eeg_filt, "b t f -> (b t) f")

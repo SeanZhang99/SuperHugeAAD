@@ -80,7 +80,9 @@ class CCA(LinearABC):
             fs=kwargs["fs"],
             l2=l2,
             num_features_x=kwargs["num_channels"],
-            num_features_y=sum(kwargs["num_audio_features"].values()),
+            num_features_y=sum(
+                x for x in kwargs["num_audio_features"].values() if x is not None
+            ),
             num_components=num_components,
         )
         self.covar_dim_x = (self.cfg.x_lag_samples * 2 + 1) * self.cfg.num_features_x
@@ -95,7 +97,7 @@ class CCA(LinearABC):
             "weight_y", torch.zeros((self.covar_dim_y, self.cfg.num_components))
         )
 
-    def update(self, eeg: torch.Tensor, audio: torch.Tensor) -> None:
+    def update(self, eeg: torch.Tensor, env: torch.Tensor) -> None:
         """
         Accumulate cross-correlation statistics
 
@@ -103,7 +105,7 @@ class CCA(LinearABC):
             x: Input features [batch, time, features_x]
             y: Target features [batch, time, features_y]
         """
-        super().update(eeg, audio)  # Update sample count
+        super().update(eeg, env)  # Update sample count
 
         # Create and flatten lagged matrices
         x_lag_flat = self.lag_and_flatten(
@@ -113,7 +115,7 @@ class CCA(LinearABC):
             self.cfg.x_lag_samples,
         )
         y_lag_flat = self.lag_and_flatten(
-            audio[..., 0],
+            env[..., 0],
             "batch lag time channel -> (batch time) (lag channel)",
             self.cfg.y_lag_samples,
             self.cfg.y_lag_samples,
@@ -149,7 +151,7 @@ class CCA(LinearABC):
         self._fitted = True
 
     def predict(
-        self, eeg: EEG_TYPE, audio: AUDIO_TYPE  # Preserve base class interface
+        self, eeg: EEG_TYPE, env: AUDIO_TYPE  # Preserve base class interface
     ) -> tuple[EEG_TYPE, AUDIO_TYPE]:
         """
         Project input onto CCA space
@@ -172,7 +174,7 @@ class CCA(LinearABC):
             self.cfg.x_lag_samples,
         )
         y_lag_flat = self.lag_and_flatten(
-            audio,
+            env,
             "batch lag time features_y speaker -> batch time speaker (lag features_y)",
             self.cfg.y_lag_samples,
             self.cfg.y_lag_samples,

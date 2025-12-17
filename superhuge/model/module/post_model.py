@@ -14,14 +14,26 @@ def classify_post_model(
         2,
         3,
     ), "Input must be of shape (batch, features) or (batch, time, features)"
-    return nn.Sequential(
-        # Average pooling across the time dimension if exists
-        Reduce("b t c -> b c", "mean") if len(input_size) == 3 else nn.Identity(),
-        # dense the last dimension
-        nn.Linear(input_size[-1], hidden_dim),
-        activation(),
-        nn.Linear(hidden_dim, num_class),
+    model = nn.Sequential()
+    model.append(
+        Reduce("b t c -> b c", "mean") if len(input_size) == 3 else nn.Identity()
     )
+    if activation is nn.Identity:
+        model.append(
+            nn.Linear(
+                input_size[-1],
+                num_class,
+            )
+        )
+    else:
+        model.append(
+            nn.Sequential(
+                nn.Linear(input_size[-1], hidden_dim),
+                activation(),
+                nn.Linear(hidden_dim, num_class),
+            )
+        )
+    return model
 
 
 def regression_post_model(input_size: Sequence[int | None], num_features: int = 1):

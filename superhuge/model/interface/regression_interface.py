@@ -36,7 +36,8 @@ class RegressionInterface(MInterface):
         self._num_audio_features = num_audio_features
 
         self.post_model = regression_post_model(
-            self.output_size, sum(num_audio_features.values())
+            self.output_size,
+            sum(x for x in num_audio_features.values() if x is not None),
         )
         torchinfo.summary(
             self.post_model,

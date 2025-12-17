@@ -65,11 +65,11 @@ class WienerFilter(LinearABC):
             torch.zeros(self.cfg.nlag * self.cfg.num_channels, 1),
         )
 
-    def update(self, eeg: EEG_TYPE, audio: AUDIO_TYPE) -> None:
+    def update(self, eeg: EEG_TYPE, env: AUDIO_TYPE) -> None:
         """
         Update the model with new data.
         """
-        super().update(eeg, audio)
+        super().update(eeg, env)
         x_lag = self.lag_and_flatten(
             eeg,
             "batch lag time channel -> (batch time) (lag channel)",
@@ -77,7 +77,7 @@ class WienerFilter(LinearABC):
             self.cfg.post_lag,  # type: ignore
         )
         y = rearrange(
-            audio[..., 0],
+            env[..., 0],
             "batch time num_features -> (batch time) num_features",
             num_features=1,
         )
@@ -98,7 +98,7 @@ class WienerFilter(LinearABC):
         self.weights = torch.linalg.solve(self.Rxx, self.rxy).detach()
         self._fitted = True
 
-    def predict(self, eeg: EEG_TYPE, audio: AUDIO_TYPE) -> tuple[EEG_TYPE, AUDIO_TYPE]:
+    def predict(self, eeg: EEG_TYPE, env: AUDIO_TYPE) -> tuple[EEG_TYPE, AUDIO_TYPE]:
         """
         Predict the output based on the input data.
         """
@@ -110,4 +110,4 @@ class WienerFilter(LinearABC):
             self.cfg.post_lag,  # type: ignore
         )
         y_pred = x_lag @ self.weights
-        return y_pred, audio
+        return y_pred, env

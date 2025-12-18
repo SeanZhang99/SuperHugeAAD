@@ -2,6 +2,8 @@ from typing import Any
 from einops import rearrange
 import torch
 import pydantic
+
+from .lwcov import lwcov
 from .abc import LinearABC
 from ...types import EEG_TYPE, AUDIO_TYPE
 
@@ -39,7 +41,16 @@ class WienerFilter(LinearABC):
     rxy: torch.Tensor
     weights: torch.Tensor
 
-    def __init__(self, /, *, pre_lag: float, post_lag: float, l2: float, **kwargs):
+    def __init__(
+        self,
+        /,
+        *,
+        pre_lag: float,
+        post_lag: float,
+        l2: float,
+        use_lwcov: bool = False,
+        **kwargs,
+    ):
         super().__init__()
         self.cfg = WienerFilterConfig(
             pre_lag=pre_lag,
@@ -47,6 +58,8 @@ class WienerFilter(LinearABC):
             l2=l2,
             **kwargs,
         )
+
+        self._use_lw_cov = use_lwcov
 
         self.register_buffer(
             "weights", torch.zeros(self.cfg.nlag * self.cfg.num_channels, 1)
@@ -64,6 +77,8 @@ class WienerFilter(LinearABC):
             "rxy",
             torch.zeros(self.cfg.nlag * self.cfg.num_channels, 1),
         )
+
+        self.x_list = []
 
     def update(self, eeg: EEG_TYPE, env: AUDIO_TYPE) -> None:
         """
@@ -83,6 +98,7 @@ class WienerFilter(LinearABC):
         )
         self.Rxx += x_lag.T @ x_lag
         self.rxy += x_lag.T @ y
+        self.x_list.append(x_lag)
 
     def fit(self):
         """
@@ -90,11 +106,15 @@ class WienerFilter(LinearABC):
         """
         assert not self._fitted, "Model is already fitted."
         assert self._n_samples > 0, "No data to fit the model."
-        self.Rxx /= self._n_samples
+        if self._use_lw_cov:
+            x_all = torch.cat(self.x_list, dim=0)
+            self.Rxx = lwcov(x_all, detect_orientation=True) / self._n_samples  # type: ignore
+        else:
+            self.Rxx /= self._n_samples
+            self.Rxx += self.cfg.l2 * torch.eye(
+                self.cfg.nlag * self.cfg.num_channels, device=self.Rxx.device
+            )
         self.rxy /= self._n_samples
-        self.Rxx += self.cfg.l2 * torch.eye(
-            self.cfg.nlag * self.cfg.num_channels, device=self.Rxx.device
-        )
         self.weights = torch.linalg.solve(self.Rxx, self.rxy).detach()
         self._fitted = True
 

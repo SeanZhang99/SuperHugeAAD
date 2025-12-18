@@ -25,9 +25,11 @@ from typing import Any
 import warnings
 
 import lightning as pl2
+import numpy as np
 from pydantic import BaseModel, model_validator
 from rich.console import Console
 from rich.table import Table
+from sklearn.random_projection import sample_without_replacement
 from torch.utils.data import DataLoader
 
 from ..transforms.resample import Resample
@@ -456,12 +458,13 @@ class DInterface(pl2.LightningDataModule):
     def sample_weights(self):
         if issubclass(self.dataset_cfg.dataset_class, EegClassifyBaseDataset):
             samples_per_class = self._global_class_counts.values()
-            weights: list[float] = [
-                1.0 / num_samples for num_samples in samples_per_class
-            ]
-            weights = [
-                weight / sum(weights) * len(samples_per_class) for weight in weights
-            ]  # 归一化，使权重总和 = 类别数
+            weights: np.ndarray = np.array(
+                [1 / count for count in samples_per_class], dtype=np.float32
+            )
+            weights *= len(samples_per_class) / sum(
+                weights
+            )  # 再次归一化，使权重平均值 = 1
+            weights = weights.tolist()
             return weights
         else:
             log(

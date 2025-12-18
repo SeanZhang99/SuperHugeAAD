@@ -16,7 +16,7 @@ dnn_envelope_reconstruction:
 
   tasks:
     pcc_diff:
-      enable: 1
+      enable: 0
       model:
         init_args:
           num_audio_features: 1
@@ -24,7 +24,7 @@ dnn_envelope_reconstruction:
             class_path: superhuge.model.loss.ContrastivePearsonLoss
 
     pcc:
-      enable: 1
+      enable: 0
       model:
         init_args:
           num_audio_features: 1
@@ -39,6 +39,50 @@ dnn_envelope_reconstruction:
           meta_group_func: superhuge.data.metadata_processing.loto
     leave_one_subject_out:
       enable: 0
+      data:
+        init_args:
+          meta_group_func: superhuge.data.metadata_processing.loso
+    leave_one_dataset_out:
+      enable: 0
+      data:
+        init_args:
+          meta_group_func: superhuge.data.metadata_processing.lodo
+
+linear_envelope_reconstruction:
+  type: regression
+  general:
+    data:
+      init_args:
+        dataset_class: superhuge.data.datasets.EegRegressionBaseDataset
+        n_folds: 12
+        metadata_fields:
+          - env
+        meta_filter_func_args:
+          - env
+    model:
+      class_path: superhuge.model.interface.LinearRegressionInterface
+      init_args:
+        model_common_args:
+          num_channels: 64
+
+  tasks:
+    pcc:
+      enable: 1
+      model:
+        init_args:
+          num_audio_features:
+            env: 1
+          loss:
+            class_path: superhuge.model.loss.ContrastivePearsonLoss
+
+  cross_validation:
+    leave_one_trial_out:
+      enable: 1
+      data:
+        init_args:
+          meta_group_func: superhuge.data.metadata_processing.loto
+    leave_one_subject_out:
+      enable: 1
       data:
         init_args:
           meta_group_func: superhuge.data.metadata_processing.loso

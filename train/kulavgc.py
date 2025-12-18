@@ -38,10 +38,12 @@ torch.set_float32_matmul_precision("medium")
 if __name__ == "__main__":
     project_path = os.path.dirname(os.path.abspath(__file__))
     config_path = os.path.join(project_path, "configs")
-    model_config = os.path.join(project_path, "configs", "models", "ssmamba.yaml")
+    model_config = os.path.join(project_path, "configs", "models", "wf.yaml")
     cli = MultiRunCLI(
         "--config",
         os.path.join(config_path, "trainer_config.yaml"),
+        "--config",
+        os.path.join(config_path, "linear_trainer.yaml"),
         "--data",
         os.path.join(
             config_path,

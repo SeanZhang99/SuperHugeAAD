@@ -60,7 +60,10 @@ class MInterface(pl2.LightningModule, ABC):
             ), f"When specifying a single loss, you should not specify the loss weights, but got {loss} and {multiloss_weights}"
         self.loss = loss
         self.multiclass_loss_weights = (
-            nn.Parameter(torch.tensor(multiclass_loss_weights, device=self.device))
+            nn.Parameter(
+                torch.tensor(multiclass_loss_weights, device=self.device),
+                requires_grad=False,
+            )
             if multiclass_loss_weights is not None
             else None
         )

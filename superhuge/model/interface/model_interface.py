@@ -476,6 +476,15 @@ class MInterface(pl2.LightningModule, ABC):
             if param_name != "self":
                 required_inputs.append(param_name.lower())
 
+        if not required_inputs:
+            warn(
+                "MODEL_INTERFACE:CONFIGURE_INPUT:WARNING:NO_REQUIRED_INPUTS_DETECTED: "
+                "No required inputs detected from the model's forward method. "
+                "Defaulting to ['eeg'].",
+                UserWarning,
+            )
+            required_inputs.append("eeg")
+
         return required_inputs
 
     @final

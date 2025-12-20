@@ -1,5 +1,6 @@
 from typing import Any
 from einops import rearrange
+import numpy as np
 import torch
 import pydantic
 
@@ -39,7 +40,7 @@ class WienerFilterConfig(pydantic.BaseModel, extra="allow"):
 class WienerFilter(LinearABC):
     Rxx: torch.Tensor
     rxy: torch.Tensor
-    weights: torch.Tensor
+    _weights: torch.Tensor
 
     def __init__(
         self,
@@ -48,7 +49,7 @@ class WienerFilter(LinearABC):
         pre_lag: float,
         post_lag: float,
         l2: float,
-        use_lwcov: bool = False,
+        use_lwcov: bool,
         **kwargs,
     ):
         super().__init__()
@@ -79,11 +80,18 @@ class WienerFilter(LinearABC):
         )
 
         self.x_list = []
+        self.y_list = []
 
     def update(self, eeg: EEG_TYPE, env: AUDIO_TYPE) -> None:
         """
         Update the model with new data.
+        eeg: batch, time, channel
+        env: batch, time, feature, speaker
         """
+        if isinstance(eeg, np.ndarray):
+            eeg = torch.from_numpy(eeg)
+        if isinstance(env, np.ndarray):
+            env = torch.from_numpy(env)
         super().update(eeg, env)
         x_lag = self.lag_and_flatten(
             eeg,
@@ -96,9 +104,8 @@ class WienerFilter(LinearABC):
             "batch time num_features -> (batch time) num_features",
             num_features=1,
         )
-        self.Rxx += x_lag.T @ x_lag
-        self.rxy += x_lag.T @ y
         self.x_list.append(x_lag)
+        self.y_list.append(y)
 
     def fit(self):
         """
@@ -106,16 +113,16 @@ class WienerFilter(LinearABC):
         """
         assert not self._fitted, "Model is already fitted."
         assert self._n_samples > 0, "No data to fit the model."
+        x_all = torch.cat(self.x_list, dim=0)
         if self._use_lw_cov:
-            x_all = torch.cat(self.x_list, dim=0)
             self.Rxx = lwcov(x_all, detect_orientation=True) / self._n_samples  # type: ignore
         else:
-            self.Rxx /= self._n_samples
+            self.Rxx = (x_all.mT @ x_all) / self._n_samples
             self.Rxx += self.cfg.l2 * torch.eye(
                 self.cfg.nlag * self.cfg.num_channels, device=self.Rxx.device
             )
-        self.rxy /= self._n_samples
-        self.weights = torch.linalg.solve(self.Rxx, self.rxy).detach()
+        self.rxy = x_all.mT @ torch.cat(self.y_list, dim=0) / self._n_samples
+        self._weights = torch.linalg.solve(self.Rxx, self.rxy).detach()
         self._fitted = True
 
     def predict(self, eeg: EEG_TYPE, env: AUDIO_TYPE) -> tuple[EEG_TYPE, AUDIO_TYPE]:
@@ -123,6 +130,10 @@ class WienerFilter(LinearABC):
         Predict the output based on the input data.
         """
         assert self._fitted, "Model is not fitted yet."
+        if isinstance(eeg, np.ndarray):
+            eeg = torch.from_numpy(eeg)
+        if isinstance(env, np.ndarray):
+            env = torch.from_numpy(env)
         x_lag = self.lag_and_flatten(
             eeg,
             "batch lag time channel -> batch time (lag channel)",
@@ -131,3 +142,11 @@ class WienerFilter(LinearABC):
         )
         y_pred = x_lag @ self.weights
         return y_pred, env
+
+    @property
+    def weights(self):
+        return self._weights
+
+    @weights.setter
+    def weights(self, value: torch.Tensor):
+        self._weights = value

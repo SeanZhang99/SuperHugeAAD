@@ -174,7 +174,7 @@ class VLAAI(nn.Module):
             for _ in range(nb_blocks)
         )
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, eeg: Tensor) -> Tensor:
         """
         forward Call forward pass of VLAAI model.
 
@@ -184,14 +184,14 @@ class VLAAI(nn.Module):
         :rtype: torch.Tensor
         """
         # 将输入从 (b, t, c) 转换为 (b, c, t)
-        x = einops.rearrange(x, "b t c -> b c t")
-        x_hat = x
+        eeg = einops.rearrange(eeg, "b t c -> b c t")
+        x_hat = eeg
         for i, block in enumerate(self._vlaai_blocks):
             if self.use_skip and i > 0:
                 # Problem:
                 # 1st layer: no effect. then x_hat get normalized after x_hat=block(x_hat)
                 # 2nd layer: x_hat already normalized, but x not normalized.
-                x_hat = x_hat + x
+                x_hat = x_hat + eeg
             x_hat = block(x_hat)
 
         x_hat = einops.rearrange(x_hat, "b c t -> b t c")

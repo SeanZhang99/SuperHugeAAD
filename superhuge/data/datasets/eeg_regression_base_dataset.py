@@ -97,7 +97,7 @@ class EegRegressionBaseDataset(EegDataset):
 
                 if self.transform:
                     speech_feature, meta = self.transform(
-                        speech_feature,
+                        speech_feature.copy(),
                         meta=meta,
                         whom=speech_type,
                         when="before_slicing",
@@ -105,7 +105,7 @@ class EegRegressionBaseDataset(EegDataset):
 
                 speech_segment: np.ndarray = speech_feature[
                     start_idx : start_idx + self.window_length * getattr(meta, f"{speech_type}_fs")  # type: ignore
-                ].copy()
+                ]
 
                 if self.transform:
                     speech_segment, meta = self.transform(

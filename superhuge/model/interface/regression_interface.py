@@ -23,13 +23,15 @@ class RegressionInterface(MInterface):
         self,
         /,
         *,
-        num_audio_features: NumAudioFeaturesMixin,
+        num_audio_features: NumAudioFeaturesMixin,  # type: ignore
         **kwargs,
     ):
-        self.required_output_keys = ["eeg", "audio"]
+        num_audio_features: dict = num_audio_features.model_dump()
+        self.required_output_keys = ["eeg"]
+        self.required_output_keys.extend(
+            x for x in num_audio_features.keys() if num_audio_features[x] is not None
+        )
         super().__init__(**kwargs)
-
-        num_audio_features = num_audio_features.model_dump()  # type: ignore
 
         assert isinstance(num_audio_features, Mapping)
 

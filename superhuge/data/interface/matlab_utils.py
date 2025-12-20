@@ -1,4 +1,5 @@
 import importlib
+from re import S
 from typing import Sequence
 from warnings import warn
 from .data_interface import DInterface
@@ -13,6 +14,7 @@ def create_data_interface(
     classify: bool = False,
     regression: bool = False,
     metadata_fields: list[str] | None = None,
+    select_dataset: int | Sequence[int] | None = None,
     select_subject: int | Sequence[int] | None = None,
     select_trial: int | Sequence[int] | None = None,
     meta_filter_func_args: Sequence | None = None,
@@ -24,6 +26,8 @@ def create_data_interface(
     preproc_stage: str | None = None,
     bandpass_wn: Sequence[float] | None = None,
     refs: int | None = None,
+    zscore: bool = False,
+    **kwargs,
 ):
     """
     Create a data interface for MATLAB.
@@ -36,6 +40,11 @@ def create_data_interface(
     dataset_class = EegClassifyBaseDataset if classify else EegRegressionBaseDataset
 
     metadata_filter = []
+    if select_dataset:
+        assert isinstance(
+            select_dataset, (int, Sequence)
+        ), "select_dataset must be an int or a sequence of ints."
+        metadata_filter.append(MetadataValueSelector("dataset_id", select_dataset))
     if select_subject:
         assert isinstance(
             select_subject, (int, Sequence)
@@ -66,6 +75,8 @@ def create_data_interface(
         from ..metadata_processing.group import loto
 
         meta_group_func = loto
+    except Exception as e:
+        raise e
 
     transforms = []
     if bandpass_wn:
@@ -75,7 +86,12 @@ def create_data_interface(
     if refs:
         from ..transforms import Resample
 
-        transforms.append(Resample(old_fs=fs, new_fs=refs))
+        transforms.append(Resample(old_fs=fs, new_fs=refs, whom=["eeg", "env"]))
+
+    if zscore:
+        from ..transforms import ZScore
+
+        transforms.append(ZScore(whom=["eeg", "env"], when="before_slicing"))
 
     transforms = transforms if transforms else None
 
@@ -95,4 +111,5 @@ def create_data_interface(
         transform=transforms,
         overlap=overlap,
         preproc_stage=preproc_stage,
+        **kwargs,
     )

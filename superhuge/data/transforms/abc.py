@@ -9,7 +9,7 @@ from pydantic_core import core_schema
 
 class TransformConfig(BaseModel):
     seed: int = 42
-    apply_prob: float = 0.5
+    apply_prob: float = 1.0
     when: Literal["before_slicing", "before_returning"] = "before_returning"
     whom: str | Sequence[str] = "eeg"
 

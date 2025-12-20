@@ -46,5 +46,7 @@ class RiemannianWienerFilter(WienerFilter):
         self.Rxx += self.cfg.l2 * torch.eye(
             self.cfg.nlag * self.cfg.num_channels, device=self.Rxx.device
         )
-        self.weights = torch.linalg.solve(self.Rxx, self.rxy * self._n_samples).detach()
+        self._weights = torch.linalg.solve(
+            self.Rxx, self.rxy * self._n_samples
+        ).detach()
         self._fitted = True

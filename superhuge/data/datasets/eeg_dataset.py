@@ -344,9 +344,9 @@ class EegDataset(Dataset):
             self._validate_eeg_shape(eeg, file_name)
 
             if self.transform:
-                eeg, meta = self.transform(eeg, meta=meta, when="before_slicing", whom="eeg")  # type: ignore
+                eeg, meta = self.transform(eeg.copy(), meta=meta, when="before_slicing", whom="eeg")  # type: ignore
 
-            eeg_seg = eeg[start_idx : start_idx + self.window_length * getattr(meta, "fs")].copy()  # type: ignore
+            eeg_seg = eeg[start_idx : start_idx + self.window_length * getattr(meta, "fs")]  # type: ignore
 
             if self.transform:
                 eeg_seg, meta = self.transform(

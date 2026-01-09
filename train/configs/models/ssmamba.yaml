@@ -11,3 +11,4 @@ init_args:
     g_con: 1
     within_sub_num: 110
   model_class: superhuge.model.ssmamba.SSMamba
+  summary_at_cuda: true

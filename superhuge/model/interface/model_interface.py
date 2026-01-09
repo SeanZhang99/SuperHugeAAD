@@ -44,6 +44,7 @@ class MInterface(pl2.LightningModule, ABC):
         log_grad: bool | None = None,
         log_norm: bool | None = None,
         summary_verbose: bool | None = None,
+        summary_at_cuda: bool | None = False,
         get_stats_fn: Callable | None = None,
     ):
         super().__init__()
@@ -90,14 +91,23 @@ class MInterface(pl2.LightningModule, ABC):
 
         # Configure the input/output of the main model.
         self._required_inputs = self.configure_input()
-        self.configure_input_example(**self.model_common_args.model_dump())
 
+        if summary_at_cuda is None:
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        elif summary_at_cuda:
+            device = torch.device("cuda")
+        else:
+            device = torch.device("cpu")
+
+        self.configure_input_example(
+            device=device, **self.model_common_args.model_dump()
+        )
         self.summary_verbose = int(summary_verbose or False)
         summary: torchinfo.ModelStatistics = torchinfo.summary(
             self.model,
             input_data=list(self.input_example.values()),
             verbose=self.summary_verbose,
-            # device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+            device=device,
             col_names=[
                 "input_size",
                 "output_size",
@@ -138,7 +148,9 @@ class MInterface(pl2.LightningModule, ABC):
             warn("ckpt_path is None, cannot restore model parameters.")
 
     @final
-    def configure_input_example(self, /, **kwargs) -> Mapping[str, tuple[int]]:
+    def configure_input_example(
+        self, /, device: torch.device | str, **kwargs
+    ) -> Mapping[str, tuple[int]]:
         """
         Get the input size for each required input type based on the model's forward method.
 
@@ -203,6 +215,14 @@ class MInterface(pl2.LightningModule, ABC):
                 input_example["label"] = torch.randn(
                     1,
                 )
+
+        for k, v in input_example.items():
+            if isinstance(v, torch.Tensor):
+                input_example[k] = v.to(device)
+            elif isinstance(v, dict):
+                for kk, vv in v.items():
+                    if isinstance(vv, torch.Tensor):
+                        v[kk] = vv.to(device)
 
         self.input_example = input_example
 
@@ -435,7 +455,6 @@ class MInterface(pl2.LightningModule, ABC):
                         enable_graph=False,
                     )
         super().on_after_backward()
-
 
     @final
     def configure_input(self) -> list[str]:

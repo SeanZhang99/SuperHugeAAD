@@ -11,7 +11,5 @@ from .group import (
     lodo,
     loso,
     loto,
-    cgrid_attention_switch_loto,
     within_trial,
-    cgrid_leave_one_speaker_out,
 )

@@ -25,7 +25,7 @@ dnn_envelope_reconstruction:
             class_path: superhuge.model.loss.ContrastivePearsonLoss
 
     pcc:
-      enable: 0
+      enable: 1
       model:
         init_args:
           loss:

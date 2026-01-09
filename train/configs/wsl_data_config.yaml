@@ -16,9 +16,9 @@ init_args:
         attribute_name: dataset_id
         attribute_value:
           # - 1 # AHU
-          - 2 # DTU
+          # - 2 # DTU
           # - 3 # Estart
-          # - 4 # KUL: lrtc?
+          - 4 # KUL: lrtc?
           # - 5 # KUL-AV-GC?
           # - 6 # NJU
           # - 7 # NUS
@@ -29,15 +29,6 @@ init_args:
   root_path: /mnt/e/derivatives/SuperHuge
   preproc_stage: preprocessed
   transform:
-    - class_path: superhuge.data.transforms.Filter
-      init_args:
-        apply_prob: 1.0
-        when: before_returning
-        whom: eeg
-        Wn: [1., 32.]
-        btype: bandpass
-        order: 5
-        fs: ${init_args.fs}
     # - class_path: superhuge.data.transforms.Scale
     #   init_args:
     #     preproc_stage: ${init_args.preproc_stage}
@@ -46,18 +37,18 @@ init_args:
     #     whom: eeg
     #     root_path: ${init_args.root_path}
     #     scaling_factor_path: scaling_factor.pkl
-    # - class_path: superhuge.data.transforms.Scale
-    #   init_args:
-    #     preproc_stage: ${init_args.preproc_stage}
-    #     apply_prob: 1.0
-    #     when: before_returning
-    #     whom: audio
-    #     root_path: ${init_args.root_path}
-    #     scaling_factor_path: scaling_factor.pkl
+    - class_path: superhuge.data.transforms.Scale
+      init_args:
+        preproc_stage: ${init_args.preproc_stage}
+        apply_prob: 1.0
+        when: before_returning
+        whom: audio
+        root_path: ${init_args.root_path}
+        scaling_factor_path: scaling_factor.pkl
     # - class_path: superhuge.data.transforms.ZScore
     #   init_args:
     #     apply_prob: 1.0
     #     when: before_returning
     #     whom: audio
-  window_length: 1
+  window_length: 10
   summary_verbose: true

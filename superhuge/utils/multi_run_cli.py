@@ -208,6 +208,10 @@ class MultiRunCLI:
                 save_config_callback=(SaveConfigCallback if save_config else None),
             )
 
+            assert len(cli.datamodule.trainset) > 0
+            assert len(cli.datamodule.valset) > 0
+            assert len(cli.datamodule.testset) > 0
+
             cli.trainer.fit(
                 model=cli.model,
                 datamodule=cli.datamodule,

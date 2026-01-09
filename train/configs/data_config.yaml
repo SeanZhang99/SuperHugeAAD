@@ -4,7 +4,7 @@ init_args:
   dataloader_args:
     batch_size: 32
     drop_last: false
-    num_workers: 0
+    num_workers: 2
     persistent_workers: true
     pin_memory: true
     prefetch_factor: 8
@@ -18,8 +18,8 @@ init_args:
           # - 1 # AHU
           # - 2 # DTU
           # - 3 # Estart
-          # - 4 # KUL: lrtc?
-          - 5 # KUL-AV-GC?
+          - 4 # KUL: lrtc?
+          # - 5 # KUL-AV-GC?
           # - 6 # NJU
           # - 7 # NUS
           # - 8 # PKU?
@@ -29,34 +29,35 @@ init_args:
   root_path: E:/derivatives/SuperHuge
   preproc_stage: preprocessed
   transform:
-    - class_path: superhuge.data.transforms.ZScore
-      init_args:
-        apply_prob: 1.0
-        when: before_slicing
-        whom: [eeg, env]
-    - class_path: superhuge.data.transforms.Filter
-      init_args:
-        apply_prob: 1.0
-        when: before_returning
-        whom: eeg
-        Wn: [1., 9.]
-        btype: bandpass
-        order: 5
-        fs: ${init_args.fs}
-    - class_path: superhuge.data.transforms.Resample
-      init_args:
-        apply_prob: 1.0
-        when: before_returning
-        whom: [eeg, env]
-        old_fs: ${init_args.fs}
-        new_fs: 20
-    # - class_path: superhuge.data.transforms.Scale
+    # null
+    # - class_path: superhuge.data.transforms.ZScore
     #   init_args:
-    #     preproc_stage: ${init_args.preproc_stage}
+    #     apply_prob: 1.0
+    #     when: before_slicing
+    #     whom: [eeg, env]
+    # - class_path: superhuge.data.transforms.Filter
+    #   init_args:
+    #     apply_prob: 1.0
+    #     when: before_returning
+    #     whom: eeg
+    #     Wn: [1., 32.]
+    #     btype: bandpass
+    #     order: 5
+    #     fs: ${init_args.fs}
+    # - class_path: superhuge.data.transforms.Resample
+    #   init_args:
     #     apply_prob: 1.0
     #     when: before_returning
     #     whom: [eeg, env]
-    #     root_path: ${init_args.root_path}
-    #     scaling_factor_path: scaling_factor.pkl
+    #     old_fs: ${init_args.fs}
+    #     new_fs: 20
+    - class_path: superhuge.data.transforms.Scale
+      init_args:
+        preproc_stage: ${init_args.preproc_stage}
+        apply_prob: 1.0
+        when: before_returning
+        whom: [eeg, env]
+        root_path: ${init_args.root_path}
+        scaling_factor_path: scaling_factor.pkl
   window_length: 10
   summary_verbose: true

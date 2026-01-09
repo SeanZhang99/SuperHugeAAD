@@ -91,14 +91,13 @@ class MInterface(pl2.LightningModule, ABC):
         # Configure the input/output of the main model.
         self._required_inputs = self.configure_input()
         self.configure_input_example(**self.model_common_args.model_dump())
-        self._output_keys = self.configure_output()
 
         self.summary_verbose = int(summary_verbose or False)
         summary: torchinfo.ModelStatistics = torchinfo.summary(
             self.model,
             input_data=list(self.input_example.values()),
             verbose=self.summary_verbose,
-            device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+            # device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
             col_names=[
                 "input_size",
                 "output_size",
@@ -109,6 +108,7 @@ class MInterface(pl2.LightningModule, ABC):
             depth=5,
         )
         self.output_size = summary.summary_list[0].output_size
+        self._output_keys = self.configure_output()
 
         self.ckpt_path = ckpt_path  # Store checkpoint path for later use
         self.log_grad = log_grad
@@ -436,19 +436,6 @@ class MInterface(pl2.LightningModule, ABC):
                     )
         super().on_after_backward()
 
-    # def on_before_backward(self, loss):
-    #     if getattr(self, "log_norm", False):
-    #         for name, param in self.named_parameters():
-    #             if param.grad is not None:
-    #                 self.log(
-    #                     f"param_norm2/{name}",
-    #                     param.detach().data.norm(2).item(),
-    #                     on_epoch=True,
-    #                     on_step=False,
-    #                     batch_size=1,
-    #                     enable_graph=False,
-    #                 )
-    #     return super().on_before_backward(loss)
 
     @final
     def configure_input(self) -> list[str]:
@@ -496,6 +483,7 @@ class MInterface(pl2.LightningModule, ABC):
             list[str]: A sequence of strings indicating the outputs of the model.
                     Possible values: 'eeg_hat', 'audio_hat', 'label_hat'.
         """
+        output_examples: tuple[torch.Tensor] = self.model(*self.input_example.values())
 
         output_keys = ["eeg"]  # EEG output is always present by default
 
@@ -509,9 +497,21 @@ class MInterface(pl2.LightningModule, ABC):
                 return_annotation.__args__, tuple
             ):
                 # If the return type is a tuple, inspect its elements
-                for output_type in return_annotation.__args__[1:]:
+                # for i, output_type in enumerate(return_annotation.__args__[1:]):
+                for i in range(1, len(return_annotation.__args__)):
+                    output_type = return_annotation.__args__[i]
+                    output_example = output_examples[i]
                     if "audio" in str(output_type).lower():
-                        output_keys.append("audio")
+                        # try to detect audio type
+                        num_audio_feature = output_example.shape[-2]
+                        num_audio_features = (
+                            self.model_common_args.num_audio_features.model_dump()
+                        )
+                        assert num_audio_features
+                        for key, val in num_audio_features.items():
+                            if val == num_audio_feature:
+                                output_keys.append(key)
+                                break
                     elif "label" in str(output_type).lower():
                         output_keys.append("label")
 

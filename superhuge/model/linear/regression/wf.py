@@ -124,6 +124,8 @@ class WienerFilter(LinearABC):
         self.rxy = x_all.mT @ torch.cat(self.y_list, dim=0) / self._n_samples
         self._weights = torch.linalg.solve(self.Rxx, self.rxy).detach()
         self._fitted = True
+        self.x_list.clear()
+        self.y_list.clear()
 
     def predict(self, eeg: EEG_TYPE, env: AUDIO_TYPE) -> tuple[EEG_TYPE, AUDIO_TYPE]:
         """

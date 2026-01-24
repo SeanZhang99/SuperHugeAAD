@@ -152,3 +152,19 @@ class WienerFilter(LinearABC):
     @weights.setter
     def weights(self, value: torch.Tensor):
         self._weights = value
+
+
+def _main():
+    wf = WienerFilter(
+        pre_lag=0.25,
+        post_lag=0.4,
+        l2=1.0,
+        fs=64,
+        window_length=60,
+        num_channels=32,
+        use_lwcov=True,
+    )
+    x = torch.randn(1, 128, 2)
+    x_lagged = wf.get_lag_mtx(x, 16, 0)
+    print(x_lagged)
+    np.save("x_lagged.npy", x_lagged.numpy())

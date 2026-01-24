@@ -25,6 +25,10 @@ init_args:
           # - 8 # PKU?
           # - 9 # PKU-NBD
           # - 10 # sparKULee
+    - class_path: superhuge.data.metadata_filters.MetadataValueSelector
+      init_args:
+        attribute_name: trial_id
+        attribute_value: [1, 2, 5, 6]
   overlap: 1
   root_path: E:/derivatives/SuperHuge
   preproc_stage: preprocessed

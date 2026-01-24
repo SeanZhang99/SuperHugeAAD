@@ -132,13 +132,13 @@ def vlaai_block(
             time_dim=time_dim,
             drouput=drouput,
         ),
-        # EinMix(
-        #     "b k t -> b c t",
-        #     weight_shape="k c",
-        #     bias_shape="c",
-        #     c=num_channels,
-        #     k=extractor_args.num_kernels[-1],
-        # ),
+        EinMix(
+            "b k t -> b c t",
+            weight_shape="k c",
+            bias_shape="c",
+            c=num_channels,
+            k=num_kernels[-1],
+        ),
     )
 
 
@@ -166,7 +166,8 @@ class VLAAI(nn.Module):
                 kernel_sizes=extractor_args.kernel_sizes,
                 output_context_kernel_size=output_context_kernel_size,
                 num_channels=(
-                    kwargs["num_channels"] if _ == 0 else extractor_args.num_kernels[-1]
+                    # kwargs["num_channels"] if _ == 0 else extractor_args.num_kernels[-1]
+                    kwargs["num_channels"]
                 ),
                 time_dim=kwargs["fs"] * kwargs["window_length"],
                 drouput=dropout,

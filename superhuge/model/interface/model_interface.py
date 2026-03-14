@@ -116,6 +116,7 @@ class MInterface(pl2.LightningModule, ABC):
                 "trainable",
             ],
             depth=5,
+            mode="eval",
         )
         self.output_size = summary.summary_list[0].output_size
         self._output_keys = self.configure_output()
@@ -502,7 +503,9 @@ class MInterface(pl2.LightningModule, ABC):
             list[str]: A sequence of strings indicating the outputs of the model.
                     Possible values: 'eeg_hat', 'audio_hat', 'label_hat'.
         """
+        self.model.eval()  # Set the model to evaluation mode to avoid any randomness in the output
         output_examples: tuple[torch.Tensor] = self.model(*self.input_example.values())
+        self.model.train()  # Set the model back to training mode
 
         output_keys = ["eeg"]  # EEG output is always present by default
 

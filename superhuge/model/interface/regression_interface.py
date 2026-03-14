@@ -90,6 +90,46 @@ class RegressionInterface(MInterface):
         #         torch.argmax(metrics_mean, dim=-1) == 0
         #     ).type_as(metrics)
 
+        if "speaker_id" in meta:
+            for speaker_idx in set(meta["speaker_id"]):
+                for j, label in enumerate(speaker_labels):
+                    stats[
+                        f"{self.stage}/{label}_{metrics_name}_speaker_{speaker_idx}"
+                    ] = metrics[
+                        [
+                            speaker_id == speaker_idx
+                            for speaker_id in meta["speaker_id"]
+                        ],
+                        :,
+                        j,
+                    ].mean(
+                        dim=1
+                    )
+                    # Compute pcc difference between the first speaker and the rest
+                    if j >= 1:
+                        stats[
+                            f"{self.stage}/{label}_{metrics_name}_diff_speaker_{speaker_idx}"
+                        ] = (
+                            metrics[
+                                [
+                                    speaker_id == speaker_idx
+                                    for speaker_id in meta["speaker_id"]
+                                ],
+                                :,
+                                0,
+                            ]
+                            - metrics[
+                                [
+                                    speaker_id == speaker_idx
+                                    for speaker_id in meta["speaker_id"]
+                                ],
+                                :,
+                                j,
+                            ]
+                        ).mean(
+                            dim=1
+                        )
+
         return stats
 
     def get_stats(
@@ -141,7 +181,9 @@ class RegressionInterfaceWithEnvDump(RegressionInterface):
     def on_test_start(self) -> None:
         super().on_test_start()
         base_dir = (
-            Path(self.logger.log_dir) if getattr(self, "logger", None) else Path(".")
+            Path(self.logger.log_dir)  # type: ignore
+            if getattr(self, "logger", None) and getattr(self.logger, "log_dir", None)
+            else Path(".")
         )
         self._test_env_dir = base_dir / "test_env"
         self._test_env_dir.mkdir(parents=True, exist_ok=True)

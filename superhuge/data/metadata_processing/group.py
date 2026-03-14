@@ -1,3 +1,4 @@
+from collections import namedtuple
 import random
 from typing import Any, TypeAlias
 
@@ -10,6 +11,9 @@ from .data import (
 
 DatasetID: TypeAlias = int
 SubjectID: TypeAlias = int
+
+
+EntryMetaPair = namedtuple("EntryMetaPair", ["entry", "metadata"])
 
 
 def collect_dataset_subject_trials(
@@ -26,7 +30,7 @@ def collect_dataset_subject_trials(
         assert subject_id is not None, "Subject ID cannot be None"
         dataset_subject_trials.setdefault(dataset_id, {}).setdefault(
             subject_id, []
-        ).append((entry, trial_metadata))
+        ).append(EntryMetaPair(entry, trial_metadata))
     return dataset_subject_trials
 
 
@@ -158,7 +162,6 @@ def lodo(
         all_folds, n_folds, test_fold_idx, val_fold_idx
     )
     return {"train": train_set, "val": val_set, "test": test_set}
-
 
 
 def within_trial(

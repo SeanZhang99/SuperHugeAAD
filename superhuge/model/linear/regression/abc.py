@@ -50,27 +50,29 @@ class LinearABC(torch.nn.Module, ABC):
         ...
 
     @final
-    def get_lag_mtx(self, x: torch.Tensor, *lag: int, **kwargs):
+    def get_lag_mtx(
+        self, x: torch.Tensor, pre_lag: int, post_lag: int, *args, **kwargs
+    ):
         """
         Construct a lagged matrix for the input with given lag.
 
         Parameters:
         x: torch.Tensor, input tensor. Shape: (batch_size, time_steps, ...). The lag (or advance) is operated along the time dimension, and lagged signals is inseted into the second dimension. Other dimensions remain unchanged.
-        lag: two integers, the lag range. The first element specify where the lag begins, the second element specify where the lag ends. The first lag indicates advance, and the second indicates delay.
+        pre_lag: int, number of time steps to advance. The mathematical formula is y(t) = sum_n w(n)*x(t-n)
+        post_lag: int, number of time steps to lag. The mathematical formula is y(t) = sum_n w(n)*x(t+n)
 
         Example:
         lag: 10, 10. return: (batch_size, 21, time_steps, ...). 10 means the input is advanced by 10 time steps, 10 means the input is lagged by 10 time steps.
         """
         x_lag = []
-        assert (
-            isinstance(lag, Sequence) and len(lag) == 2
-        ), "lag must be a sequence of two integers"
+        if pre_lag < 0:
+            pre_lag = -pre_lag
 
-        if lag[0] <= 0 and lag[1] >= 0:
-            lag = (-lag[0], lag[1])
+        assert pre_lag >= 0, "pre_lag must be non-negative"
+        assert post_lag >= 0, "post_lag must be non-negative"
 
-        for l in range(-lag[0], lag[1] + 1):
-            if l >= 0:
+        for l in range(-pre_lag, post_lag + 1):
+            if l <= 0:
                 x_lag.append(
                     torch.cat(
                         [

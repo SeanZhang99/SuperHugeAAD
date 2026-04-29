@@ -104,7 +104,7 @@ class EegRegressionBaseDataset(EegDataset):
                     )  # type: ignore
 
                 speech_segment: np.ndarray = speech_feature[
-                    start_idx : start_idx + self.window_length * getattr(meta, f"{speech_type}_fs")  # type: ignore
+                    start_idx : start_idx + self.window_length * self.fs  # type: ignore
                 ]
 
                 if self.transform:

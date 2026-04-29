@@ -1,4 +1,5 @@
 from typing import Any
+from warnings import warn
 import numpy as np
 from scipy.signal import resample
 
@@ -12,6 +13,10 @@ class Resample(Transform):
         self, /, *, old_fs: int | float, new_fs: int | float, **kwargs
     ) -> None:
         super().__init__(**kwargs)
+        if kwargs["when"] == "before_returning":
+            warn(
+                "Resampling before returning is not recommended. Dataset slicing is based on the new sampling rate, and therefore the data slicing will be incorrect if resampling is done after slicing."
+            )
         self.old_fs = old_fs
         self.new_fs = new_fs
 

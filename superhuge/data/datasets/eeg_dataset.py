@@ -346,7 +346,7 @@ class EegDataset(Dataset):
             if self.transform:
                 eeg, meta = self.transform(eeg.copy(), meta=meta, when="before_slicing", whom="eeg")  # type: ignore
 
-            eeg_seg = eeg[start_idx : start_idx + self.window_length * getattr(meta, "fs")]  # type: ignore
+            eeg_seg = eeg[start_idx : start_idx + self.window_length * self.fs]  # type: ignore
 
             if self.transform:
                 eeg_seg, meta = self.transform(

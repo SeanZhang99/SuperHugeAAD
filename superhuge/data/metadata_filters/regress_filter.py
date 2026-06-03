@@ -1,7 +1,16 @@
 from ..metadata_processing.data import RegressionMetadataElement
-from .abc import RegressionMetadataFilter
+from .abc import MetadataFilter
 
 __all__ = ["get_regression_filter"]
+
+
+class RegressionMetadataFilter(MetadataFilter):
+    """Base class for regression metadata filters.
+
+    Does nothing, just for identification.
+    """
+
+    _filter_marker = True
 
 
 class EnvFilter(RegressionMetadataFilter):

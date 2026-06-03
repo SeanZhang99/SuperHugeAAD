@@ -1,5 +1,14 @@
 from ..metadata_processing.data import ClassifyMetadataElement
-from .abc import ClassifyMetadataFilter
+from .abc import MetadataFilter
+class ClassifyMetadataFilter(MetadataFilter):
+    """Base class for classification metadata filters.
+
+    Does nothing, just for identification.
+    """
+
+    _filter_marker = True
+
+
 
 # from typing import TYPE_CHECKING
 

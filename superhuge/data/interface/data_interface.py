@@ -40,9 +40,9 @@ from ..datasets.eeg_classify_base_dataset import EegClassifyBaseDataset
 from ..datasets.collect_multidataset import collect_multidataset
 from ..metadata_filters.abc import (
     MetadataFilter,
-    ClassifyMetadataFilter,
-    RegressionMetadataFilter,
 )
+from ..metadata_filters.classify_filter import ClassifyMetadataFilter
+from ..metadata_filters.regress_filter import RegressionMetadataFilter
 from ..metadata_filters.classify_filter import get_classify_filter
 from ..metadata_filters.regress_filter import get_regression_filter
 from ..metadata_filters.composer import MetadataFilterComposer
@@ -273,15 +273,28 @@ class DInterface(pl2.LightningDataModule):
     def filt_metadata(
         self,
         metadata: Metadata,
-        meta_filter_func: Callable[[MetadataElement], MetadataElement | None] | None,
+        meta_filter_func: (
+            Callable[
+                [
+                    Metadata,
+                ],
+                Metadata,
+            ]
+            | None
+        ),
     ):
-        if meta_filter_func:
-            filtered_metadata: Metadata = {}
-            for dataset_entry, metadata_element in metadata.items():
-                metadata_element = meta_filter_func(metadata_element)
-                if metadata_element is not None:
-                    filtered_metadata[dataset_entry] = metadata_element
-            return filtered_metadata
+        # if meta_filter_func:
+        #     filtered_metadata: Metadata = {}
+        #     for dataset_entry, metadata_element in metadata.items():
+        #         metadata_element = meta_filter_func(metadata_element)
+        #         if metadata_element is not None:
+        #             filtered_metadata[dataset_entry] = metadata_element
+        #     return filtered_metadata
+        # else:
+        #     return metadata
+        # update in 2026/06/03: support batch filtering. also change the default behaviour of Composer
+        if meta_filter_func is not None:
+            return meta_filter_func(metadata)
         else:
             return metadata
 

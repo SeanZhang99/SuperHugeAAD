@@ -311,16 +311,8 @@ class EegDataset(Dataset):
             and self._get_file_disk_usage() < psutil.virtual_memory().available * 0.8
         ):
             self._save_on_memory = True
-            print("Dataset will cache loaded data in memory.")
-            print(
-                f"Memory usage detail: {self._get_file_disk_usage() / psutil.virtual_memory().total * 100:.2f}% of memory will be used to cache dataset."
-            )
         elif self._save_on_memory is None:
-            print("Dataset will NOT cache loaded data in memory.")
             self._save_on_memory = False
-            print(
-                f"Memory usage detail: {self._get_file_disk_usage() / psutil.virtual_memory().total * 100:.2f}% of memory will be used to cache dataset."
-            )
         if (
             self._save_on_memory
             and idx in self.memory

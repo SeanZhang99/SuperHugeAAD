@@ -124,5 +124,5 @@ class LSM_CNN(nn.Module):
             ),
         )
 
-    def forward(self, x, *args, **kwargs):
-        return self._lsm_cnn(x)
+    def forward(self, eeg):
+        return self._lsm_cnn(eeg)

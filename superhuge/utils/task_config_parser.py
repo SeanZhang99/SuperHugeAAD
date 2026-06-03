@@ -2,7 +2,7 @@ from collections.abc import Generator
 from copy import deepcopy
 from itertools import product
 import os
-from typing import Any
+from typing import Any, Sequence
 
 import yaml
 
@@ -41,6 +41,14 @@ class TaskConfigParser:
             for key, value in update.items():
                 if isinstance(value, dict) and key in merged:
                     merged[key] = self._deep_merge_dicts(merged[key], value)
+                elif (
+                    isinstance(value, Sequence)
+                    and key in merged
+                    and isinstance(merged[key], Sequence)
+                    and not isinstance(merged[key], str)
+                ):
+                    merged[key] = list(merged[key]) + list(value)
+
                 else:
                     merged[key] = value
         return merged

@@ -25,7 +25,7 @@ def gather_runs(
         # take the last two row of the dataframe and merge into one row
         target_df = pd.DataFrame()
         for col in df.columns:
-            tmp = df[col]
+            tmp = df[col].copy()
             idx = tmp.last_valid_index()
             target_df[col] = [tmp.loc[idx]]
         runs.append(target_df)

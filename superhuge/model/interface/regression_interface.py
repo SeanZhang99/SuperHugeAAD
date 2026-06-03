@@ -230,3 +230,9 @@ class RegressionInterfaceWithEnvDump(RegressionInterface):
         if getattr(self, "stage", None) == "test":
             self._save_test_env_batch(y_pred, y_true, meta)
         return super().get_stats(y_pred, y_true, meta=meta)
+
+
+class LinearRegressionInterfaceWithEnvDump(
+    LinearInterface, RegressionInterfaceWithEnvDump
+):
+    pass

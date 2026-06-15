@@ -46,8 +46,14 @@ class MInterface(pl2.LightningModule, ABC):
         summary_verbose: bool | None = None,
         summary_at_cuda: bool | None = False,
         get_stats_fn: Callable | None = None,
+        diagnostic: bool | None = None,
     ):
         super().__init__()
+
+        if diagnostic:
+            log_grad = True
+            log_norm = True
+            summary_verbose = True
 
         # Check and configure loss
         if isinstance(loss, Sequence):
@@ -309,7 +315,7 @@ class MInterface(pl2.LightningModule, ABC):
         batch_size = 0
         for data in batch.values():
             outputs = self.training_closure(data)
-            loss += self.loss_fn(*outputs)
+            loss += self.loss_fn(*outputs, interface=self)
             batch_size += outputs[0].shape[0]
             self.get_stats(
                 *outputs,
@@ -318,7 +324,6 @@ class MInterface(pl2.LightningModule, ABC):
             if self.get_stats_fn:
                 self.get_stats_fn(self, *outputs, meta=data["meta"])  # type: ignore
 
-        loss /= batch_size
         self.log(
             f"{self.stage}/loss",
             loss,
@@ -377,12 +382,20 @@ class MInterface(pl2.LightningModule, ABC):
                     | int
                     | str
                     | Sequence[torch.Tensor | int | str],
+                    interface: "MInterface | None " = None,
                 ):
                     loss = torch.zeros(1, device=self.device)
                     for loss_fn, weight in zip(self.loss, self.multiloss_weights):  # type: ignore
-                        loss += (
-                            loss_fn(*args, self.multiclass_loss_weights).sum() * weight
+                        tmp = loss_fn(*args, self.multiclass_loss_weights) * weight
+                        interface.log(
+                            f"{interface.stage}/loss_{loss_fn.__repr__()}",
+                            tmp.mean(),
+                            on_epoch=True,
+                            on_step=False,
+                            prog_bar=True,
+                            batch_size=args[0].shape[0],
                         )
+                        loss += tmp.mean()
                     assert not isnan(loss), (
                         "MODEL_INTERFACE:LOSS_FN:ASSERTION:VALUE_ERROR: Loss function returned NaN. "
                         "This usually indicates a problem with the model or the data. "
@@ -397,10 +410,20 @@ class MInterface(pl2.LightningModule, ABC):
                     | int
                     | str
                     | Sequence[torch.Tensor | int | str],
+                    interface: "MInterface | None " = None,
                 ):
                     loss = torch.zeros(1, device=self.device)
                     for loss_fn, weight in zip(self.loss, self.multiloss_weights):  # type: ignore
-                        loss += loss_fn(*args).sum() * weight
+                        tmp = loss_fn(*args) * weight
+                        interface.log(
+                            f"{interface.stage}/loss_{loss_fn.__repr__()}",
+                            tmp.mean(),
+                            on_epoch=True,
+                            on_step=False,
+                            prog_bar=True,
+                            batch_size=args[0].shape[0],
+                        )
+                        loss += tmp.mean()
                     assert not isnan(loss), (
                         "MODEL_INTERFACE:LOSS_FN:ASSERTION:VALUE_ERROR: Loss function returned NaN. "
                         "This usually indicates a problem with the model or the data. "
@@ -411,8 +434,11 @@ class MInterface(pl2.LightningModule, ABC):
         else:
             if self.multiclass_loss_weights is not None:
 
-                def loss_fn(*args: torch.Tensor | int | str):
-                    loss = self.loss(*args, self.multiclass_loss_weights).sum()  # type: ignore
+                def loss_fn(
+                    *args: torch.Tensor | int | str,
+                    interface: "MInterface | None " = None,
+                ):
+                    loss = self.loss(*args, self.multiclass_loss_weights).mean()  # type: ignore
                     assert not isnan(loss), (
                         "MODEL_INTERFACE:LOSS_FN:ASSERTION:VALUE_ERROR: Loss function returned NaN. "
                         "This usually indicates a problem with the model or the data. "
@@ -422,8 +448,11 @@ class MInterface(pl2.LightningModule, ABC):
 
             else:
 
-                def loss_fn(*args: torch.Tensor | int | str):
-                    loss = self.loss(*args).sum()  # type: ignore
+                def loss_fn(
+                    *args: torch.Tensor | int | str,
+                    interface: "MInterface | None " = None,
+                ):
+                    loss = self.loss(*args).mean()  # type: ignore
                     assert not isnan(loss), (
                         "MODEL_INTERFACE:LOSS_FN:ASSERTION:VALUE_ERROR: Loss function returned NaN. "
                         "This usually indicates a problem with the model or the data. "

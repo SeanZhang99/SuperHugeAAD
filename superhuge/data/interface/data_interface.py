@@ -152,9 +152,9 @@ class DInterface(pl2.LightningDataModule):
             meta_path=os.path.join(root_path, preproc_stage, "meta", "metadata.pkl"),
             eeg_path=os.path.join(root_path, preproc_stage, "eeg"),
             meta_filter_func=self.meta_filter_func_parser(
-                dataset_class=dataset_class,
-                meta_filter_func=meta_filter_func,
-                add_meta_filter_func=add_meta_filter_func,
+                dataset_class,
+                meta_filter_func,
+                add_meta_filter_func,
                 *meta_filter_func_args if meta_filter_func_args else [],
             ),
             meta_group_func=meta_group_func,

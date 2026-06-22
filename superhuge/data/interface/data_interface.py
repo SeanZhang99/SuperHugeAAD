@@ -106,6 +106,7 @@ class DInterface(pl2.LightningDataModule):
         window_length: int | float,
         fs: int,
         meta_filter_func: MetadataFilter | Sequence[MetadataFilter] | None = None,
+        add_meta_filter_func: MetadataFilter | Sequence[MetadataFilter] | None = None,
         meta_filter_func_args: Sequence | None = None,
         meta_group_func: Callable | None = None,
         test_fold_idx: int = 0,
@@ -151,8 +152,9 @@ class DInterface(pl2.LightningDataModule):
             meta_path=os.path.join(root_path, preproc_stage, "meta", "metadata.pkl"),
             eeg_path=os.path.join(root_path, preproc_stage, "eeg"),
             meta_filter_func=self.meta_filter_func_parser(
-                dataset_class,
-                meta_filter_func,
+                dataset_class=dataset_class,
+                meta_filter_func=meta_filter_func,
+                add_meta_filter_func=add_meta_filter_func,
                 *meta_filter_func_args if meta_filter_func_args else [],
             ),
             meta_group_func=meta_group_func,
@@ -183,6 +185,9 @@ class DInterface(pl2.LightningDataModule):
         /,
         dataset_class: type[EegDataset],
         meta_filter_func: (
+            MetadataFilter | Sequence[MetadataFilter] | MetadataFilterComposer | None
+        ),
+        add_meta_filter_func: (
             MetadataFilter | Sequence[MetadataFilter] | MetadataFilterComposer | None
         ),
         *args,
@@ -220,6 +225,12 @@ class DInterface(pl2.LightningDataModule):
             meta_filter_func = MetadataFilterComposer(meta_filter_func)
 
         assert isinstance(meta_filter_func, MetadataFilterComposer)
+
+        if add_meta_filter_func is not None:
+            if isinstance(add_meta_filter_func, Sequence):
+                meta_filter_func.add_filters(*add_meta_filter_func)
+            elif isinstance(add_meta_filter_func, MetadataFilter):
+                meta_filter_func.add_filters(add_meta_filter_func)
 
         # Check for classify dataset and add classify filter if missing
         if issubclass(dataset_class, EegClassifyBaseDataset):

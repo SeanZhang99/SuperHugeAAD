@@ -78,19 +78,27 @@ class ExperimentStates:
             "Argument --data.init_args.n_folds is required to prepare fold indices"
         )
         n_folds = int(config_list[config_list.index("--data.init_args.n_folds") + 1])
-        if "--data.init_args.val_fold_idx" not in self._cli_argv:
-            val_fold_idx = [str(x) for x in range(n_folds)]
-        else:
+        if "--data.init_args.val_fold_idx" in self._cli_argv:
             val_fold_idx = self._cli_argv[
                 self._cli_argv.index("--data.init_args.val_fold_idx") + 1
             ]
-
-        if "--data.init_args.test_fold_idx" not in self._cli_argv:
-            test_fold_idx = [str(x) for x in range(n_folds)]
+        elif "--data.init_args.val_fold_idx" in config_list:
+            val_fold_idx = config_list[
+                config_list.index("--data.init_args.val_fold_idx") + 1
+            ]
         else:
+            val_fold_idx = [str(x) for x in range(n_folds)]
+
+        if "--data.init_args.test_fold_idx" in self._cli_argv:
             test_fold_idx = self._cli_argv[
                 self._cli_argv.index("--data.init_args.test_fold_idx") + 1
             ]
+        elif "--data.init_args.test_fold_idx" in config_list:
+            test_fold_idx = config_list[
+                config_list.index("--data.init_args.test_fold_idx") + 1
+            ]
+        else:
+            test_fold_idx = [str(x) for x in range(n_folds)]
 
         return list(product(val_fold_idx, test_fold_idx))
 

@@ -105,3 +105,64 @@ def calcbbar2(X, S, xp):
         raise ValueError("Unsupported backend.")
 
     return bbar2
+
+
+def lwcov_from_cov(
+    S: np.ndarray | torch.Tensor,  # type: ignore
+    n: int,
+) -> np.ndarray | torch.Tensor:  # type: ignore
+    """
+    Compute Ledoit-Wolf regularized covariance from a pre-computed
+    sample covariance matrix, without requiring individual samples.
+
+    Uses a Gaussian approximation for the bbar^2 term:
+        E[||z||^4] = tr(S)^2 + 2 * tr(S^2)
+
+    This enables online/streaming covariance estimation where only
+    running sufficient statistics (sum_x, sum_xx) are maintained.
+
+    Parameters:
+    S (numpy.ndarray or torch.Tensor): Sample covariance matrix (p x p),
+        i.e., (1/(n-1)) * sum_i (x_i - mu)(x_i - mu)^T.
+    n (int): Number of observations used to compute S.
+
+    Returns:
+    numpy.ndarray or torch.Tensor: Regularized covariance matrix (p x p).
+    """
+    xp = _get_backend(S)
+    p = S.shape[0]
+
+    # 1. Grand mean of eigenvalues
+    if xp == "np":
+        m = np.trace(S) / p
+        d2 = (np.linalg.norm(S - m * np.eye(p), "fro") ** 2) / p
+        tr_S = np.trace(S)
+        tr_S2 = np.trace(S @ S)
+        eye = np.eye(p)
+    elif xp == "torch" and torch is not None:
+        m = torch.trace(S) / p
+        d2 = (torch.norm(S - m * torch.eye(p, device=S.device), p="fro") ** 2) / p
+        tr_S = torch.trace(S)
+        tr_S2 = torch.trace(S @ S)
+        eye = torch.eye(p, device=S.device)
+    else:
+        raise ValueError("Unsupported backend.")
+
+    # 2. Shrinkage intensity using Gaussian approximation for bbar^2
+    #    bbar^2 = (n * E[||z||^4] + (2-n) * tr(S^2)) / (p * n^2)
+    #    with  E[||z||^4] ≈ tr(S)^2 + 2 * tr(S^2)
+    bbar2 = (tr_S ** 2) / (p * n) + ((n + 2) * tr_S2) / (p * n ** 2)
+    b2_val = bbar2
+    if xp == "np":
+        b2 = np.minimum(b2_val, d2)
+    elif xp == "torch" and torch is not None:
+        b2 = torch.minimum(b2_val, d2)
+    else:
+        raise ValueError("Unsupported backend.")
+
+    a2 = d2 - b2
+
+    # 3. Regularized covariance
+    Sr = (b2 / d2) * m * eye + (a2 / d2) * S
+
+    return Sr

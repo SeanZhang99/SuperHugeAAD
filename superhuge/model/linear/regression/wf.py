@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import pydantic
 
-from .lwcov import lwcov
+from .lwcov import lwcov_from_cov
 from .abc import LinearABC
 from ...types import EEG_TYPE, AUDIO_TYPE
 
@@ -41,6 +41,9 @@ class WienerFilter(LinearABC):
     Rxx: torch.Tensor
     rxy: torch.Tensor
     _weights: torch.Tensor
+    _sum_xx: torch.Tensor
+    _sum_xy: torch.Tensor
+    _sum_x: torch.Tensor
 
     def __init__(
         self,
@@ -79,12 +82,29 @@ class WienerFilter(LinearABC):
             torch.zeros(self.cfg.nlag * self.cfg.num_channels, 1),
         )
 
-        self.x_list = []
-        self.y_list = []
+        # Running sufficient statistics for online covariance computation.
+        # _sum_xx: sum of outer products  Σ x_i x_i^T        (p x p)
+        # _sum_xy: sum of cross products   Σ x_i y_i^T        (p x 1)
+        # _sum_x:  sum of lagged EEG       Σ x_i              (p,)
+        self.register_buffer(
+            "_sum_xx",
+            torch.zeros(
+                self.cfg.nlag * self.cfg.num_channels,
+                self.cfg.nlag * self.cfg.num_channels,
+            ),
+        )
+        self.register_buffer(
+            "_sum_xy",
+            torch.zeros(self.cfg.nlag * self.cfg.num_channels, 1),
+        )
+        self.register_buffer(
+            "_sum_x",
+            torch.zeros(self.cfg.nlag * self.cfg.num_channels),
+        )
 
     def update(self, eeg: EEG_TYPE, env: AUDIO_TYPE) -> None:
         """
-        Update the model with new data.
+        Update the model with new data (online accumulation).
         eeg: batch, time, channel
         env: batch, time, feature, speaker
         """
@@ -104,28 +124,40 @@ class WienerFilter(LinearABC):
             "batch time num_features -> (batch time) num_features",
             num_features=1,
         )
-        self.x_list.append(x_lag)
-        self.y_list.append(y)
+        # Online accumulation — avoid storing all samples
+        self._sum_xx += x_lag.mT @ x_lag  # (p, p)
+        self._sum_xy += x_lag.mT @ y  # (p, 1)
+        self._sum_x += x_lag.sum(dim=0)  # (p,)
 
     def fit(self):
         """
-        Fit the model to the data.
+        Fit the model from accumulated running sums (online covariance).
         """
         assert not self._fitted, "Model is already fitted."
         assert self._n_samples > 0, "No data to fit the model."
-        x_all = torch.cat(self.x_list, dim=0)
+
+        n = self._n_samples
+
         if self._use_lw_cov:
-            self.Rxx = lwcov(x_all, detect_orientation=True) / self._n_samples  # type: ignore
+            assert n > 1, "At least two observations are needed for LW covariance"
+            # Compute sample covariance with mean subtraction
+            mu = self._sum_x / n  # (p,)
+            S = (self._sum_xx - n * torch.outer(mu, mu)) / (n - 1)
+            self.Rxx = lwcov_from_cov(S, n) / n  # type: ignore
         else:
-            self.Rxx = (x_all.mT @ x_all) / self._n_samples
+            self.Rxx = self._sum_xx / n
             self.Rxx += self.cfg.l2 * torch.eye(
                 self.cfg.nlag * self.cfg.num_channels, device=self.Rxx.device
             )
-        self.rxy = x_all.mT @ torch.cat(self.y_list, dim=0) / self._n_samples
+
+        self.rxy = self._sum_xy / n
         self._weights = torch.linalg.solve(self.Rxx, self.rxy).detach()
         self._fitted = True
-        self.x_list.clear()
-        self.y_list.clear()
+
+        # Release running-sum memory now that fitting is complete
+        self._sum_xx.zero_()
+        self._sum_xy.zero_()
+        self._sum_x.zero_()
 
     def predict(self, eeg: EEG_TYPE, env: AUDIO_TYPE) -> tuple[EEG_TYPE, AUDIO_TYPE]:
         """

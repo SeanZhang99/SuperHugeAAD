@@ -384,9 +384,10 @@ class EegDataset(Dataset):
         assert (
             eeg.ndim == 2
         ), f"Loaded data is not 2D, but {eeg.ndim}D for file {file_name}."
-        assert eeg.shape[1] == len(
-            self.metadata[file_name].channel_infos
-        ), f"Number of channels {eeg.shape[1]} does not match expected {len(self.metadata[file_name].channel_infos)} for file {file_name}."
+        if self.metadata[file_name].channel_infos:
+            assert eeg.shape[1] == len(
+                self.metadata[file_name].channel_infos
+            ), f"Number of channels {eeg.shape[1]} does not match expected {len(self.metadata[file_name].channel_infos)} for file {file_name}."
 
     def _map_idx_to_file_and_segment(self, idx: int):
         """

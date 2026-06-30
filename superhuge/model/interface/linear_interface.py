@@ -11,7 +11,7 @@ from ..linear import LinearABC
 class LinearInterface(MInterface):
     model: LinearABC
 
-    def identity_loss(self, *args):
+    def identity_loss(self, *args, **kwargs):
         return self.fake_parameter * 0.0
 
     def __init__(self, /, **kwargs):

@@ -1,4 +1,3 @@
-import einops
 from torch.nn.modules.loss import _Loss
 import torch
 
@@ -7,10 +6,7 @@ def pearson_corrcoef(
     y_pred: torch.Tensor, y_true: torch.Tensor, dim: int
 ) -> torch.Tensor:
     """
-    pearson_corrcoef Compute the pearson correlation coefficient between y_pred and y_true. y_pred and y_true can be 3D or 4D tensors.
-    If both 3D, the return shape is (`batch`,`feature`)
-    If both 4D, the return shape is (`batch`,`feature`, `speaker`)
-    If one 3D and one 4D, the return shape is (`batch`, `feature`, `speaker`), with the 3D tensor expanded to 4D at the last dimension.
+    pearson_corrcoef Compute the pearson correlation coefficient between y_pred and y_true. y_pred and y_true can be >= 3D tensors. The correlation coefficient is computed along the specified dimension. The other dimensions are kept.
 
     :param y_pred: _description_
     :type y_pred: torch.Tensor
@@ -22,10 +18,10 @@ def pearson_corrcoef(
     :rtype: torch.Tensor
     """
 
-    if y_pred.ndim == 3 and y_true.ndim == 4:
-        y_pred = y_pred.unsqueeze(-1)
-    elif y_pred.ndim == 4 and y_true.ndim == 3:
-        y_true = y_true.unsqueeze(-1)
+    while y_pred.ndim > y_true.ndim:
+        y_true = y_true.unsqueeze(dim=y_true.ndim)
+    while y_true.ndim > y_pred.ndim:
+        y_pred = y_pred.unsqueeze(dim=y_pred.ndim)
 
     # Compute mean of y_true and y_pred along the specified dimension.
     y_true_mean = torch.mean(y_true, dim=dim, keepdim=True)
@@ -89,8 +85,8 @@ class ContrastiveAbsPearsonLoss(_Loss):
         self, y_pred: torch.Tensor, y_true: torch.Tensor, *args, **kwargs
     ) -> torch.Tensor:
 
-        pcc = torch.abs(pearson_corrcoef(y_pred, y_true, dim=1).mean(dim=1))
-        # pcc: (batch, speaker). feature dimension is averaded across.
+        pcc = pearson_corrcoef(y_pred, y_true, dim=1).abs().mean(dim=1)
+        # pcc: (batch, speaker). feature dimension is averaged across.
         loss = -pcc[:, 0]
         for j in range(1, y_true.shape[3]):
             loss += pcc[:, j] / (y_true.shape[3] - 1)

@@ -1,0 +1,13 @@
+---
+class_path: superhuge.model.interface.MInterface
+init_args:
+  model_args:
+    num_chan: 74
+    lsm_chan_dim: 8
+    cnn_num_layers: 1
+    cnn_temporal_kernel_size: 13
+    cnn_channel_kernel_size: 3
+    cnn_num_kernels: 5
+    fc_hidden_dim: 5
+    dropout: 0.3
+  model_class: superhuge.model.pure_cnn.LSM_CNN

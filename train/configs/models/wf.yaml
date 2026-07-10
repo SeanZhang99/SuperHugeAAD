@@ -1,0 +1,8 @@
+class_path: superhuge.model.interface.MInterface
+init_args:
+  model_args:
+    use_lwcov: true
+    pre_lag: 0.0
+    post_lag: 0.4
+    l2: 0.0
+  model_class: superhuge.model.linear.WienerFilter

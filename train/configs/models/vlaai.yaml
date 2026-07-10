@@ -1,16 +1,15 @@
 ---
-class_path: superhuge.models.commons.m_interface.MInterface
+class_path: superhuge.model.interface.MInterface
 init_args:
   model_args:
     extractor_args:
-      kernel_sizes: [9]
-      num_kernels: [16]
-      num_layers: 3
-    input_channels: 68
-    nb_blocks: 2
-    output_context_args:
-      kernel_size: 9
-      num_kernel: 64
-    window_length: 10
-    fs: 128
-  model_class: superhuge.models.vlaai.vlaai.vlaai
+      class_path: superhuge.model.pure_cnn.ExtractorParams
+      init_args:
+        kernel_sizes: [8]
+        num_kernels: [256, 256, 256, 128, 128]
+        num_layers: 5
+    nb_blocks: 4
+    output_context_kernel_size: 32
+    dropout: 0.5
+    use_skip: false
+  model_class: superhuge.model.pure_cnn.VLAAI

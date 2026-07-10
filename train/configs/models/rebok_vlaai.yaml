@@ -1,0 +1,13 @@
+---
+class_path: superhuge.model.interface.MInterface
+init_args:
+  model_args:
+    extractor_args:
+      kernel_sizes: [3, 7, 11, 15]
+      num_kernels: [64]
+      num_layers: 3
+    nb_blocks: 4
+    output_context_args:
+      kernel_size: 17
+      num_kernel: 64
+  model_class: superhuge.model.pure_cnn.VLAAI_ws

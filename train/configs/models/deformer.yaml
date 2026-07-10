@@ -1,18 +1,12 @@
 ---
-class_path: superhuge.models.commons.m_interface.MInterface
+class_path: superhuge.model.interface.MInterface
 init_args:
   model_args:
-    dp_rate: 0
-    ff_hidden_dim: 128
-    fs: 128
-    mha_depth: 4
-    mha_dim_heads: 256
-    mha_num_heads: 16
-    num_electrodes: 68
-    num_kernels: 32
-    # preconv_callable: superhuge.models.rebok_deformer.deformer.preconv
-    temporal_kernel_size: 17
-    # transformer_callable: superhuge.models.rebok_deformer.deformer.transformer
-    window_length: 10
-  # model_class: superhuge.models.rebok_deformer.deformer.deformer
-  model_class: superhuge.old_models.deformer.Deformer.create_models
+    dropout: 0.3
+    ff_hidden_dim: 64
+    mha_depth: 2
+    mha_embed_dim: 32
+    mha_num_heads: 2
+    num_kernels: 8
+    temporal_kernel_size: 13
+  model_class: superhuge.model.former.Deformer

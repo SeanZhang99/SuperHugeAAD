@@ -25,21 +25,27 @@ DInterface can be seen as transparent to all your args.
 """
 import os
 
+
 os.environ["KERAS_BACKEND"] = "torch"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import torch
+<<<<<<< HEAD
 from src.functional.multi_run_cli import MultiRunCLI
 
+=======
+
+from superhuge.utils.multi_run_cli import MultiRunCLI
+
+>>>>>>> python-package-working
 torch.set_float32_matmul_precision("medium")
 
 
 if __name__ == "__main__":
     project_path = os.path.dirname(os.path.abspath(__file__)).split("src")[0]
     config_path = os.path.join(project_path, "configs")
-    model_config = pick_file(project_path, timeout=10)
-    if not model_config:
-        model_config = os.path.join(config_path, "models", "rebok_deformer.yaml")
+    model_config = os.path.join(project_path, "configs", "models", "ssmamba.yaml")
     cli = MultiRunCLI(
+<<<<<<< HEAD
         "fit",
         "--task_config",
         os.path.join(config_path, "task_config.yaml"),
@@ -53,4 +59,21 @@ if __name__ == "__main__":
         os.path.join(config_path, "optimizer_config.yaml"),
         "--lr_scheduler",
         os.path.join(config_path, "lr_scheduler_config.yaml"),
+=======
+        "--config",
+        os.path.join(config_path, "trainer_config.yaml"),
+        "--data",
+        os.path.join(
+            config_path,
+            "data_config.yaml" if os.name == "nt" else "wsl_data_config.yaml",
+        ),
+        "--model",
+        model_config,
+        "--model",
+        os.path.join(config_path, "optimizer_config.yaml"),
+        "--model.init_args.summary_verbose",
+        "true",
+        task_config_path=os.path.join(config_path, "task_config.yaml"),
+>>>>>>> python-package-working
     )
+    cli.run()

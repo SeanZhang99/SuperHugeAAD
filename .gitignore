@@ -1,6 +1,6 @@
 __pycache__/
 *.pyc
-lightning_logs/
+*logs*/
 weights/
 /backup
 .vscode/
@@ -11,5 +11,12 @@ weights/
 !.vscode/*.code-snippets
 superhuge.egg-info/
 build/
+<<<<<<< HEAD
 *.asv
 *egg-info/
+=======
+*egg-info/
+matlab-preprocessing-code/
+prepare_dataset/
+.pytest_cache/
+>>>>>>> python-package-working

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 directional_focus_decoding:
   type: classification
   general:
@@ -83,45 +84,98 @@ directional_focus_decoding:
             meta_group_func: src.datasets.metadata_processing.lodo
 
 speech_reconstruction:
+=======
+dnn_envelope_reconstruction:
+>>>>>>> python-package-working
   type: regression
   general:
     data:
       init_args:
-        dataset_class: superhuge.datasets.regression.eeg_regression_base_dataset.EegRegressionBaseDataset
-        dataset_args:
-          n_folds: 5
-
+        dataset_class: superhuge.data.datasets.EegRegressionBaseDataset
+        n_folds: 4
+        metadata_fields: ["env"]
+        meta_filter_func_args:
+          - env
     model:
-      class_path: superhuge.models.commons.regression_interface.Channel1DRegressionInterface
+      class_path: superhuge.model.interface.RegressionInterface
       init_args:
-        loss:
-          class_path: superhuge.models.loss.regression.mse_loss.MSELoss
+        num_audio_features:
+          env: 1
+        model_common_args:
+          num_channels: 64
+
   tasks:
-    envelope_reconstruction:
+    pcc_diff:
       enable: 1
-      data:
+      model:
         init_args:
-          dataset_args:
-            meta_filter_func_args:
-              - env
-            speech_feature_key: env
+          loss:
+            class_path: superhuge.model.loss.ContrastivePearsonLoss
+
+    pcc:
+      enable: 1
+      model:
+        init_args:
+          loss:
+            class_path: superhuge.model.loss.PearsonLoss
 
   cross_validation:
     leave_one_trial_out:
       enable: 1
       data:
         init_args:
-          dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.group.loto
+          meta_group_func: superhuge.data.metadata_processing.loto
     leave_one_subject_out:
       enable: 0
       data:
         init_args:
-          dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.group.loso
+          meta_group_func: superhuge.data.metadata_processing.loso
     leave_one_dataset_out:
       enable: 0
       data:
         init_args:
-          dataset_args:
-            meta_group_func: superhuge.datasets.metadata_processing.group.lodo
+          meta_group_func: superhuge.data.metadata_processing.lodo
+
+linear_envelope_reconstruction:
+  type: regression
+  general:
+    data:
+      init_args:
+        dataset_class: superhuge.data.datasets.EegRegressionBaseDataset
+        n_folds: 12
+        metadata_fields:
+          - env
+        meta_filter_func_args:
+          - env
+    model:
+      class_path: superhuge.model.interface.LinearRegressionInterface
+      init_args:
+        model_common_args:
+          num_channels: 64
+
+  tasks:
+    pcc:
+      enable: 0
+      model:
+        init_args:
+          num_audio_features:
+            env: 1
+          loss:
+            class_path: superhuge.model.loss.ContrastivePearsonLoss
+
+  cross_validation:
+    leave_one_trial_out:
+      enable: 0
+      data:
+        init_args:
+          meta_group_func: superhuge.data.metadata_processing.loto
+    leave_one_subject_out:
+      enable: 1
+      data:
+        init_args:
+          meta_group_func: superhuge.data.metadata_processing.loso
+    leave_one_dataset_out:
+      enable: 0
+      data:
+        init_args:
+          meta_group_func: superhuge.data.metadata_processing.lodo

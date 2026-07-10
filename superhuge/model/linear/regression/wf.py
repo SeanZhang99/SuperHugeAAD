@@ -1,10 +1,11 @@
+from dataclasses import dataclass
 from typing import Any
-from einops import rearrange
-import numpy as np
-import torch
-import pydantic
 
-from .lwcov import lwcov_from_cov
+import numpy as np
+import pydantic
+import torch
+from einops import rearrange
+
 from .abc import LinearABC
 from ...types import EEG_TYPE, AUDIO_TYPE
 
@@ -37,13 +38,56 @@ class WienerFilterConfig(pydantic.BaseModel, extra="allow"):
         return super().model_post_init(__context)
 
 
-class WienerFilter(LinearABC):
+@dataclass
+class WienerFilterState:
+    """Running sufficient statistics for online Wiener filter estimation.
+
+    Accumulates:
+        sum_xx     : Σ x_k x_k^T        (p, p)
+        sum_xy     : Σ x_k y_k          (p, 1)
+        sum_x      : Σ x_k              (p,)
+        sum_normsq : Σ ||x_k||^2        (scalar)
+        sum_x4     : Σ ||x_k||^4        (scalar)
+        sum_wx     : Σ ||x_k||^2 x_k    (p,)
+        Rxx:    Covariance matrix       (p, p)
+        rxy:    Cross-covariance vector (p, 1)
+    """
+
+    sum_xx: torch.Tensor
+    sum_xy: torch.Tensor
+    sum_x: torch.Tensor
+    sum_normsq: torch.Tensor
+    sum_x4: torch.Tensor
+    sum_wx: torch.Tensor
     Rxx: torch.Tensor
     rxy: torch.Tensor
+
+    def __init__(self, p: int):
+        self.sum_xx = torch.zeros(p, p)
+        self.sum_xy = torch.zeros(p, 1)
+        self.sum_x = torch.zeros(p)
+        self.sum_normsq = torch.tensor(0.0)
+        self.sum_x4 = torch.tensor(0.0)
+        self.sum_wx = torch.zeros(p)
+        self.Rxx = torch.zeros(p, p)
+        self.rxy = torch.zeros(p, 1)
+
+    def zero_(self) -> "WienerFilterState":
+        self.sum_xx.zero_()
+        self.sum_xy.zero_()
+        self.sum_x.zero_()
+        self.sum_normsq.zero_()
+        self.sum_x4.zero_()
+        self.sum_wx.zero_()
+        self.Rxx.zero_()
+        self.rxy.zero_()
+        return self
+
+
+class WienerFilter(LinearABC):
     _weights: torch.Tensor
-    _sum_xx: torch.Tensor
-    _sum_xy: torch.Tensor
-    _sum_x: torch.Tensor
+    _state: WienerFilterState
+    _use_lw_cov: bool
 
     def __init__(
         self,
@@ -62,60 +106,28 @@ class WienerFilter(LinearABC):
             l2=l2,
             **kwargs,
         )
-
         self._use_lw_cov = use_lwcov
 
-        self.register_buffer(
-            "weights", torch.zeros(self.cfg.nlag * self.cfg.num_channels, 1)
-        )
+        p = self.cfg.nlag * self.cfg.num_channels
 
-        self.register_buffer(
-            "Rxx",
-            torch.zeros(
-                self.cfg.nlag * self.cfg.num_channels,
-                self.cfg.nlag * self.cfg.num_channels,
-            ),
-        )
+        self.register_buffer("weights", torch.zeros(p, 1))
 
-        self.register_buffer(
-            "rxy",
-            torch.zeros(self.cfg.nlag * self.cfg.num_channels, 1),
-        )
-
-        # Running sufficient statistics for online covariance computation.
-        # _sum_xx: sum of outer products  Σ x_i x_i^T        (p x p)
-        # _sum_xy: sum of cross products   Σ x_i y_i^T        (p x 1)
-        # _sum_x:  sum of lagged EEG       Σ x_i              (p,)
-        self.register_buffer(
-            "_sum_xx",
-            torch.zeros(
-                self.cfg.nlag * self.cfg.num_channels,
-                self.cfg.nlag * self.cfg.num_channels,
-            ),
-        )
-        self.register_buffer(
-            "_sum_xy",
-            torch.zeros(self.cfg.nlag * self.cfg.num_channels, 1),
-        )
-        self.register_buffer(
-            "_sum_x",
-            torch.zeros(self.cfg.nlag * self.cfg.num_channels),
-        )
+        state = WienerFilterState(p)
+        for name, tensor in state.__dict__.items():
+            self.register_buffer(f"_{name}", tensor)
+        self._state = state
 
     def update(self, eeg: EEG_TYPE, env: AUDIO_TYPE) -> None:
-        """
-        Update the model with new data (online accumulation).
-        eeg: batch, time, channel
-        env: batch, time, feature, speaker
-        """
+        """Update running statistics with a new batch."""
         if isinstance(eeg, np.ndarray):
             eeg = torch.from_numpy(eeg)
         if isinstance(env, np.ndarray):
             env = torch.from_numpy(env)
         super().update(eeg, env)
+
         x_lag = self.lag_and_flatten(
             eeg,
-            "batch lag time channel -> (batch time) (lag channel)",
+            "batch time lag channel -> (batch time) (lag channel)",
             self.cfg.pre_lag,  # type: ignore
             self.cfg.post_lag,  # type: ignore
         )
@@ -124,45 +136,64 @@ class WienerFilter(LinearABC):
             "batch time num_features -> (batch time) num_features",
             num_features=1,
         )
-        # Online accumulation — avoid storing all samples
-        self._sum_xx += x_lag.mT @ x_lag  # (p, p)
-        self._sum_xy += x_lag.mT @ y  # (p, 1)
-        self._sum_x += x_lag.sum(dim=0)  # (p,)
 
-    def fit(self):
-        """
-        Fit the model from accumulated running sums (online covariance).
-        """
+        self._state.sum_xx += x_lag.mT @ x_lag
+        self._state.sum_xy += x_lag.mT @ y
+        self._state.sum_x += x_lag.sum(dim=0)
+
+        # Fourth-moment accumulators for sample-based Ledoit-Wolf shrinkage.
+        norms2 = (x_lag**2).sum(dim=1)
+        self._state.sum_normsq += norms2.sum()
+        self._state.sum_x4 += (norms2**2).sum()
+        self._state.sum_wx += (x_lag * norms2.unsqueeze(1)).sum(dim=0)
+
+    def fit(self) -> None:
+        """Fit weights from running statistics."""
         assert not self._fitted, "Model is already fitted."
         assert self._n_samples > 0, "No data to fit the model."
 
         n = self._n_samples
+        p = self._state.sum_x.shape[0]
 
         if self._use_lw_cov:
             assert n > 1, "At least two observations are needed for LW covariance"
-            # Compute sample covariance with mean subtraction
-            mu = self._sum_x / n  # (p,)
-            S = (self._sum_xx - n * torch.outer(mu, mu)) / (n - 1)
-            self.Rxx = lwcov_from_cov(S, n) / n  # type: ignore
-        else:
-            self.Rxx = self._sum_xx / n
-            self.Rxx += self.cfg.l2 * torch.eye(
-                self.cfg.nlag * self.cfg.num_channels, device=self.Rxx.device
+            mu = self._state.sum_x / n
+            S = (self._state.sum_xx - n * torch.outer(mu, mu)) / (n - 1)
+
+            mu_norm_sq = torch.dot(mu, mu)
+            sum_z4 = (
+                self._state.sum_x4
+                + 4.0 * (mu @ (self._state.sum_xx @ mu))
+                - 4.0 * torch.dot(self._state.sum_wx, mu)
+                + 2.0 * mu_norm_sq * self._state.sum_normsq
+                - 3.0 * n * mu_norm_sq**2
             )
 
-        self.rxy = self._sum_xy / n
-        self._weights = torch.linalg.solve(self.Rxx, self.rxy).detach()
+            tr_S = torch.trace(S)
+            m = tr_S / p
+            eye = torch.eye(p, device=S.device, dtype=S.dtype)
+            d2 = torch.norm(S - m * eye, p="fro") ** 2 / p
+
+            tr_S2 = torch.trace(S @ S)
+            bbar2 = (sum_z4 + (2.0 - n) * tr_S2) / (p * n * n)
+            b2 = torch.minimum(bbar2, d2)
+            a2 = d2 - b2
+
+            self._state.Rxx = (b2 / d2) * m * eye + (a2 / d2) * S
+        else:
+            self._state.Rxx = self._state.sum_xx / n
+            self._state.Rxx += self.cfg.l2 * torch.eye(p, device=self._state.Rxx.device)
+
+        self._weights = torch.linalg.solve(
+            self._state.Rxx, self._state.sum_xy / n
+        ).detach()
         self._fitted = True
 
-        # Release running-sum memory now that fitting is complete
-        self._sum_xx.zero_()
-        self._sum_xy.zero_()
-        self._sum_x.zero_()
+        # Release running-sum memory now that fitting is complete.
+        # self._state.zero_()
 
     def predict(self, eeg: EEG_TYPE, env: AUDIO_TYPE) -> tuple[EEG_TYPE, AUDIO_TYPE]:
-        """
-        Predict the output based on the input data.
-        """
+        """Predict the output based on the input data."""
         assert self._fitted, "Model is not fitted yet."
         if isinstance(eeg, np.ndarray):
             eeg = torch.from_numpy(eeg)
@@ -170,11 +201,11 @@ class WienerFilter(LinearABC):
             env = torch.from_numpy(env)
         x_lag = self.lag_and_flatten(
             eeg,
-            "batch lag time channel -> batch time (lag channel)",
+            "batch time lag channel -> batch time (lag channel)",
             self.cfg.pre_lag,  # type: ignore
             self.cfg.post_lag,  # type: ignore
         )
-        y_pred = x_lag @ self.weights
+        y_pred = x_lag @ self._weights
         return y_pred, env
 
     @property
@@ -184,19 +215,3 @@ class WienerFilter(LinearABC):
     @weights.setter
     def weights(self, value: torch.Tensor):
         self._weights = value
-
-
-def _main():
-    wf = WienerFilter(
-        pre_lag=0.25,
-        post_lag=0.4,
-        l2=1.0,
-        fs=64,
-        window_length=60,
-        num_channels=32,
-        use_lwcov=True,
-    )
-    x = torch.randn(1, 128, 2)
-    x_lagged = wf.get_lag_mtx(x, 16, 0)
-    print(x_lagged)
-    np.save("x_lagged.npy", x_lagged.numpy())

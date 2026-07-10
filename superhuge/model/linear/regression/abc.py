@@ -6,10 +6,13 @@ from einops import rearrange
 
 import superhuge
 
+from memory_profiler import profile
+
 
 class LinearABC(torch.nn.Module, ABC):
     _fitted: bool = False
     _n_samples: int = 0
+    _x_lag_buf: torch.Tensor
 
     @abstractmethod
     def __init__(self, /, **kwargs):
@@ -50,9 +53,46 @@ class LinearABC(torch.nn.Module, ABC):
         ...
 
     @final
-    def get_lag_mtx(
-        self, x: torch.Tensor, pre_lag: int, post_lag: int, *args, **kwargs
-    ):
+    def get_lag_mtx(self, x: torch.Tensor, pre_lag: int, post_lag: int):
+        """
+        Fill a single pre-allocated buffer with lagged copies of x.
+        Returns view — zero allocation per call.
+
+        Buffer layout: (batch, time, nlag, ch_flat), contiguous.
+        This layout means merge patterns like
+            "batch time lag channel -> (batch time) (lag channel)"
+        are pure views (both batch-time and lag-channel are adjacent in memory).
+
+        Old layout was (batch, nlag, time, ...) — that layout required
+        a copy for every einops rearrange because batch and time were
+        separated by the nlag dimension.
+        """
+        batch, time, *rest = x.shape
+        nlag = pre_lag + post_lag + 1
+
+        need_shape = (batch, time, nlag, *rest)
+        if not hasattr(self, "_x_lag_buf") or self._x_lag_buf.shape != need_shape:
+            self.register_buffer(
+                "_x_lag_buf",
+                torch.empty(*need_shape, device=x.device),
+            )
+
+        buf = self._x_lag_buf
+        buf.zero_()
+
+        for lag_idx, shift in enumerate(range(-pre_lag, post_lag + 1)):
+            if shift < 0:
+                buf[:, -shift:, lag_idx, :] = x[:, : time + shift, ...]
+            elif shift > 0:
+                buf[:, : time - shift, lag_idx, :] = x[:, shift:, ...]
+            else:
+                # unresolved problem: memory leak of this line.
+                buf[:, :, lag_idx, :].copy_(x.detach())
+
+        return buf  # (batch, time, nlag, ...) — view
+
+    @final
+    def get_lag_mtx_old(self, x: torch.Tensor, *lag: int, **kwargs):
         """
         Construct a lagged matrix for the input with given lag.
 
@@ -65,6 +105,7 @@ class LinearABC(torch.nn.Module, ABC):
         lag: 10, 10. return: (batch_size, 21, time_steps, ...). 10 means the input is advanced by 10 time steps, 10 means the input is lagged by 10 time steps.
         """
         x_lag = []
+        pre_lag, post_lag = lag
         if pre_lag < 0:
             pre_lag = -pre_lag
 
@@ -110,7 +151,7 @@ class LinearABC(torch.nn.Module, ABC):
             num_features: Number of features
 
         Returns:
-            Flattened lagged matrix [batch*time, lag*features]
+            Flattened lagged matrix [batch * time, lag * features]
         """
         lagged_matrix = self.get_lag_mtx(signal, lag_samples[0], lag_samples[1])
         return rearrange(

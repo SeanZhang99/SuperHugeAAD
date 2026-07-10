@@ -5,6 +5,47 @@ from warnings import warn
 from .data_interface import DInterface
 from ..datasets import EegClassifyBaseDataset, EegRegressionBaseDataset
 from ..metadata_filters import MetadataValueSelector
+from ..metadata_processing.data import (
+    Metadata,
+    CrossValidationEntry,
+    DatasetSubjectTrialEntry,
+    MetadataElement,
+)
+from ..metadata_processing.group import collect_dataset_subject_trials
+
+import random
+from typing import Any
+
+
+def no_cv(
+    metadata: Metadata,
+    test_fold_idx: int,
+    val_fold_idx: int,
+    n_folds: int,
+    seed: int = 42,
+    **kwargs: Any,
+) -> CrossValidationEntry:
+    assert (
+        0 <= test_fold_idx < n_folds
+    ), f"test_fold_idx must be in the range [0, {n_folds})"
+    assert (
+        0 <= val_fold_idx < n_folds
+    ), f"val_fold_idx must be in the range [0, {n_folds})"
+    random.seed(seed)
+
+    dataset_subject_trials = collect_dataset_subject_trials(metadata)
+
+    # Distribute trials evenly across folds
+    train_set = []
+    val_set = []
+    test_set = []
+
+    for dataset_id, subjects in dataset_subject_trials.items():
+        for subject_id, trials in subjects.items():
+            for trial in trials:
+                train_set.append(trial[0])
+
+    return {"train": train_set, "val": val_set, "test": test_set}
 
 
 def create_data_interface(
@@ -18,7 +59,7 @@ def create_data_interface(
     select_subject: int | Sequence[int] | None = None,
     select_trial: int | Sequence[int] | None = None,
     meta_filter_func_args: Sequence | None = None,
-    leave_one_out: str = "loto",
+    leave_one_out: str | None = None,
     test_fold_idx: int = 0,
     val_fold_idx: int = 1,
     n_folds: int = 5,
@@ -59,22 +100,24 @@ def create_data_interface(
     metadata_filter = metadata_filter if metadata_filter else None
 
     try:
-        group_pkg = importlib.import_module(
-            ".data.metadata_processing.group", "superhuge"
-        )
-        meta_group_func = getattr(group_pkg, leave_one_out)
+        if leave_one_out is None:
+            meta_group_func = no_cv
+        else:
+            group_pkg = importlib.import_module(
+                ".data.metadata_processing.group", "superhuge"
+            )
+            meta_group_func = getattr(group_pkg, leave_one_out)
     except ImportError as e:
         raise ImportError(
             f"Could not import metadata_processing.group from package `superhuge`"
         ) from e
     except AttributeError as e:
         warn(
-            f"Function {leave_one_out} not found in metadata_processing.group. Using default grouping function.",
+            f"Function {leave_one_out} not found in metadata_processing.group. Using no_cv",
             UserWarning,
         )
-        from ..metadata_processing.group import loto
 
-        meta_group_func = loto
+        meta_group_func = no_cv
     except Exception as e:
         raise e
 
@@ -82,11 +125,22 @@ def create_data_interface(
     if bandpass_wn:
         from ..transforms import Filter
 
-        transforms.append(Filter(Wn=bandpass_wn, fs=fs, btype="bandpass", order=5))
+        transforms.append(
+            Filter(
+                Wn=bandpass_wn,
+                fs=fs,
+                btype="bandpass",
+                order=5,
+                whom=["eeg", "env"],
+                when="before_slicing",
+            )
+        )
     if refs:
         from ..transforms import Resample
 
-        transforms.append(Resample(old_fs=fs, new_fs=refs, whom=["eeg", "env"]))
+        transforms.append(
+            Resample(old_fs=fs, new_fs=refs, whom=["eeg", "env"], when="before_slicing")
+        )
 
     if zscore:
         from ..transforms import ZScore

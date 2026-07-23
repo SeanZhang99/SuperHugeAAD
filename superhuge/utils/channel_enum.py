@@ -1,20 +1,19 @@
 from enum import Enum
 
-
 class CHANNEL1D_ENUM(Enum):
-    A1 = 0
-    A2 = 1
-    AF3 = 2
-    AF4 = 3
-    AF7 = 4
-    AF8 = 5
-    AFz = 6
-    C1 = 7
-    C2 = 8
-    C3 = 9
-    C4 = 10
-    C5 = 11
-    C6 = 12
+    AF3 = 0
+    AF4 = 1
+    AF7 = 2
+    AF8 = 3
+    AFz = 4
+    C1 = 5
+    C2 = 6
+    C3 = 7
+    C4 = 8
+    C5 = 9
+    C6 = 10
+    CB1 = 11
+    CB2 = 12
     CP1 = 13
     CP2 = 14
     CP3 = 15
@@ -47,40 +46,41 @@ class CHANNEL1D_ENUM(Enum):
     Fpz = 42
     Fz = 43
     Iz = 44
-    O1 = 45
-    O2 = 46
-    Oz = 47
-    P1 = 48
-    P10 = 49
-    P2 = 50
-    P3 = 51
-    P4 = 52
-    P5 = 53
-    P6 = 54
-    P7 = 55
-    P8 = 56
-    P9 = 57
-    PO10 = 58
-    PO3 = 59
-    PO4 = 60
-    PO5 = 61
-    PO6 = 62
-    PO7 = 63
-    PO8 = 64
-    PO9 = 65
-    POz = 66
-    Pz = 67
-    T7 = 68
-    T8 = 69
-    TP10 = 70
-    TP7 = 71
-    TP8 = 72
-    TP9 = 73
+    M1 = 45
+    M2 = 46
+    O1 = 47
+    O2 = 48
+    Oz = 49
+    P1 = 50
+    P10 = 51
+    P2 = 52
+    P3 = 53
+    P4 = 54
+    P5 = 55
+    P6 = 56
+    P7 = 57
+    P8 = 58
+    P9 = 59
+    PO10 = 60
+    PO3 = 61
+    PO4 = 62
+    PO5 = 63
+    PO6 = 64
+    PO7 = 65
+    PO8 = 66
+    PO9 = 67
+    POz = 68
+    Pz = 69
+    T7 = 70
+    T8 = 71
+    TP10 = 72
+    TP7 = 73
+    TP8 = 74
+    TP9 = 75
 
+NUM_ELECTRODES = 76
 
 class CHANNEL2D_ENUM(Enum):
-    A11 = (4, 0)
-    A12 = (4, 12)
     AF3 = (1, 4)
     AF4 = (1, 8)
     AF7 = (1, 2)
@@ -92,6 +92,8 @@ class CHANNEL2D_ENUM(Enum):
     C4 = (4, 8)
     C5 = (4, 3)
     C6 = (4, 9)
+    CB1 = (9, 5)
+    CB2 = (9, 7)
     CP1 = (5, 5)
     CP2 = (5, 7)
     CP3 = (5, 4)
@@ -123,7 +125,9 @@ class CHANNEL2D_ENUM(Enum):
     Fp2 = (0, 7)
     Fpz = (0, 6)
     Fz = (2, 6)
-    Iz = (9, 6)
+    Iz = (10, 6)
+    M1 = (5, 0)
+    M2 = (5, 12)
     O1 = (8, 5)
     O2 = (8, 7)
     Oz = (8, 6)
@@ -154,5 +158,3 @@ class CHANNEL2D_ENUM(Enum):
     TP8 = (5, 10)
     TP9 = (5, 1)
 
-
-NUM_ELECTRODES = len(CHANNEL1D_ENUM)

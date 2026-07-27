@@ -5,5 +5,6 @@ from .regression import (
     ForwardWienerFilter,
     LinearABC,
     RiemannianWienerFilter,
+    PerSubjectWienerFilter,
 )
 from .classify import CSPClassifier, RGCClassifer

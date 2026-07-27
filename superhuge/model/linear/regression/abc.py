@@ -19,7 +19,7 @@ class LinearABC(torch.nn.Module, ABC):
         super().__init__()
 
     @abstractmethod
-    def update(self, eeg: torch.Tensor, env: torch.Tensor) -> None:
+    def update(self, eeg: torch.Tensor, env: torch.Tensor, **kwargs) -> None:
         """
         Update the model with new data.
         """
@@ -27,7 +27,7 @@ class LinearABC(torch.nn.Module, ABC):
 
     @final
     def forward(
-        self, eeg: torch.Tensor, env: "torch.Tensor"
+        self, eeg: torch.Tensor, env: torch.Tensor, meta: dict
     ) -> tuple["superhuge.model.types.EEG_TYPE", "superhuge.model.types.AUDIO_TYPE"]:
         """
         Forward pass of the model.
@@ -35,7 +35,7 @@ class LinearABC(torch.nn.Module, ABC):
         if self._fitted:
             eeg, env = self.predict(eeg, env)
         elif self.training:
-            self.update(eeg, env)
+            self.update(eeg, env, meta=meta)
         return eeg, env
 
     @abstractmethod

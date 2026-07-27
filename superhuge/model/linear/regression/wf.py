@@ -117,13 +117,13 @@ class WienerFilter(LinearABC):
             self.register_buffer(f"_{name}", tensor)
         self._state = state
 
-    def update(self, eeg: EEG_TYPE, env: AUDIO_TYPE) -> None:
+    def update(self, eeg: EEG_TYPE, env: AUDIO_TYPE, **kwargs) -> None:
         """Update running statistics with a new batch."""
         if isinstance(eeg, np.ndarray):
             eeg = torch.from_numpy(eeg)
         if isinstance(env, np.ndarray):
             env = torch.from_numpy(env)
-        super().update(eeg, env)
+        super().update(eeg, env, **kwargs)
 
         x_lag = self.lag_and_flatten(
             eeg,

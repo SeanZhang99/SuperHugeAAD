@@ -1,5 +1,7 @@
 from ..metadata_processing.data import ClassifyMetadataElement
 from .abc import MetadataFilter
+
+
 class ClassifyMetadataFilter(MetadataFilter):
     """Base class for classification metadata filters.
 
@@ -7,7 +9,6 @@ class ClassifyMetadataFilter(MetadataFilter):
     """
 
     _filter_marker = True
-
 
 
 # from typing import TYPE_CHECKING
@@ -56,9 +57,9 @@ class BinaryLeftRightFilter(ClassifyMetadataFilter):
         result = None
         label = getattr(metadata_element, "label", None)
         if isinstance(label, str):
-            if label.lower() in ["left", "right"]:
+            if label.lower() in ["left", "right", "l", "r"]:
                 result = metadata_element
-                result.label = 0 if label.lower() == "left" else 1
+                result.label = 0 if label.lower() in ["left", "l"] else 1
             else:
                 try:
                     metadata_element.label = int(label)

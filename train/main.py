@@ -23,8 +23,8 @@ add all the input arguments of your model's constructor
 and the dataset file's constructor. The MInterface and
 DInterface can be seen as transparent to all your args.
 """
-import os
 
+import os
 
 os.environ["KERAS_BACKEND"] = "torch"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"

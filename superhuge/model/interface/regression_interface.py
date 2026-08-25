@@ -82,54 +82,6 @@ class RegressionInterface(MInterface):
                 positive_label=0,
             )
 
-        # if self.stage in ["val", "test"] and metrics_mean.shape[-1] > 1:
-        #     # log the pcc and acc metric for each dataset
-        #     dataset_id = int(meta["dataset_id"][0])
-        #     stats[f"{self.stage}/{dataset_id=}_pcc"] = metrics_mean.mean(dim=1)
-        #     stats[f"{self.stage}/{dataset_id=}_acc"] = (
-        #         torch.argmax(metrics_mean, dim=-1) == 0
-        #     ).type_as(metrics)
-
-        if "speaker_id" in meta:
-            for speaker_idx in set(meta["speaker_id"]):
-                for j, label in enumerate(speaker_labels):
-                    stats[
-                        f"{self.stage}/{label}_{metrics_name}_speaker_{speaker_idx}"
-                    ] = metrics[
-                        [
-                            speaker_id == speaker_idx
-                            for speaker_id in meta["speaker_id"]
-                        ],
-                        :,
-                        j,
-                    ].mean(
-                        dim=1
-                    )
-                    # Compute pcc difference between the first speaker and the rest
-                    if j >= 1:
-                        stats[
-                            f"{self.stage}/{label}_{metrics_name}_diff_speaker_{speaker_idx}"
-                        ] = (
-                            metrics[
-                                [
-                                    speaker_id == speaker_idx
-                                    for speaker_id in meta["speaker_id"]
-                                ],
-                                :,
-                                0,
-                            ]
-                            - metrics[
-                                [
-                                    speaker_id == speaker_idx
-                                    for speaker_id in meta["speaker_id"]
-                                ],
-                                :,
-                                j,
-                            ]
-                        ).mean(
-                            dim=1
-                        )
-
         return stats
 
     def get_stats(
@@ -174,6 +126,12 @@ class ChannelMapping2DRegressionInterface(
 
 
 class LinearRegressionInterface(LinearInterface, RegressionInterface):  # type: ignore
+    pass
+
+
+class LinearChannelMapping1DRegressionInterface(
+    LinearInterface, ChannelMapping1DRegressionInterface
+):
     pass
 
 

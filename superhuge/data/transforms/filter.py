@@ -1,7 +1,7 @@
 from typing import Any, Sequence
 
 import numpy as np
-from scipy.signal import butter, filtfilt
+from scipy.signal import butter, filtfilt, sosfiltfilt
 
 from .abc import Transform
 
@@ -30,13 +30,15 @@ class Filter(Transform):
         self.order = order
         self.btype = btype
 
-        result = butter(self.order, self.Wn, btype=self.btype)
-        if result is None or len(result) != 2:
-            raise ValueError("Butter function did not return expected coefficients.")
-        self.b, self.a = result
+        result = butter(self.order, self.Wn, btype=self.btype, output="sos")
+        self.sos = result
+        # if result is None or len(result) != 2:
+        #     raise ValueError("Butter function did not return expected coefficients.")
+        # self.b, self.a = result
 
     def __call__(self, x: np.ndarray, **kwargs) -> dict[str, np.ndarray]:
         super().__call__(x)
         if self.roll():
-            x = filtfilt(self.b, self.a, x, axis=0).copy()
+            # x = filtfilt(self.b, self.a, x, axis=0).copy()
+            x = sosfiltfilt(sos=self.sos, x=x, axis=0).copy()
         return {"x": x}

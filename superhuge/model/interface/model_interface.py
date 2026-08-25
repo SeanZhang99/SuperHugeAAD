@@ -312,10 +312,12 @@ class MInterface(pl2.LightningModule, ABC):
 
     def training_step(self, batch: dict[str, Any], batch_idx: int) -> torch.Tensor:
         loss: torch.Tensor = torch.zeros(1, device=self.device)
+        # loss: torch.Tensor = torch.zeros(size=len(batch.keys()), device=self.device)
         batch_size = 0
-        for data in batch.values():
+        for i, data in enumerate(batch.values()):
             outputs = self.training_closure(data)
             loss += self.loss_fn(*outputs, interface=self)
+            # loss[i] = self.loss_fn(*outputs, interface=self)
             batch_size += outputs[0].shape[0]
             self.get_stats(
                 *outputs,
@@ -323,6 +325,8 @@ class MInterface(pl2.LightningModule, ABC):
             )
             if self.get_stats_fn:
                 self.get_stats_fn(self, *outputs, meta=data["meta"])  # type: ignore
+
+        # loss = loss.mean()
 
         self.log(
             f"{self.stage}/loss",
@@ -382,7 +386,7 @@ class MInterface(pl2.LightningModule, ABC):
                     | int
                     | str
                     | Sequence[torch.Tensor | int | str],
-                    interface: "MInterface | None " = None,
+                    interface: "MInterface",
                 ):
                     loss = torch.zeros(1, device=self.device)
                     for loss_fn, weight in zip(self.loss, self.multiloss_weights):  # type: ignore
@@ -410,7 +414,7 @@ class MInterface(pl2.LightningModule, ABC):
                     | int
                     | str
                     | Sequence[torch.Tensor | int | str],
-                    interface: "MInterface | None " = None,
+                    interface: "MInterface ",
                 ):
                     loss = torch.zeros(1, device=self.device)
                     for loss_fn, weight in zip(self.loss, self.multiloss_weights):  # type: ignore
@@ -436,7 +440,7 @@ class MInterface(pl2.LightningModule, ABC):
 
                 def loss_fn(
                     *args: torch.Tensor | int | str,
-                    interface: "MInterface | None " = None,
+                    interface: "MInterface",
                 ):
                     loss = self.loss(*args, self.multiclass_loss_weights).mean()  # type: ignore
                     assert not isnan(loss), (
@@ -450,7 +454,7 @@ class MInterface(pl2.LightningModule, ABC):
 
                 def loss_fn(
                     *args: torch.Tensor | int | str,
-                    interface: "MInterface | None " = None,
+                    interface: "MInterface",
                 ):
                     loss = self.loss(*args).mean()  # type: ignore
                     assert not isnan(loss), (

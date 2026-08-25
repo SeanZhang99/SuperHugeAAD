@@ -26,6 +26,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     assert hasattr(args, "ckpt_dir"), "The 'ckpt_dir' argument is required."
+
     assert args.ckpt_dir, "The 'ckpt_dir' argument cannot be empty."
     assert Path(
         args.ckpt_dir

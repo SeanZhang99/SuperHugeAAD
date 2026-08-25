@@ -126,16 +126,15 @@ class EEGMismatchDataset(EegRegressionBaseDataset):
 
                 label = np.where(perm_idx == attended_label)[0][0]
                 meta.label = type(getattr(meta, "label"))(label) if hasattr(meta, "label") else int(label)  # type: ignore
-            # No more permutation required because the parent class already permutes the attended speaker to `attended_label` position.
-            # else:
-            #     assert (
-            #         getattr(meta, "label") is not None
-            #     ), "Metadata must have 'label' attribute"
-            #     label = int(getattr(meta, "label"))
-            #     audio[speech_type][..., 0], audio[speech_type][..., label] = (
-            #         audio[speech_type][..., label],
-            #         audio[speech_type][..., 0],
-            #     )
+            else:
+                assert (
+                    getattr(meta, "label") is not None
+                ), "Metadata must have 'label' attribute"
+                label = int(getattr(meta, "label"))
+                audio[speech_type][..., 0], audio[speech_type][..., label] = (
+                    audio[speech_type][..., label],
+                    audio[speech_type][..., 0],
+                )
 
         return {"meta": meta, "eeg": eeg, "label": int(label), **audio}  # type: ignore
 

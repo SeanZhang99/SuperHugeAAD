@@ -50,7 +50,8 @@ class EEGMismatchDataset(EegRegressionBaseDataset):
                 when set. This enables cross-dataset training with a fixed number of classes.
         """
         super().__init__(**kwargs)
-        if kwargs["stage"] in ["val", "test"]:
+        self.stage = kwargs.get("stage", "train")
+        if self.stage in ["val", "test"]:
             num_additional_speakers = 0
             additional_speaker_from_same_trial_prob = 0.0
             shuffle_order = False
@@ -126,7 +127,7 @@ class EEGMismatchDataset(EegRegressionBaseDataset):
 
                 label = np.where(perm_idx == attended_label)[0][0]
                 meta.label = type(getattr(meta, "label"))(label) if hasattr(meta, "label") else int(label)  # type: ignore
-            else:
+            elif self.stage in ["val", "test"]:
                 assert (
                     getattr(meta, "label") is not None
                 ), "Metadata must have 'label' attribute"

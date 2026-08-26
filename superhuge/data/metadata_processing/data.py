@@ -15,7 +15,7 @@ class MetadataElement(BaseModel, extra="allow"):
     signal_length: int | None = 0
     fs: int | None = 0
     dataset_name: str | None = None
-    channel_infos: Mapping[int, Mapping[str, Any]]
+    channel_infos: Mapping[int, Mapping[str, Any]] | None = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

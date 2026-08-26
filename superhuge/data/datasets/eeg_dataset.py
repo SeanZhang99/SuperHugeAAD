@@ -384,7 +384,7 @@ class EegDataset(Dataset):
         assert (
             eeg.ndim == 2
         ), f"Loaded data is not 2D, but {eeg.ndim}D for file {file_name}."
-        if self.metadata[file_name].channel_infos:
+        if hasattr(self.metadata[file_name], "channel_infos"):
             assert eeg.shape[1] == len(
                 self.metadata[file_name].channel_infos
             ), f"Number of channels {eeg.shape[1]} does not match expected {len(self.metadata[file_name].channel_infos)} for file {file_name}."

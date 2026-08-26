@@ -143,7 +143,7 @@ class DInterface(pl2.LightningDataModule):
                 "fs",
                 "num_channel",
                 "signal_length",
-                "channel_infos",
+                # "channel_infos",
             ]
         )
 

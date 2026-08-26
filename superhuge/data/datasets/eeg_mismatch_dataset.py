@@ -127,7 +127,7 @@ class EEGMismatchDataset(EegRegressionBaseDataset):
 
                 label = np.where(perm_idx == attended_label)[0][0]
                 meta.label = type(getattr(meta, "label"))(label) if hasattr(meta, "label") else int(label)  # type: ignore
-            elif self.stage in ["val", "test"]:
+            elif self.stage == "train":
                 assert (
                     getattr(meta, "label") is not None
                 ), "Metadata must have 'label' attribute"
@@ -136,6 +136,8 @@ class EEGMismatchDataset(EegRegressionBaseDataset):
                     audio[speech_type][..., label],
                     audio[speech_type][..., 0],
                 )
+            else:
+                label = 0
 
         return {"meta": meta, "eeg": eeg, "label": int(label), **audio}  # type: ignore
 

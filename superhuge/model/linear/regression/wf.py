@@ -85,7 +85,7 @@ class WienerFilterState:
 
 
 class WienerFilter(LinearABC):
-    _weights: torch.Tensor
+    weights: torch.Tensor
     _state: WienerFilterState
     _use_lw_cov: bool
 
@@ -184,7 +184,7 @@ class WienerFilter(LinearABC):
             self._state.Rxx = self._state.sum_xx / n
             self._state.Rxx += self.cfg.l2 * torch.eye(p, device=self._state.Rxx.device)
 
-        self._weights = torch.linalg.solve(
+        self.weights = torch.linalg.solve(
             self._state.Rxx, self._state.sum_xy / n
         ).detach()
         self._fitted = True
@@ -205,13 +205,5 @@ class WienerFilter(LinearABC):
             self.cfg.pre_lag,  # type: ignore
             self.cfg.post_lag,  # type: ignore
         )
-        y_pred = x_lag @ self._weights
+        y_pred = x_lag @ self.weights
         return y_pred, env
-
-    @property
-    def weights(self):
-        return self._weights
-
-    @weights.setter
-    def weights(self, value: torch.Tensor):
-        self._weights = value

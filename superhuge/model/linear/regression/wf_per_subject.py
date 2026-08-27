@@ -79,7 +79,7 @@ class PerSubjectWienerFilter(LinearABC):
         ``window_length``).
     """
 
-    _weights: torch.Tensor
+    weights: torch.Tensor
     _sum_xy: torch.Tensor
     _use_lw_cov: bool
     _per_subject: dict[Any, _SubjectStats]
@@ -188,9 +188,9 @@ class PerSubjectWienerFilter(LinearABC):
         """Compute per-subject Rxx, average across subjects, then solve."""
         assert not self._fitted, "Model is already fitted."
         assert self._n_samples > 0, "No data to fit the model."
-        assert len(self._per_subject) > 0, (
-            "No subjects seen during update() — was meta missing subject_id?"
-        )
+        assert (
+            len(self._per_subject) > 0
+        ), "No subjects seen during update() — was meta missing subject_id?"
 
         p = self.cfg.nlag * self.cfg.num_channels
         device = self._device or self._sum_xy.device
@@ -207,23 +207,19 @@ class PerSubjectWienerFilter(LinearABC):
                 Rxx_s = self._compute_lw_cov(s, p, device, dtype)
             else:
                 Rxx_s = s.sum_xx / n_s
-                Rxx_s = Rxx_s + self.cfg.l2 * torch.eye(
-                    p, device=device, dtype=dtype
-                )
+                Rxx_s = Rxx_s + self.cfg.l2 * torch.eye(p, device=device, dtype=dtype)
 
             Rxx_list.append(Rxx_s)
 
         if not Rxx_list:
-            raise RuntimeError(
-                "No subject had enough samples to compute Rxx."
-            )
+            raise RuntimeError("No subject had enough samples to compute Rxx.")
 
         # ---- average Rxx across subjects --------------------------------
         self._Rxx_avg: torch.Tensor = torch.stack(Rxx_list, dim=0).mean(dim=0)
 
         # ---- solve for decoder weights ----------------------------------
         n_total = self._n_samples
-        self._weights = torch.linalg.solve(
+        self.weights = torch.linalg.solve(
             self._Rxx_avg, self._sum_xy / n_total
         ).detach()
         self._fitted = True
@@ -245,19 +241,8 @@ class PerSubjectWienerFilter(LinearABC):
             self.cfg.pre_lag,  # type: ignore[arg-type]
             self.cfg.post_lag,  # type: ignore[arg-type]
         )
-        y_pred = x_lag @ self._weights
+        y_pred = x_lag @ self.weights
         return y_pred, env
-
-    # ------------------------------------------------------------------
-    # Properties
-    # ------------------------------------------------------------------
-    @property
-    def weights(self) -> torch.Tensor:
-        return self._weights
-
-    @weights.setter
-    def weights(self, value: torch.Tensor) -> None:
-        self._weights = value
 
     @property
     def Rxx_avg(self) -> torch.Tensor | None:
@@ -278,9 +263,7 @@ class PerSubjectWienerFilter(LinearABC):
     # Internal helpers
     # ------------------------------------------------------------------
     @staticmethod
-    def _resolve_composite_keys(
-        meta: dict[str, Any], B: int
-    ) -> list[Any]:
+    def _resolve_composite_keys(meta: dict[str, Any], B: int) -> list[Any]:
         """Build composite keys ``(dataset_id, subject_id)`` for each batch element.
 
         Both ``meta["dataset_id"]`` and ``meta["subject_id"]`` are 1-D
@@ -290,22 +273,24 @@ class PerSubjectWienerFilter(LinearABC):
         sid_raw = meta["subject_id"]
 
         ds_arr = np.asarray(
-            ds_raw.detach().cpu().numpy() if isinstance(ds_raw, torch.Tensor) else ds_raw
+            ds_raw.detach().cpu().numpy()
+            if isinstance(ds_raw, torch.Tensor)
+            else ds_raw
         )
         sid_arr = np.asarray(
-            sid_raw.detach().cpu().numpy() if isinstance(sid_raw, torch.Tensor) else sid_raw
+            sid_raw.detach().cpu().numpy()
+            if isinstance(sid_raw, torch.Tensor)
+            else sid_raw
         )
 
-        assert ds_arr.ndim == 1 and ds_arr.shape[0] == B, (
-            f"dataset_id must be 1-D of length {B}, got {ds_arr.shape}"
-        )
-        assert sid_arr.ndim == 1 and sid_arr.shape[0] == B, (
-            f"subject_id must be 1-D of length {B}, got {sid_arr.shape}"
-        )
+        assert (
+            ds_arr.ndim == 1 and ds_arr.shape[0] == B
+        ), f"dataset_id must be 1-D of length {B}, got {ds_arr.shape}"
+        assert (
+            sid_arr.ndim == 1 and sid_arr.shape[0] == B
+        ), f"subject_id must be 1-D of length {B}, got {sid_arr.shape}"
 
-        return [
-            (_to_key(ds_arr[b]), _to_key(sid_arr[b])) for b in range(B)
-        ]
+        return [(_to_key(ds_arr[b]), _to_key(sid_arr[b])) for b in range(B)]
 
     @staticmethod
     def _compute_lw_cov(
@@ -314,8 +299,7 @@ class PerSubjectWienerFilter(LinearABC):
         """Ledoit-Wolf shrinkage covariance for a single subject."""
         n = s.n
         assert n > 1, (
-            f"At least two observations are needed for LW covariance, "
-            f"got n={n}"
+            f"At least two observations are needed for LW covariance, " f"got n={n}"
         )
 
         mu = s.sum_x / n

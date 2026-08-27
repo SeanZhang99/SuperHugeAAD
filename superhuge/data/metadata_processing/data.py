@@ -20,11 +20,16 @@ class MetadataElement(BaseModel, extra="allow"):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.entry = f"dataset-{self.dataset_id:03d}-subject-{self.subject_id:03d}-trial-{self.trial_id:03d}"
+        if self.channel_infos is None and self.num_channel is not None:
+            self.channel_infos = {
+                i: {"name": f"ch-{i+1:02d}", "type": "EEG"}
+                for i in range(self.num_channel)
+            }
 
 
 class RegressionMetadataElement(MetadataElement):
-    env: str | int | None
-    mel: str | int | None
+    env: str | int | None = None
+    mel: str | int | None = None
 
 
 class ClassifyMetadataElement(MetadataElement):

@@ -92,7 +92,7 @@ class EEGMismatchDataset(EegRegressionBaseDataset):
         meta: RegressionMetadataElement = data["meta"]  # type: ignore
         eeg: np.ndarray = data["eeg"]  # type: ignore
         audio: dict[str, np.ndarray] = {k: v for k, v in data.items() if k in self.speech_feature_types}  # type: ignore
-        attended_label = int(getattr(meta, "label"))
+        # attended_label = int(getattr(meta, "label"))
         # audio size: (samples, features, speakers), the attended speaker is represented by metadata.label
 
         for speech_type in self.speech_feature_types:
@@ -125,7 +125,7 @@ class EEGMismatchDataset(EegRegressionBaseDataset):
                 perm_idx = np.random.permutation(audio[speech_type].shape[-1])
                 audio[speech_type] = audio[speech_type][..., perm_idx]
 
-                label = np.where(perm_idx == attended_label)[0][0]
+                label = np.where(perm_idx == 0)[0][0]
                 meta.label = type(getattr(meta, "label"))(label) if hasattr(meta, "label") else int(label)  # type: ignore
             elif self.stage == "train":
                 assert (

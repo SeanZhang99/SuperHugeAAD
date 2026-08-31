@@ -318,7 +318,7 @@ class DInterface(pl2.LightningDataModule):
 
         metadata = self.filt_metadata(metadata, self.dataset_cfg.meta_filter_func)
 
-        splits: Mapping = self.dataset_cfg.meta_group_func(
+        splits: Mapping[str, Sequence] = self.dataset_cfg.meta_group_func(
             metadata=metadata,
             val_fold_idx=self.dataset_cfg.val_fold_idx,
             test_fold_idx=self.dataset_cfg.test_fold_idx,
@@ -330,7 +330,7 @@ class DInterface(pl2.LightningDataModule):
         self.trainset, self.valset, self.testset = (
             self.dataset_cfg.dataset_class(
                 eeg_path=self.dataset_cfg.eeg_path,
-                files=splits[mode],
+                files=sorted(list(splits[mode])),
                 metadata=metadata,
                 fs=self.fs,
                 window_length=self.dataset_cfg.window_length,
@@ -350,10 +350,14 @@ class DInterface(pl2.LightningDataModule):
             self.testset.sync_transform_stats(self.trainset.transform)
 
     def create_dataloader(self, dataset, *args, **kwargs):
+        new_kwargs = {}
+        for k, v in kwargs.items():
+            if k not in self.dataloader_args:
+                new_kwargs[k] = v
         return DataLoader(
             dataset,
             *args,
-            **kwargs,
+            **new_kwargs,
             **self.dataloader_args,
             collate_fn=collect_multidataset,
         )

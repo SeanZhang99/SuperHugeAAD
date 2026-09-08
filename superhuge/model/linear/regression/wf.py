@@ -11,8 +11,9 @@ from ...types import EEG_TYPE, AUDIO_TYPE
 
 
 class WienerFilterConfig(pydantic.BaseModel, extra="allow"):
-    pre_lag: float | int
-    post_lag: float | int
+    pre_lag: float | int | None = None
+    post_lag: float | int | None = None
+    lags: list | None = None
     l2: float
     fs: int
     window_length: int
@@ -22,19 +23,70 @@ class WienerFilterConfig(pydantic.BaseModel, extra="allow"):
         "pre_lag", "post_lag", "l2", "fs", "window_length", "num_channels"
     )
     def positive_float(cls, v):
+        if v is None:
+            return v
         if v < 0:
             raise ValueError("Value must be non-negative")
         return v
 
+    @pydantic.model_validator(mode="after")
+    def check_lag_mode(self):
+        has_pre = self.pre_lag is not None or self.post_lag is not None
+        has_lags = self.lags is not None
+        if has_pre and has_lags:
+            raise ValueError(
+                "pre_lag/post_lag and lags are mutually exclusive: choose one lag mode"
+            )
+        if has_pre and (self.pre_lag is None or self.post_lag is None):
+            raise ValueError("pre_lag and post_lag must be given together")
+        if not has_pre and not has_lags:
+            raise ValueError("must specify either pre_lag/post_lag or lags")
+        if has_lags:
+            if (
+                not isinstance(self.lags, (list, tuple))
+                or len(self.lags) != 2
+                or not all(
+                    isinstance(v, (int, float)) and not isinstance(v, bool)
+                    for v in self.lags
+                )
+            ):
+                raise ValueError(
+                    "lags must be a [start, end] pair of seconds values (start may be negative)"
+                )
+            if not self.lags[1] > self.lags[0]:
+                raise ValueError("lags end must be greater than start")
+        return self
+
+    @property
+    def lag_start_samples(self) -> int:
+        """Left edge of the lag window in samples (negative = past, i.e. causal)."""
+        if self.lags is not None:
+            return int(self.lags[0] * self.fs)
+        return -self.pre_lag  # pre_lag already converted to samples in model_post_init
+
+    @property
+    def lag_end_samples(self) -> int:
+        """Right edge of the lag window in samples (positive = future, non-causal)."""
+        if self.lags is not None:
+            return int(self.lags[1] * self.fs)
+        return self.post_lag  # post_lag already converted to samples in model_post_init
+
     @pydantic.computed_field
     @property
     def nlag(self) -> int:
-        assert isinstance(self.pre_lag, int) and isinstance(self.post_lag, int)
-        return self.pre_lag + self.post_lag + 1
+        return self.lag_end_samples - self.lag_start_samples + 1
 
     def model_post_init(self, __context: Any) -> None:
-        self.pre_lag = int(self.pre_lag * self.fs)
-        self.post_lag = int(self.post_lag * self.fs)
+        # pydantic v2 runs model_post_init BEFORE model_validator(after), so the
+        # lag-mode checks must be enforced here explicitly (validator stays as a
+        # guard for rebuild/copy paths).
+        self.check_lag_mode()
+        # Legacy mode: convert pre_lag/post_lag seconds -> samples in place,
+        # preserving the historic behaviour of these fields. lags mode leaves
+        # them None (samples are derived via lag_start_samples/lag_end_samples).
+        if self.lags is None:
+            self.pre_lag = int(self.pre_lag * self.fs)
+            self.post_lag = int(self.post_lag * self.fs)
         return super().model_post_init(__context)
 
 
@@ -93,8 +145,9 @@ class WienerFilter(LinearABC):
         self,
         /,
         *,
-        pre_lag: float,
-        post_lag: float,
+        pre_lag: float | None = None,
+        post_lag: float | None = None,
+        lags: list | None = None,
         l2: float,
         use_lwcov: bool,
         **kwargs,
@@ -103,6 +156,7 @@ class WienerFilter(LinearABC):
         self.cfg = WienerFilterConfig(
             pre_lag=pre_lag,
             post_lag=post_lag,
+            lags=lags,
             l2=l2,
             **kwargs,
         )
@@ -128,8 +182,8 @@ class WienerFilter(LinearABC):
         x_lag = self.lag_and_flatten(
             eeg,
             "batch time lag channel -> (batch time) (lag channel)",
-            self.cfg.pre_lag,  # type: ignore
-            self.cfg.post_lag,  # type: ignore
+            self.cfg.lag_start_samples,  # type: ignore
+            self.cfg.lag_end_samples,  # type: ignore
         )
         y = rearrange(
             env[..., 0],
@@ -202,8 +256,8 @@ class WienerFilter(LinearABC):
         x_lag = self.lag_and_flatten(
             eeg,
             "batch time lag channel -> batch time (lag channel)",
-            self.cfg.pre_lag,  # type: ignore
-            self.cfg.post_lag,  # type: ignore
+            self.cfg.lag_start_samples,  # type: ignore
+            self.cfg.lag_end_samples,  # type: ignore
         )
         y_pred = x_lag @ self.weights
         return y_pred, env

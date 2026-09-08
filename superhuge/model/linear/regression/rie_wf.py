@@ -16,9 +16,9 @@ class RiemannianWienerFilter(WienerFilter):
 
         x_lag = self.lag_and_flatten(
             eeg,
-            "batch lag time channel -> (batch time) (lag channel)",
-            self.cfg.pre_lag,  # type: ignore
-            self.cfg.post_lag,  # type: ignore
+            "batch time lag channel -> (batch time) (lag channel)",
+            self.cfg.lag_start_samples,  # type: ignore
+            self.cfg.lag_end_samples,  # type: ignore
         )
         y = rearrange(
             env[..., 0],

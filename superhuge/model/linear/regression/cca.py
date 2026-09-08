@@ -7,8 +7,10 @@ from ...types import EEG_TYPE, AUDIO_TYPE
 
 
 class CCAConfig(pydantic.BaseModel):
-    x_lag_sec: float
-    y_lag_sec: float
+    x_lag_sec: float | None = None
+    y_lag_sec: float | None = None
+    x_lags: list | None = None
+    y_lags: list | None = None
     fs: int
     l2: float
     num_features_x: int
@@ -27,20 +29,80 @@ class CCAConfig(pydantic.BaseModel):
         "num_components",
     )
     def positive_float(cls, v):
+        if v is None:
+            return v
         if v < 0:
             raise ValueError("Value must be non-negative")
         return v
 
+    @staticmethod
+    def _check_lag_side(sec_name: str, lags_name: str, sec, lags) -> None:
+        has_sec = sec is not None
+        has_lags = lags is not None
+        if has_sec and has_lags:
+            raise ValueError(
+                f"{sec_name} and {lags_name} are mutually exclusive: choose one lag mode"
+            )
+        if not has_sec and not has_lags:
+            raise ValueError(f"must specify either {sec_name} or {lags_name}")
+        if has_lags:
+            if (
+                not isinstance(lags, (list, tuple))
+                or len(lags) != 2
+                or not all(
+                    isinstance(v, (int, float)) and not isinstance(v, bool)
+                    for v in lags
+                )
+            ):
+                raise ValueError(
+                    f"{lags_name} must be a [start, end] pair of seconds values "
+                    "(start may be negative)"
+                )
+            if not lags[1] > lags[0]:
+                raise ValueError(f"{lags_name} end must be greater than start")
+
+    @pydantic.model_validator(mode="after")
+    def check_lag_modes(self):
+        self._check_lag_side("x_lag_sec", "x_lags", self.x_lag_sec, self.x_lags)
+        self._check_lag_side("y_lag_sec", "y_lags", self.y_lag_sec, self.y_lags)
+        return self
+
+    @property
+    def x_lag_start_samples(self) -> int:
+        """Left edge of the EEG lag window in samples (negative = past, causal)."""
+        if self.x_lags is not None:
+            return int(self.x_lags[0] * self.fs)
+        return -int(self.x_lag_sec * self.fs)
+
+    @property
+    def x_lag_end_samples(self) -> int:
+        """Right edge of the EEG lag window in samples (positive = future)."""
+        if self.x_lags is not None:
+            return int(self.x_lags[1] * self.fs)
+        return int(self.x_lag_sec * self.fs)
+
+    @property
+    def y_lag_start_samples(self) -> int:
+        if self.y_lags is not None:
+            return int(self.y_lags[0] * self.fs)
+        return -int(self.y_lag_sec * self.fs)
+
+    @property
+    def y_lag_end_samples(self) -> int:
+        if self.y_lags is not None:
+            return int(self.y_lags[1] * self.fs)
+        return int(self.y_lag_sec * self.fs)
+
     @pydantic.computed_field
     @property
     def x_lag_samples(self) -> int:
-        """Convert x_lag_sec to samples using sampling frequency"""
+        """Legacy symmetric half-window in samples (x_lag_sec mode only)."""
         return int(self.x_lag_sec * self.fs)
 
     @pydantic.computed_field
     @property
     def y_lag_samples(self) -> int:
-        """Convert y_lag_sec to samples using sampling frequency"""
+        """Legacy symmetric half-window in samples (y_lag_sec mode only)."""
         return int(self.y_lag_sec * self.fs)
 
 
@@ -53,8 +115,10 @@ class CCA(LinearABC):
         self,
         /,
         *,
-        x_lag_sec: float,
-        y_lag_sec: float,
+        x_lag_sec: float | None = None,
+        y_lag_sec: float | None = None,
+        x_lags: list | None = None,
+        y_lags: list | None = None,
         l2: float = 0.0,
         num_components: int,
         **kwargs,
@@ -63,8 +127,10 @@ class CCA(LinearABC):
         Canonical Correlation Analysis model with temporal filtering
 
         Args:
-            x_lag_sec: Pre-stimulus lag (seconds)
-            y_lag_sec: Post-stimulus lag (seconds)
+            x_lag_sec: Pre-stimulus lag (seconds); mutually exclusive with x_lags
+            y_lag_sec: Post-stimulus lag (seconds); mutually exclusive with y_lags
+            x_lags: EEG lag window [start, end] in seconds (start may be negative)
+            y_lags: envelope lag window [start, end] in seconds (start may be negative)
             fs: Sampling frequency (Hz)
             l2: L2 regularization strength
             num_features_x: Number of input features (channels)
@@ -77,6 +143,8 @@ class CCA(LinearABC):
         self.cfg = CCAConfig(
             x_lag_sec=x_lag_sec,
             y_lag_sec=y_lag_sec,
+            x_lags=x_lags,
+            y_lags=y_lags,
             fs=kwargs["fs"],
             l2=l2,
             num_features_x=kwargs["num_channels"],
@@ -85,8 +153,12 @@ class CCA(LinearABC):
             ),
             num_components=num_components,
         )
-        self.covar_dim_x = (self.cfg.x_lag_samples * 2 + 1) * self.cfg.num_features_x
-        self.covar_dim_y = (self.cfg.y_lag_samples * 2 + 1) * self.cfg.num_features_y
+        self.covar_dim_x = (
+            self.cfg.x_lag_end_samples - self.cfg.x_lag_start_samples + 1
+        ) * self.cfg.num_features_x
+        self.covar_dim_y = (
+            self.cfg.y_lag_end_samples - self.cfg.y_lag_start_samples + 1
+        ) * self.cfg.num_features_y
 
         covar_dim = self.covar_dim_x + self.covar_dim_y
         self.register_buffer("Rxyxy", torch.zeros((covar_dim, covar_dim)))
@@ -110,15 +182,15 @@ class CCA(LinearABC):
         # Create and flatten lagged matrices
         x_lag_flat = self.lag_and_flatten(
             eeg,
-            "batch lag time channel -> (batch time) (lag channel)",
-            self.cfg.x_lag_samples,
-            self.cfg.x_lag_samples,
+            "batch time lag channel -> (batch time) (lag channel)",
+            self.cfg.x_lag_start_samples,
+            self.cfg.x_lag_end_samples,
         )
         y_lag_flat = self.lag_and_flatten(
             env[..., 0],
-            "batch lag time channel -> (batch time) (lag channel)",
-            self.cfg.y_lag_samples,
-            self.cfg.y_lag_samples,
+            "batch time lag channel -> (batch time) (lag channel)",
+            self.cfg.y_lag_start_samples,
+            self.cfg.y_lag_end_samples,
         )
 
         # Combine into joint tensor
@@ -142,7 +214,10 @@ class CCA(LinearABC):
 
         self.weight_x, self.weight_y = canonical_correlation_analysis(
             cov_matrix=self.Rxyxy / self._n_samples,
-            num_features_x=(self.cfg.x_lag_samples * 2 + 1) * self.cfg.num_features_x,
+            num_features_x=(
+                self.cfg.x_lag_end_samples - self.cfg.x_lag_start_samples + 1
+            )
+            * self.cfg.num_features_x,
             reg_strength=1.0e-5,
             num_components=self.cfg.num_components,
         )
@@ -169,15 +244,15 @@ class CCA(LinearABC):
         # Create and flatten lagged matrices for both inputs
         x_lag_flat = self.lag_and_flatten(
             eeg,
-            "batch lag time features_x -> batch time (lag features_x)",
-            self.cfg.x_lag_samples,
-            self.cfg.x_lag_samples,
+            "batch time lag features_x -> batch time (lag features_x)",
+            self.cfg.x_lag_start_samples,
+            self.cfg.x_lag_end_samples,
         )
         y_lag_flat = self.lag_and_flatten(
             env,
-            "batch lag time features_y speaker -> batch time speaker (lag features_y)",
-            self.cfg.y_lag_samples,
-            self.cfg.y_lag_samples,
+            "batch time lag features_y speaker -> batch time speaker (lag features_y)",
+            self.cfg.y_lag_start_samples,
+            self.cfg.y_lag_end_samples,
         )
 
         # Project using learned weights

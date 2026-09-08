@@ -53,9 +53,16 @@ class LinearABC(torch.nn.Module, ABC):
         ...
 
     @final
-    def get_lag_mtx(self, x: torch.Tensor, pre_lag: int, post_lag: int):
+    def get_lag_mtx_range(self, x: torch.Tensor, start: int, end: int):
         """
-        Fill a single pre-allocated buffer with lagged copies of x.
+        Fill a single pre-allocated buffer with lagged copies of x over the
+        arbitrary shift range ``[start, end]`` (samples). Negative shifts take
+        PAST samples (x(t-|s|), causal), positive shifts take FUTURE samples
+        (x(t+s), non-causal); shift 0 takes the current sample.
+
+        ``[start, end]`` generalises the legacy ``pre_lag/post_lag`` pair:
+        ``get_lag_mtx(x, pre, post) == get_lag_mtx_range(x, -pre, post)``.
+
         Returns view — zero allocation per call.
 
         Buffer layout: (batch, time, nlag, ch_flat), contiguous.
@@ -68,7 +75,7 @@ class LinearABC(torch.nn.Module, ABC):
         separated by the nlag dimension.
         """
         batch, time, *rest = x.shape
-        nlag = pre_lag + post_lag + 1
+        nlag = end - start + 1
 
         need_shape = (batch, time, nlag, *rest)
         if not hasattr(self, "_x_lag_buf") or self._x_lag_buf.shape != need_shape:
@@ -80,7 +87,7 @@ class LinearABC(torch.nn.Module, ABC):
         buf = self._x_lag_buf
         buf.zero_()
 
-        for lag_idx, shift in enumerate(range(-pre_lag, post_lag + 1)):
+        for lag_idx, shift in enumerate(range(start, end + 1)):
             if shift < 0:
                 buf[:, -shift:, lag_idx, :] = x[:, : time + shift, ...]
             elif shift > 0:
@@ -90,6 +97,15 @@ class LinearABC(torch.nn.Module, ABC):
                 buf[:, :, lag_idx, :].copy_(x.detach())
 
         return buf  # (batch, time, nlag, ...) — view
+
+    @final
+    def get_lag_mtx(self, x: torch.Tensor, pre_lag: int, post_lag: int):
+        """
+        Legacy lagged-matrix builder: shift range [−pre_lag, +post_lag] (samples).
+        Equivalent to ``get_lag_mtx_range(x, -pre_lag, post_lag)``; kept with
+        unchanged semantics for backward compatibility.
+        """
+        return self.get_lag_mtx_range(x, -pre_lag, post_lag)
 
     @final
     def get_lag_mtx_old(self, x: torch.Tensor, *lag: int, **kwargs):
@@ -153,7 +169,7 @@ class LinearABC(torch.nn.Module, ABC):
         Returns:
             Flattened lagged matrix [batch * time, lag * features]
         """
-        lagged_matrix = self.get_lag_mtx(signal, lag_samples[0], lag_samples[1])
+        lagged_matrix = self.get_lag_mtx_range(signal, lag_samples[0], lag_samples[1])
         return rearrange(
             lagged_matrix,
             pattern,

@@ -88,8 +88,9 @@ class PerSubjectWienerFilter(LinearABC):
         self,
         /,
         *,
-        pre_lag: float,
-        post_lag: float,
+        pre_lag: float | None = None,
+        post_lag: float | None = None,
+        lags: list | None = None,
         l2: float,
         use_lwcov: bool,
         **kwargs,
@@ -98,6 +99,7 @@ class PerSubjectWienerFilter(LinearABC):
         self.cfg = WienerFilterConfig(
             pre_lag=pre_lag,
             post_lag=post_lag,
+            lags=lags,
             l2=l2,
             **kwargs,
         )
@@ -136,8 +138,8 @@ class PerSubjectWienerFilter(LinearABC):
         x_lag = self.lag_and_flatten(
             eeg,
             "batch time lag channel -> (batch time) (lag channel)",
-            self.cfg.pre_lag,  # type: ignore[arg-type]
-            self.cfg.post_lag,  # type: ignore[arg-type]
+            self.cfg.lag_start_samples,  # type: ignore[arg-type]
+            self.cfg.lag_end_samples,  # type: ignore[arg-type]
         )
         y = rearrange(
             env[..., 0],
@@ -238,8 +240,8 @@ class PerSubjectWienerFilter(LinearABC):
         x_lag = self.lag_and_flatten(
             eeg,
             "batch time lag channel -> batch time (lag channel)",
-            self.cfg.pre_lag,  # type: ignore[arg-type]
-            self.cfg.post_lag,  # type: ignore[arg-type]
+            self.cfg.lag_start_samples,  # type: ignore[arg-type]
+            self.cfg.lag_end_samples,  # type: ignore[arg-type]
         )
         y_pred = x_lag @ self.weights
         return y_pred, env

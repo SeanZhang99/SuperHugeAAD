@@ -160,8 +160,9 @@ where `R_xx` is the auto-correlation of EEG and `R_xy` is the cross-correlation 
 **Key parameters:**
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `pre_lag` | 0.0 | Pre-stimulus lag in seconds |
-| `post_lag` | 0.4 | Post-stimulus lag in seconds |
+| `pre_lag` | 0.0 | Pre-stimulus lag in seconds (mutually exclusive with `lags`) |
+| `post_lag` | 0.4 | Post-stimulus lag in seconds (mutually exclusive with `lags`) |
+| `lags` | — | Lag window `[start, end]` in seconds; negative = past (causal), positive = future (non-causal). Mutually exclusive with `pre_lag`/`post_lag`. E.g. `[0.1, 0.4]` uses EEG samples `t+100ms..t+400ms`; `[-0.1, 0.9]` equals `pre_lag=0.1, post_lag=0.9` |
 | `use_lwcov` | true | Use Ledoit-Wolf shrinkage for covariance |
 | `l2` | 0.0 | L2 regularization strength |
 

@@ -17,7 +17,9 @@ def _load_parser():
     spec = importlib.util.spec_from_file_location(
         "task_config_parser_under_test", _PARSER_PATH
     )
+    assert spec
     module = importlib.util.module_from_spec(spec)
+    assert spec.loader
     spec.loader.exec_module(module)
     return module
 
